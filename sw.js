@@ -1,6 +1,6 @@
 // SHELOOPS offline helper. Network first (so updates arrive right away), saved copy when offline.
 // release.py bumps VERSION so installed apps notice new files.
-const VERSION = '1.2.0';
+const VERSION = '1.2.1';
 const CACHE = 'sheloops-' + VERSION;
 
 self.addEventListener('install', e => {

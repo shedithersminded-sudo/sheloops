@@ -60,7 +60,7 @@ class Limit extends AudioWorkletProcessor {
   }
 }
 registerProcessor('limit', Limit);` + PITCH_WORKLET + DENOISE_WORKLET;
-const workletURL = URL.createObjectURL(new Blob([WORKLET], { type: 'text/javascript' }));
+export const workletURL = URL.createObjectURL(new Blob([WORKLET], { type: 'text/javascript' }));
 
 export const E = { ctx: null, g: null, mic: null, ready: null };
 

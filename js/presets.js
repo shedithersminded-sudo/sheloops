@@ -124,7 +124,7 @@ export const mine = JSON.parse(localStorage.getItem(KEY) || '[]');
 export const favs = new Set(JSON.parse(localStorage.getItem(KEY + '.fav') || '[]'));
 export function saveMine() { localStorage.setItem(KEY, JSON.stringify(mine)); localStorage.setItem(KEY + '.fav', JSON.stringify([...favs])); }
 export function addMine(name, folder, fx, rev, dly) {
-  const p = { id: 'm:' + uid(), name, folder: folder || 'My presets', fx: JSON.parse(JSON.stringify(fx)), rev, dly, created: Date.now() };
+  const p = { id: 'm:' + uid(), name, folder: folder || 'My presets', fx: JSON.parse(JSON.stringify(fx)).map(f => { delete f.layer; return f; }), rev, dly, created: Date.now() };
   mine.push(p); saveMine(); return p;
 }
 export const folders = () => [...new Set(mine.map(p => p.folder))].sort();
@@ -132,7 +132,7 @@ export const folders = () => [...new Set(mine.map(p => p.folder))].sort();
 // Fresh copy of a preset's chain with new ids
 export function presetFx(p) {
   const fx = p.chain ? p.chain() : JSON.parse(JSON.stringify(p.fx));
-  for (const f of fx) f.id = uid();
+  for (const f of fx) { f.id = uid(); delete f.layer; }
   return fx;
 }
 export const findPreset = id => BUILTIN.find(p => p.id === id) || mine.find(p => p.id === id);

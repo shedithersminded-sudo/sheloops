@@ -171,7 +171,7 @@ const BUILD = {
   },
   autowah(c) {
     const w = wetDry(c), f = c.createBiquadFilter(); f.type = 'bandpass';
-    const mk = c.createGain(); mk.gain.value = 2.2;
+    const mk = c.createGain(); mk.gain.value = 3;
     const l = lfo(c, 1.5, 400, f.frequency);
     w.input.connect(f); f.connect(mk); mk.connect(w.wet);
     return { in: w.input, out: w.out, set(p, _, i) { sp(c, f.frequency, p.freq, i); sp(c, l.o.frequency, p.rate, i); sp(c, l.g.gain, p.freq * 0.9 * p.depth, i); sp(c, f.Q, p.q, i); w.mix(p.mix, i); }, stop() { l.o.stop(); } };

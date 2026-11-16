@@ -1,16 +1,25 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Presets now stack: one Vocal plus any Enhance and Voice FX. Take any of them off again.",
-    "Light-up rotary knobs on every effect, including Auto-Tune (new Transpose knob).",
-    "Effects in the beat maker for every drum and instrument track.",
-    "New effects: Echo, Reverb room, Lo-fi crusher, Auto-wah, Tremolo / chop, Vibrato.",
-    "More presets: 28 Vocal, 18 Enhance, 28 Voice FX.",
-    "Bolder fonts, glowing hover and animated cards."
+    "Bug check: all 70 instruments, 46 drum sounds, 22 effects, 74 presets and 9 starter beats tested.",
+    "Saved presets no longer carry hidden stack tags.",
+    "Auto-wah is a bit louder."
   ],
   "history": [
+    {
+      "version": "1.2.0",
+      "date": "2026-11-16",
+      "notes": [
+        "Presets now stack: one Vocal plus any Enhance and Voice FX. Take any of them off again.",
+        "Light-up rotary knobs on every effect, including Auto-Tune (new Transpose knob).",
+        "Effects in the beat maker for every drum and instrument track.",
+        "New effects: Echo, Reverb room, Lo-fi crusher, Auto-wah, Tremolo / chop, Vibrato.",
+        "More presets: 28 Vocal, 18 Enhance, 28 Voice FX.",
+        "Bolder fonts, glowing hover and animated cards."
+      ]
+    },
     {
       "version": "1.1.0",
       "date": "2026-11-16",
