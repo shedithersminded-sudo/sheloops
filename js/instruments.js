@@ -227,7 +227,8 @@ export function playExtra(c, dest, syn, midi, t, dur, vel) {
 // ---------- percussion ----------
 export const PERC_NAMES = { conga: 'Conga', bongo: 'Bongo', shaker: 'Shaker', cowbell: 'Cowbell', tambourine: 'Tambourine', triangle: 'Triangle', woodblock: 'Woodblock', snap: 'Finger snap', timbale: 'Timbale', guiro: 'Guiro',
   claves: 'Claves', agogo: 'Agogo bell', castanets: 'Castanets', cabasa: 'Cabasa', vibraslap: 'Vibraslap', djembe: 'Djembe', djembeslap: 'Djembe slap', tabla: 'Tabla', tablabayan: 'Tabla bass', cajon: 'Cajon', cajonslap: 'Cajon slap', gong: 'Gong', timpani: 'Timpani', crash: 'Crash cymbal', ride: 'Ride cymbal', chime: 'Wind chimes',
-  taiko: 'Taiko', odaiko: 'O-daiko', shime: 'Shime-daiko', tsuzumi: 'Tsuzumi', mokugyo: 'Mokugyo', suzu: 'Kagura suzu', hyoshigi: 'Hyoshigi clap', rin: 'Rin bowl', laser: 'Laser zap', vinyl: 'Vinyl scratch', riser: 'Riser', glitch: 'Glitch' };
+  taiko: 'Taiko', odaiko: 'O-daiko', shime: 'Shime-daiko', tsuzumi: 'Tsuzumi', mokugyo: 'Mokugyo', suzu: 'Kagura suzu', hyoshigi: 'Hyoshigi clap', rin: 'Rin bowl', laser: 'Laser zap', vinyl: 'Vinyl scratch', riser: 'Riser', glitch: 'Glitch',
+  breaksnare: 'Break snare', ghost: 'Ghost snare', airhorn: 'Air horn', siren: 'Dub siren', rewind: 'Rewind' };
 export const PERC = Object.keys(PERC_NAMES);
 export const PERC_KITS = {
   'Latin': ['conga', 'bongo', 'timbale', 'cowbell', 'claves', 'agogo', 'guiro', 'shaker', 'cabasa', 'vibraslap'],
@@ -235,6 +236,7 @@ export const PERC_KITS = {
   'World': ['djembe', 'djembeslap', 'tabla', 'tablabayan', 'cajon', 'cajonslap', 'tambourine', 'castanets'],
   'Orchestra': ['timpani', 'crash', 'ride', 'gong', 'triangle', 'chime', 'snap', 'woodblock'],
   'FX': ['laser', 'vinyl', 'riser', 'glitch', 'snap', 'chime'],
+  'Jungle': ['breaksnare', 'ghost', 'ride', 'crash', 'airhorn', 'siren', 'rewind', 'vinyl'],
 };
 export function playPerc(c, dest, sound, t, vel) {
   const out = c.createGain(); out.gain.value = vel; out.connect(dest);
@@ -277,6 +279,23 @@ export function playPerc(c, dest, sound, t, vel) {
     case 'laser': { const o = part(c, out, 3000, t, 0.4, 0.25, 'sawtooth'); o.frequency.setValueAtTime(3000, t); o.frequency.exponentialRampToValueAtTime(120, t + 0.25); break; }
     case 'vinyl': { const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain(); s.buffer = noiseBuf(c); bp.type = 'bandpass'; bp.Q.value = 4; bp.frequency.setValueAtTime(400, t); bp.frequency.exponentialRampToValueAtTime(2500, t + 0.09); bp.frequency.exponentialRampToValueAtTime(300, t + 0.22); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(3.5, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25); s.connect(bp); bp.connect(g); g.connect(out); s.start(t); s.stop(t + 0.3); break; }
     case 'riser': { const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain(); s.buffer = noiseBuf(c); s.loop = true; bp.type = 'bandpass'; bp.Q.value = 3; bp.frequency.setValueAtTime(300, t); bp.frequency.exponentialRampToValueAtTime(9000, t + 1.8); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.6, t + 1.7); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.9); s.connect(bp); bp.connect(g); g.connect(out); s.start(t); s.stop(t + 2); break; }
+    case 'breaksnare': noise(c, out, t, 0.75, 0.13, 'bandpass', 2600, 0.8); noise(c, out, t, 0.35, 0.05, 'highpass', 6000, 0.7); drop(330, 210, 0.5, 0.07, 'triangle'); break;
+    case 'ghost': noise(c, out, t, 0.22, 0.06, 'bandpass', 3000, 0.9); drop(300, 220, 0.12, 0.04, 'triangle'); break;
+    case 'airhorn': for (const [o, l] of [[0, 0.11], [0.14, 0.11], [0.28, 0.42]]) {
+      const lp = c.createBiquadFilter(), g = c.createGain(); lp.type = 'lowpass'; lp.frequency.value = 3200; lp.connect(g); g.connect(out);
+      g.gain.setValueAtTime(0.0001, t + o); g.gain.exponentialRampToValueAtTime(0.22, t + o + 0.01); g.gain.setValueAtTime(0.22, t + o + l - 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + o + l);
+      for (const f of [466, 470, 932, 587]) { const x = c.createOscillator(); x.type = 'sawtooth'; x.frequency.setValueAtTime(f * 0.94, t + o); x.frequency.exponentialRampToValueAtTime(f, t + o + 0.04); x.connect(lp); x.start(t + o); x.stop(t + o + l + 0.02); }
+    } break;
+    case 'siren': { const x = c.createOscillator(), lf = c.createOscillator(), lg = c.createGain(), g = c.createGain(), lp = c.createBiquadFilter();
+      x.type = 'square'; lp.type = 'lowpass'; lp.frequency.value = 2500; x.frequency.setValueAtTime(520, t); x.frequency.linearRampToValueAtTime(760, t + 1.6);
+      lf.frequency.setValueAtTime(5, t); lf.frequency.linearRampToValueAtTime(9, t + 1.6); lg.gain.value = 140; lf.connect(lg); lg.connect(x.frequency);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3, t + 0.03); g.gain.setValueAtTime(0.3, t + 1.4); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.75);
+      x.connect(lp); lp.connect(g); g.connect(out); x.start(t); lf.start(t); x.stop(t + 1.8); lf.stop(t + 1.8); break; }
+    case 'rewind': { const x = c.createOscillator(), g = c.createGain(), bp = c.createBiquadFilter(); x.type = 'sawtooth'; bp.type = 'bandpass'; bp.Q.value = 1.2;
+      x.frequency.setValueAtTime(400, t); x.frequency.exponentialRampToValueAtTime(60, t + 0.35); x.frequency.exponentialRampToValueAtTime(900, t + 0.9);
+      bp.frequency.setValueAtTime(1500, t); bp.frequency.exponentialRampToValueAtTime(400, t + 0.35); bp.frequency.exponentialRampToValueAtTime(3000, t + 0.9);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4, t + 0.03); g.gain.setValueAtTime(0.4, t + 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + 1);
+      x.connect(bp); bp.connect(g); g.connect(out); x.start(t); x.stop(t + 1.05); noise(c, out, t, 0.15, 0.9, 'bandpass', 1200, 1); break; }
     case 'glitch': for (let i = 0; i < 6; i++) part(c, out, [200, 1600, 400, 3200, 800, 6400][i], t + i * 0.018, 0.3, 0.015, 'square', 0.001); break;
   }
 }

@@ -1,11 +1,24 @@
 {
-  "version": "1.2.2",
+  "version": "1.3.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Keys guide: the lists no longer overlap. Each key now sits above what it does."
+    "Simple mode explains every step: what each tab does, a 3-step guide for vocal presets, and plain words on every effect.",
+    "More presets: 30 Enhance and 50 Voice FX, with Mood filters and a Surprise me button.",
+    "Jungle, Drum and Bass, Breakcore and Heavenly Breakcore starter beats. New Jungle drum kit: break snare, ghost snare, air horn, dub siren, rewind.",
+    "Quick sounds in the beat maker effects: Breakcore crunch, Jungle break, Heavenly wash, Dub echo and more. BPM now goes up to 300.",
+    "Text glow with your own glow color, strength and text color (Appearance).",
+    "New mouse trails and click effects: comet, rainbow, music notes, bubbles, confetti, shockwave, stars, spotlight.",
+    "Music visualizer on the CD player (ring, bars, mirror, wave, dots) with glow, color and rainbow, or a visualizer-only mini player."
   ],
   "history": [
+    {
+      "version": "1.2.2",
+      "date": "2026-11-16",
+      "notes": [
+        "Keys guide: the lists no longer overlap. Each key now sits above what it does."
+      ]
+    },
     {
       "version": "1.2.1",
       "date": "2026-11-16",

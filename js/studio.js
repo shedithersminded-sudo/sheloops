@@ -134,6 +134,14 @@ export function seek(pos) {
 }
 
 // ---------- render ----------
+// plain words shown in Simple mode under the inspector tabs
+const TAB_EXPLAIN = {
+  mix: 'Set how loud this track is, move it left or right, and pick which recording (take) to use. Record again and every take is kept here.',
+  fix: 'Click Check my voice. SHELOOPS listens to your recording and tells you what to fix, like noise, harsh S sounds or a quiet take. One click fixes each problem.',
+  presets: 'Make your voice sound finished. 1: pick one Vocal style. 2: add Enhance to polish it. 3: add Voice FX for fun or creative sounds. Everything you add shows up in the Sound stack, where you can turn it off, open its knobs, or take it off.',
+  fx: 'Every effect on this track, in order. Turn the knobs to change the sound.',
+  build: 'Pick a vibe, then shape it with four big knobs.',
+};
 export function renderStudio() {
   setRerender(() => renderInspector());
   const view = $('#view'); view.innerHTML = '';
@@ -148,7 +156,7 @@ export function renderStudio() {
     el('span', { class: 'withhelp' }, el('button', { id: 'playbtn', class: 'tbtn', onclick: () => T.playing ? stop() : play() }, 'Play'), helpBtn('play')),
     el('span', { class: 'withhelp' }, el('button', { id: 'recbtn', class: 'tbtn recbig', onclick: record }, 'Record'), helpBtn('record')),
     el('div', { class: 'lcd' }, timeEl, barEl, recTimeEl),
-    el('label', { class: 'num' }, 'BPM', el('input', { type: 'number', min: 40, max: 220, value: P.bpm, onchange: e => { snapshot(); P.bpm = clamp(+e.target.value || 90, 40, 220); e.target.value = P.bpm; applyMix(); save(); renderStudio(); refresh(); } }), helpBtn('bpm')),
+    el('label', { class: 'num' }, 'BPM', el('input', { type: 'number', min: 40, max: 300, value: P.bpm, onchange: e => { snapshot(); P.bpm = clamp(+e.target.value || 90, 40, 300); e.target.value = P.bpm; applyMix(); save(); renderStudio(); refresh(); } }), helpBtn('bpm')),
     toggle('Click', settings.metro, v => { settings.metro = v; saveSettings(); }, 'metro'),
     toggle('Count in', settings.countIn, v => { settings.countIn = v; saveSettings(); }, 'countin'),
     toggle('Loop', P.loop, v => { P.loop = v; save(); refresh(); renderRange(); }, 'loop'),
@@ -431,6 +439,7 @@ export function renderInspector() {
     el('div', { class: 'insp-title', style: `--c:${t.color}` }, el('b', {}, t.name), el('span', { class: 'tag' }, t.kind === 'file' ? 'beat file' : 'vocal track'),
       el('div', { class: 'itabs' }, tabBtn('mix', 'Mix & takes'), tabBtn('fix', 'Fix my voice'), tabBtn('presets', 'Vocal presets'), settings.simple ? null : tabBtn('fx', `Effects (${(t.fx || []).length})`), settings.simple ? null : tabBtn('build', 'Build my sound'))),
     previewBar(t),
+    el('div', { class: 'explain tabexplain' }, el('b', {}, 'What this tab does: '), TAB_EXPLAIN[tab] || ''),
     content,
   ].filter(Boolean));
 }

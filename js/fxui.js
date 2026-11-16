@@ -1,10 +1,10 @@
 // Inspector tabs for effects, presets and Build My Sound.
 import { el, clamp, toast, knob, select, ask, confirmBox } from './util.js';
-import { helpBtn } from './help.js';
+import { helpBtn, HELP } from './help.js';
 import { app, save, snapshot } from './state.js';
 import { settings, saveSettings } from './store.js';
 import { FX, FX_ORDER, BEAT_FX, NOTE, TUNE_SCALES, newFx } from './fx.js';
-import { BUILTIN, CATS, VIBES, buildSound, mine, favs, saveMine, addMine, folders, presetFx, findPreset } from './presets.js';
+import { BUILTIN, CATS, MOODS, moodOf, VIBES, buildSound, mine, favs, saveMine, addMine, folders, presetFx, findPreset } from './presets.js';
 import { T, play, applyMix } from './engine.js';
 
 let preview = null;
@@ -94,7 +94,7 @@ function stackPanel(t) {
     L.map(l => {
       const mine = (t.fx || []).map((f, i) => [f, i]).filter(([f]) => f.layer === l.pid), on = mine.some(([f]) => f.on), open = openLayers.has(t.id + l.pid);
       return el('div', { class: 'layer' + (on ? ' on' : '') + (open ? ' open' : '') },
-        el('div', { class: 'layerhead' },
+        el('div', { class: 'layerhead' }, on ? eqBars() : null,
           el('button', { class: 'pow' + (on ? ' on' : ''), title: on ? 'Mute this layer' : 'Turn it back on', onclick: () => { for (const [f] of mine) f.on = !on; save(); applyMix(); rerender(); } }, on ? 'ON' : 'OFF'),
           el('b', {}, l.name), el('span', { class: 'cattag c-' + l.cat.replace(/\W/g, '') }, l.cat),
           el('small', { class: 'hint' }, mine.map(([f]) => FX[f.type].name).join(' + ')),
@@ -104,6 +104,7 @@ function stackPanel(t) {
             const p = findPreset(l.pid) || { id: l.pid, name: l.name, cat: l.cat }; snapshot(); const st = layered(t, p);
             Object.assign(t, st); save(); applyMix(); rerender(); toast(st.msg);
           } }, '×')),
+        el('div', { class: 'explain' }, (findPreset(l.pid) || {}).desc || '', ' Click Knobs to change it, OFF to hear it without, or × to take it off.'),
         open ? el('div', { class: 'layerfx' }, mine.map(([f, i]) => fxCard(t, f, i))) : null);
     }));
 }
@@ -165,22 +166,44 @@ export function fxCard(t, f, i, rr) {
       el('button', { class: 'sq', title: 'Move earlier', onclick: () => move(-1) }, '<'),
       el('button', { class: 'sq', title: 'Move later', onclick: () => move(1) }, '>'),
       el('button', { class: 'sq', title: 'Remove', onclick: () => { snapshot(); t.fx.splice(i, 1); tidyLayers(t); save(); applyMix(); rerender(); } }, '×')),
+    HELP['fx_' + f.type] ? el('div', { class: 'explain' }, HELP['fx_' + f.type].what, ' ', el('i', {}, HELP['fx_' + f.type].how), HELP['fx_' + f.type].start ? el('span', { class: 'try' }, 'Try: ' + HELP['fx_' + f.type].start) : null) : null,
     el('div', { class: 'fxparams' }, params),
     f.type === 'tune' && f.params.key < 0 ? el('small', { class: 'hint' }, `Song key: ${NOTE[app.P.beat.key]} ${app.P.beat.scale === 'off' ? '(all notes)' : app.P.beat.scale}. Change it in the Beat tab.`) : null);
 }
 
 // ---------- Presets tab ----------
-let presetCat = 'Vocal', myFolder = '';
+let presetCat = 'Vocal', myFolder = '', mood = '';
+const eqBars = () => el('span', { class: 'eqbars', 'aria-hidden': 'true' }, el('i'), el('i'), el('i'), el('i'));
+function steps(t) {
+  const L = t.layers || [], has = c => L.some(l => l.cat === c);
+  const st = (n, c, label, text) => el('button', { class: 'step' + (has(c) ? ' done' : '') + (presetCat === c ? ' on' : ''), onclick: () => { presetCat = c; mood = ''; rerender(); } },
+    el('span', { class: 'num' }, has(c) ? '✓' : n), el('b', {}, label), el('small', {}, text));
+  return el('div', { class: 'steps explain' },
+    st('1', 'Vocal', 'Pick a style', 'One Vocal preset sets the main sound.'),
+    st('2', 'Enhance', 'Polish it', 'Add Enhance to make it clearer, warmer or louder.'),
+    st('3', 'Voice FX', 'Get creative', 'Add Voice FX for robot, deep, echo and more.'));
+}
 export function presetsTab(t) {
   const cats = ['Favorites', ...CATS, 'My presets'];
   const top = el('div', { class: 'fxtop' },
-    cats.map(c => el('button', { class: 'chip' + (presetCat === c ? ' on' : ''), onclick: () => { presetCat = c; rerender(); } }, c === 'Favorites' ? '★ Favorites' : c)),
+    cats.map(c => el('button', { class: 'chip' + (presetCat === c ? ' on' : ''), onclick: () => { presetCat = c; mood = ''; rerender(); } }, c === 'Favorites' ? '★ Favorites' : c)),
     helpBtn('presets'), el('span', { class: 'spacer' }), abButton(t));
   const stack = stackPanel(t);
   let list;
   if (presetCat === 'My presets') list = mine.filter(p => !myFolder || p.folder === myFolder);
   else if (presetCat === 'Favorites') list = [...BUILTIN, ...mine].filter(p => favs.has(p.id));
   else list = BUILTIN.filter(p => p.cat === presetCat);
+  const moods = MOODS[presetCat];
+  const all = list;
+  if (moods && mood) list = list.filter(p => moodOf(p) === mood);
+  const moodRow = moods ? el('div', { class: 'moods' },
+    el('span', { class: 'hint' }, 'Mood:'),
+    ['', ...moods].map(m => el('button', { class: 'mood' + (mood === m ? ' on' : ''), 'data-m': m || 'all', onclick: () => { mood = m; rerender(); } }, m || 'All', el('small', {}, String(m ? all.filter(p => moodOf(p) === m).length : all.length)))),
+    el('span', { class: 'spacer' }),
+    el('button', { class: 'hot surprise', title: 'Adds a random preset from this list', onclick: () => {
+      const pool = list.filter(p => !isOn(t, p)); if (!pool.length) return toast('Everything here is already on.');
+      const p = pool[Math.floor(Math.random() * pool.length)]; applyPreset(t, layered(t, p));
+    } }, 'Surprise me')) : null;
   const grid = el('div', { class: 'pregrid' });
   if (presetCat === 'My presets') top.append(el('label', { class: 'num' }, 'Folder', select([['', 'All folders'], ...folders()], myFolder, v => { myFolder = v; rerender(); })));
   if (!list.length) grid.append(el('p', { class: 'hint' }, presetCat === 'Favorites' ? 'Click the star on a preset to add it here.' : 'No saved presets yet. Set up effects on a track and click Save as my preset.'));
@@ -188,10 +211,10 @@ export function presetsTab(t) {
     const isMine = p.id.startsWith('m:'), active = isOn(t, p);
     const inside = (p.chain ? p.chain() : p.fx).map(f => FX[f.type].name);
     grid.append(el('div', { class: 'precard' + (preview && preview.trackId === t.id && preview.name === p.name ? ' prev' : '') + (active ? ' on' : ''), title: 'Inside: ' + inside.join(', ') },
-      el('div', { class: 'prehead' }, el('b', {}, p.name),
+      el('div', { class: 'prehead' }, active ? eqBars() : null, el('b', {}, p.name), moodOf(p) ? el('span', { class: 'moodtag', 'data-m': moodOf(p) }, moodOf(p)) : null,
         el('button', { class: 'star' + (favs.has(p.id) ? ' on' : ''), title: 'Favorite', onclick: () => { favs.has(p.id) ? favs.delete(p.id) : favs.add(p.id); saveMine(); rerender(); } }, favs.has(p.id) ? '★' : '☆')),
       el('small', {}, isMine ? `${p.folder} · ${p.fx.length} effects` : p.desc),
-      el('div', { class: 'inside' }, inside.map(n => el('span', {}, n))),
+      el('div', { class: 'inside' }, (p.chain ? p.chain() : p.fx).map(f => el('span', { title: (HELP['fx_' + f.type] || {}).what || '' }, FX[f.type].name))),
       el('div', { class: 'prebtns' },
         active ? null : el('button', { onclick: () => startPreview(t, layered(t, p)) }, 'Preview'),
         el('button', { class: active ? 'danger' : 'hot', onclick: () => applyPreset(t, layered(t, p)) }, active ? 'Take off' : ((p.cat || 'Mine') === 'Vocal' ? 'Use' : 'Add')),
@@ -202,7 +225,7 @@ export function presetsTab(t) {
           el('button', { class: 'danger', onclick: async () => { if (await confirmBox('Delete preset', `Delete "${p.name}"?`, 'Delete')) { mine.splice(mine.indexOf(p), 1); favs.delete(p.id); saveMine(); rerender(); } } }, 'Delete'),
         ] : null)));
   }
-  return el('div', { class: 'fxtab' }, top, stack, grid);
+  return el('div', { class: 'fxtab' }, top, steps(t), stack, moodRow, grid);
 }
 
 // ---------- Build My Sound tab ----------
@@ -240,12 +263,26 @@ export function buildTab(t) {
 }
 
 // ---------- Beat maker effects (per instrument or drum row) ----------
+const BEAT_RECIPES = [
+  { name: 'Breakcore crunch', what: 'Smashed, distorted, crunchy drums.', fx: [['comp', { thresh: -30, ratio: 8, makeup: 8, attack: 0.002 }], ['dist', { drive: 0.55, tone: 5000, mix: 0.45 }], ['bitcrush', { bits: 8, tone: 9000, mix: 0.3 }], ['limiter', { ceiling: -1, drive: 3 }]] },
+  { name: 'Jungle break', what: 'Punchy, gritty old-school break sound.', fx: [['eq', { lowcut: 40, body: 2, presence: 3, air: 2 }], ['comp', { thresh: -24, ratio: 5, makeup: 6, attack: 0.003 }], ['sat', { drive: 0.5 }]] },
+  { name: 'Stutter', what: 'Fast on and off chop.', fx: [['tremolo', { rate: 12, depth: 1, shape: 1 }]] },
+  { name: 'Heavenly wash', what: 'Huge dreamy space for pads, bells and choirs.', fx: [['chorus', { rate: 0.4, depth: 0.5, mix: 0.35 }], ['delay', { time: 0.42, feedback: 0.45, tone: 6000, mix: 0.25 }], ['room', { size: 5.5, tone: 10000, mix: 0.5 }]] },
+  { name: 'Dub echo', what: 'Long repeating echo, great on snares and stabs.', fx: [['delay', { time: 0.35, feedback: 0.7, tone: 1800, mix: 0.35 }]] },
+  { name: 'Lo-fi tape', what: 'Warm, wobbly and dusty.', fx: [['sat', { drive: 0.5 }], ['vibrato', { rate: 0.7, depth: 0.2 }], ['bitcrush', { bits: 10, tone: 6000, mix: 0.3 }]] },
+  { name: 'Reese wobble', what: 'Moving filter for dark basses.', fx: [['autowah', { rate: 0.5, freq: 400, depth: 0.7, q: 4, mix: 0.7 }], ['dist', { drive: 0.3, tone: 2500, mix: 0.3 }]] },
+  { name: 'Glitch', what: 'Broken digital stutter.', fx: [['tremolo', { rate: 16, depth: 1, shape: 1 }], ['bitcrush', { bits: 5, tone: 8000, mix: 0.5 }]] },
+];
 export function beatFxPanel(t, rr) {
   t.fx ||= [];
   const add = type => { snapshot(); t.fx.push(newFx(type)); save(); applyMix(); rr(); toast(`${FX[type].name} added to ${t.name}.`); };
   return el('div', { class: 'beatfx fxtab' },
     el('div', { class: 'fxtop' }, el('b', {}, `Effects on ${t.name}`), helpBtn('beatFx'), el('span', { class: 'spacer' }),
       t.fx.length ? el('button', { onclick: () => { snapshot(); t.fx = []; save(); applyMix(); rr(); } }, 'Remove all') : null),
-    el('div', { class: 'fxlib' }, BEAT_FX.map(type => el('button', { class: 'chip', title: FX[type].group, onclick: () => add(type) }, '+ ' + FX[type].name))),
+    el('div', { class: 'explain' }, 'Effects change how this track sounds. Click one to add it, then turn its knobs. Drag a knob up or down. Double-click a knob to reset it. Hover an effect to see what it does.'),
+    el('div', { class: 'recipes' }, el('span', { class: 'hint' }, 'Quick sounds:'), BEAT_RECIPES.map(r => el('button', { class: 'recipe', title: r.what, onclick: () => {
+      snapshot(); for (const [type, params] of r.fx) t.fx.push(newFx(type, params)); save(); applyMix(); rr(); toast(`${r.name} added to ${t.name}. Turn the knobs below to change it.`);
+    } }, r.name)), helpBtn('beatRecipes')),
+    el('div', { class: 'fxlib' }, BEAT_FX.map(type => el('button', { class: 'chip', title: (HELP['fx_' + type] || {}).what || FX[type].group, onclick: () => add(type) }, '+ ' + FX[type].name))),
     t.fx.length ? el('div', { class: 'fxchain' }, t.fx.map((f, i) => fxCard(t, f, i, rr))) : el('p', { class: 'hint' }, 'No effects yet. Click one above. Each one gets its own knobs.'));
 }

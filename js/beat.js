@@ -68,7 +68,7 @@ export async function renderBeat() {
   let starter = 'R&B';
   const top = el('div', { class: 'panel toolbar' },
     el('b', { class: 'section-title' }, 'Beat maker'),
-    el('label', { class: 'num' }, 'BPM', el('input', { type: 'number', min: 40, max: 220, value: app.P.bpm, onchange: e => { snapshot(); app.P.bpm = clamp(+e.target.value || 90, 40, 220); e.target.value = app.P.bpm; applyMix(); save(); refresh(); } }), helpBtn('bpm')),
+    el('label', { class: 'num' }, 'BPM', el('input', { type: 'number', min: 40, max: 300, value: app.P.bpm, onchange: e => { snapshot(); app.P.bpm = clamp(+e.target.value || 90, 40, 300); e.target.value = app.P.bpm; applyMix(); save(); refresh(); } }), helpBtn('bpm')),
     el('label', { class: 'num' }, 'Bars', select([1, 2, 3, 4], b.bars, v => { snapshot(); b.bars = +v; save(); renderBeatEditor(); renderArr(); refresh(); }), helpBtn('bars')),
     knob('Swing', 0, 1, 0.01, b.swing, v => { b.swing = v; save(); }, pct, 'swing'),
     el('label', { class: 'num' }, 'Key', select(NOTE.map((n, i) => [i, n]), b.key, v => { b.key = +v; save(); applyMix(); renderBeatEditor(); }),

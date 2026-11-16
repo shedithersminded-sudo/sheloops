@@ -1,13 +1,14 @@
 // "Now playing" see-through CD player. Shows while anything plays, with my designed disc spinning inside.
 import { el, clamp, select } from './util.js';
 import { app, songEnd } from './state.js';
-import { T, play, stop, currentPos } from './engine.js';
+import { T, E, play, stop, currentPos } from './engine.js';
 import { db } from './store.js';
 import { faceCanvas, ensureDesign, listDesigns } from './art.js';
 import { look, saveLook } from './look.js';
 import { isPreviewing } from './library.js';
 
-const DEF = { mode: 'playing', color: '#ff7fbf', alpha: 0.55, size: 230, x: null, y: 20, disc: 'song', text: 'SHELOOPS', glitter: true };
+const DEF = { mode: 'playing', color: '#ff7fbf', alpha: 0.55, size: 230, x: null, y: 20, disc: 'song', text: 'SHELOOPS', glitter: true,
+  view: 'cd', vizOn: true, vizStyle: 'ring', vizColor: '', rainbow: false, vizGlow: 0.6, vizSens: 1, vizBars: 48 };
 // fill in defaults in place (a fresh copy each call would leave drag and settings editing an old object)
 const P = () => { const p = look.player ||= {}; for (const [k, v] of Object.entries(DEF)) if (p[k] === undefined) p[k] = v; return p; };
 const COLORS = [['#ff7fbf', 'Pink'], ['#a46bff', 'Purple'], ['#4a9bff', 'Blue'], ['#44d48a', 'Green'], ['#ffb347', 'Orange'], ['#e8eef5', 'Clear'], ['#2a2a30', 'Smoke black']];
@@ -51,6 +52,7 @@ function build() {
       box.onpointermove = null; box.classList.remove('dragging');
       if (moved) { saveLook(); return; }
       if (p.collapsed) { setCollapsed(false); return; }
+      if (p.view === 'viz') { if (app.P) (T.playing ? stop() : play()); return; }
       const u = cv.clientWidth / 1000; hitButton((ev.clientX - r.left) / u, (ev.clientY - r.top) / u);
     };
   });
@@ -59,12 +61,12 @@ function build() {
 }
 function setCollapsed(v) { P().collapsed = v; saveLook(); if (v && menu) { menu.remove(); menu = null; } place(); }
 function place() {
-  const p = P(), s = p.collapsed ? 64 : p.size;
-  box.classList.toggle('collapsed', !!p.collapsed);
-  cv.width = cv.height = Math.round(s * devicePixelRatio); cv.style.width = cv.style.height = s + 'px';
-  box.style.width = s + 'px';
-  const x = p.x == null ? innerWidth - s - 24 : p.x;
-  box.style.left = clamp(x, 0, Math.max(0, innerWidth - s)) + 'px'; box.style.top = clamp(p.y, 0, Math.max(0, innerHeight - s)) + 'px';
+  const p = P(), s = p.collapsed ? 64 : p.size, viz = p.view === 'viz' && !p.collapsed, w = viz ? Math.round(s * 1.5) : s, h = viz ? Math.round(s * 0.55) : s;
+  box.classList.toggle('collapsed', !!p.collapsed); box.classList.toggle('vizonly', viz);
+  cv.width = Math.round(w * devicePixelRatio); cv.height = Math.round(h * devicePixelRatio); cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  box.style.width = w + 'px';
+  const x = p.x == null ? innerWidth - w - 24 : p.x;
+  box.style.left = clamp(x, 0, Math.max(0, innerWidth - w)) + 'px'; box.style.top = clamp(p.y, 0, Math.max(0, innerHeight - h)) + 'px';
   box.title = p.collapsed ? 'Click to open the CD player, drag to move' : '';
 }
 function hitButton(x, y) {
@@ -80,7 +82,16 @@ function toggleMenu() {
   if (menu) { menu.remove(); menu = null; lidOpen = false; return; }
   const p = P(), set = (k, v) => { p[k] = v; saveLook(); if (k === 'size') place(); if (k === 'disc') refreshDisc(); };
   menu = el('div', { class: 'np-menu panel' },
-    el('b', {}, 'CD player'),
+    el('b', {}, 'Player and visualizer'),
+    el('div', { class: 'np-views' }, [['cd', 'CD player'], ['viz', 'Visualizer only']].map(([v, l]) => el('button', { class: 'chip' + (p.view === v ? ' on' : ''), onclick: () => { set('view', v); place(); toggleMenu(); toggleMenu(); } }, l))),
+    el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: p.view === 'viz' || p.vizOn, disabled: p.view === 'viz', onchange: e => set('vizOn', e.target.checked) }), 'Music visualizer'),
+    el('div', { class: 'np-views' }, [['ring', 'Ring'], ['bars', 'Bars'], ['mirror', 'Mirror'], ['wave', 'Wave'], ['dots', 'Dots']].map(([v, l]) => el('button', { class: 'chip' + (p.vizStyle === v ? ' on' : ''), onclick: () => { set('vizStyle', v); toggleMenu(); toggleMenu(); } }, l))),
+    el('div', { class: 'np-colors' }, el('span', { class: 'hint' }, 'Visualizer color'), el('input', { type: 'color', value: p.vizColor || p.color, oninput: e => set('vizColor', e.target.value) }),
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: p.rainbow, onchange: e => set('rainbow', e.target.checked) }), 'Rainbow')),
+    el('label', { class: 'knob' }, 'Glow', el('input', { type: 'range', min: 0, max: 1, step: 0.01, value: p.vizGlow, oninput: e => set('vizGlow', +e.target.value) })),
+    el('label', { class: 'knob' }, 'Bounce (how much it reacts)', el('input', { type: 'range', min: 0.4, max: 2.5, step: 0.05, value: p.vizSens, oninput: e => set('vizSens', +e.target.value) })),
+    el('label', { class: 'knob' }, 'Number of bars', el('input', { type: 'range', min: 16, max: 96, step: 4, value: p.vizBars, oninput: e => set('vizBars', +e.target.value) })),
+    el('b', {}, 'Player look'),
     el('label', { class: 'num' }, 'Show', select([['playing', 'While playing'], ['always', 'Always'], ['never', 'Never']], p.mode, v => set('mode', v))),
     el('div', { class: 'np-colors' }, COLORS.map(([c, n]) => el('button', { class: 'swatchbtn', title: n, style: `background:${c}`, onclick: () => set('color', c) })),
       el('input', { type: 'color', value: p.color, oninput: e => set('color', e.target.value) })),
@@ -98,6 +109,76 @@ function toggleMenu() {
   const left = r.left - 262 >= 8 ? r.left - 262 : (r.right + 12 + 250 <= innerWidth ? r.right + 12 : clamp(r.left, 8, innerWidth - 260));
   menu.style.left = left + 'px'; menu.style.top = clamp(r.top, 8, Math.max(8, innerHeight - 440)) + 'px';
   listDesigns().then(ds => { const s = menu && menu.querySelector('#np-disc'); if (!s) return; for (const d of ds.filter(x => !x.template)) s.append(el('option', { value: d.id, selected: p.disc === d.id }, d.name)); });
+}
+
+// ---------- visualizer ----------
+let fbuf = null, tbuf = null, smooth = new Float32Array(128), peaks = new Float32Array(128);
+function vizData(n) {
+  const an = E.g && E.g.analyser, p = P();
+  if (an) {
+    if (!fbuf || fbuf.length !== an.frequencyBinCount) { fbuf = new Uint8Array(an.frequencyBinCount); tbuf = new Uint8Array(an.fftSize); }
+    an.getByteFrequencyData(fbuf); an.getByteTimeDomainData(tbuf);
+  }
+  const live = an && playing(), now = performance.now() / 1000;
+  for (let i = 0; i < n; i++) {
+    let v;
+    if (live) { // log spaced bands, bass on the left
+      const a = Math.floor(Math.pow(i / n, 1.8) * fbuf.length * 0.7), b = Math.max(a + 1, Math.floor(Math.pow((i + 1) / n, 1.8) * fbuf.length * 0.7));
+      let m = 0; for (let k = a; k < b; k++) m = Math.max(m, fbuf[k]); v = Math.pow(m / 255, 1.4) * p.vizSens * (1 + i / n * 0.6);
+    } else v = 0.06 + 0.05 * Math.sin(now * 2 + i * 0.4); // idle: gentle breathing
+    v = Math.min(1, v);
+    smooth[i] += (v - smooth[i]) * (v > smooth[i] ? 0.6 : 0.18);
+    peaks[i] = Math.max(smooth[i], peaks[i] - 0.012);
+  }
+  return { bars: smooth, peaks, wave: live ? tbuf : null };
+}
+const vcol = (p, i, n) => p.rainbow ? `hsl(${(i / n * 300 + performance.now() / 20) % 360} 100% 62%)` : (p.vizColor || p.color);
+function glow(g, p, c) { g.shadowColor = c; g.shadowBlur = p.vizGlow * 24 * devicePixelRatio; }
+// draws the chosen style inside a box (x, y, w, h) or around a circle (ring)
+function drawViz(g, p, x, y, w, h, ring) {
+  const n = ring ? Math.max(32, p.vizBars) : p.vizBars, d = vizData(n), st = ring ? 'ring' : p.vizStyle;
+  g.save(); g.lineCap = 'round';
+  if (st === 'ring') {
+    const { cx, cy, r, len } = ring || { cx: x + w / 2, cy: y + h / 2, r: Math.min(w, h) * 0.26, len: Math.min(w, h) * 0.22 };
+    g.lineWidth = Math.max(3, 2 * Math.PI * r / n * 0.55);
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + i / n * Math.PI * 2, v = d.bars[i < n / 2 ? i * 2 : (n - i) * 2 - 1] || d.bars[i], c = vcol(p, i, n);
+      g.strokeStyle = c; glow(g, p, c);
+      g.beginPath(); g.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); g.lineTo(cx + Math.cos(a) * (r + 6 + v * len), cy + Math.sin(a) * (r + 6 + v * len)); g.stroke();
+    }
+  } else if (st === 'wave') {
+    g.lineWidth = Math.max(3, h / 30); const c = vcol(p, 0, 1); g.strokeStyle = c; glow(g, p, c); g.beginPath();
+    for (let i = 0; i <= 200; i++) {
+      const v = d.wave ? (d.wave[Math.floor(i / 200 * (d.wave.length - 1))] - 128) / 128 * p.vizSens : Math.sin(i / 12 + performance.now() / 400) * 0.08;
+      const X = x + i / 200 * w, Y = y + h / 2 + v * h * 0.45; i ? g.lineTo(X, Y) : g.moveTo(X, Y);
+    }
+    g.stroke();
+  } else { // bars, mirror, dots
+    const bw = w / n;
+    for (let i = 0; i < n; i++) {
+      const v = d.bars[i], c = vcol(p, i, n), X = x + i * bw + bw * 0.15, W = bw * 0.7;
+      g.fillStyle = c; glow(g, p, c);
+      if (st === 'mirror') { const H = Math.max(2, v * h * 0.5); g.fillRect(X, y + h / 2 - H, W, H * 2); }
+      else if (st === 'dots') { const k = Math.round(v * 10); for (let j = 0; j < k; j++) { g.beginPath(); g.arc(X + W / 2, y + h - (j + 0.5) * h / 10, W * 0.4, 0, 7); g.fill(); } }
+      else { const H = Math.max(2, v * h); g.fillRect(X, y + h - H, W, H); g.globalAlpha = 0.9; g.fillRect(X, y + h - d.peaks[i] * h - 4, W, 3); g.globalAlpha = 1; }
+    }
+  }
+  g.restore();
+}
+function drawVizOnly(dt) {
+  const p = P(), g = cv.getContext('2d'), k = cv.width / 1000, H = 1000 * cv.height / cv.width;
+  g.setTransform(k, 0, 0, k, 0, 0); g.clearRect(0, 0, 1000, H);
+  g.save(); g.beginPath(); g.roundRect(8, 8, 984, H - 16, 40); g.fillStyle = p.color; g.globalAlpha = p.alpha * 0.55; g.fill();
+  g.globalAlpha = 1; g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 4; g.stroke(); g.clip();
+  drawViz(g, p, 50, 60, 900, H - 150);
+  g.restore();
+  // name and time strip
+  const pos = T.playing ? currentPos() : app.playhead || 0, t = `${String(Math.floor(pos / 60)).padStart(2, '0')}:${String(Math.floor(pos % 60)).padStart(2, '0')}`;
+  g.fillStyle = 'rgba(255,255,255,.92)'; g.font = '700 40px "Cascadia Mono", monospace'; g.textBaseline = 'middle'; g.textAlign = 'left';
+  g.shadowColor = p.vizColor || p.color; g.shadowBlur = p.vizGlow * 16 * devicePixelRatio;
+  g.fillText((playing() ? '▶ ' : '■ ') + t, 50, H - 50);
+  g.textAlign = 'right'; g.font = '600 34px "Cascadia Mono", monospace'; g.fillText((app.P ? app.P.name : '').slice(0, 26), 950, H - 50);
+  g.shadowBlur = 0;
 }
 
 // ---------- drawing ----------
@@ -118,6 +199,7 @@ function drawMini() { // small spinning disc bubble when closed
 function draw(dt) {
   const p = P(), g = cv.getContext('2d'), k = cv.width / 1000;
   if (p.collapsed) return drawMini();
+  if (p.view === 'viz') return drawVizOnly(dt);
   lid += ((lidOpen ? 1 : 0) - lid) * Math.min(1, dt * 8);
   g.setTransform(k, 0, 0, k, 0, 0); g.clearRect(0, 0, 1000, 1000);
   const cx = 500, cy = 440, R = 360;
@@ -143,6 +225,7 @@ function draw(dt) {
   g.beginPath(); g.arc(cx, cy, 70, 0, 7); g.stroke();
   g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.arc(cx, cy, 34, 0, 7); g.fill();
   g.restore();
+  if (p.vizOn) { if (p.vizStyle === 'ring') drawViz(g, p, 0, 0, 0, 0, { cx, cy, r: R + 44, len: 62 }); else drawViz(g, p, 70, 800, 820, 85); }
   // laser window (curved slot) with glitter
   g.beginPath(); g.arc(cx, cy, 300, Math.PI * 0.18, Math.PI * 0.82); g.arc(cx, cy, 225, Math.PI * 0.8, Math.PI * 0.2, true); g.closePath();
   g.save(); g.fillStyle = p.color; g.globalAlpha = Math.min(1, p.alpha + 0.35); g.fill(); g.restore();

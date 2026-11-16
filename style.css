@@ -1000,3 +1000,67 @@ body.simple .dialknob.adv { display: none; }
 @keyframes sweepX { to { background-position: -200% 0; } }
 @keyframes cardIn { from { opacity: 0; transform: translateY(6px); } }
 @media (prefers-reduced-motion: reduce) { h1, .fxcard, .fxcard::before, .precard, .layer, .fxhead .led { animation: none !important; } }
+
+/* ===== 1.3: explanations, moods, live bars, text glow, mouse fx ===== */
+/* plain explanations only show in Simple mode */
+.explain { display: none; }
+body.simple .explain { display: block; font-size: 12px; line-height: 1.45; color: var(--dim); padding: 7px 10px; border-left: 2px solid var(--led); background: color-mix(in srgb, var(--led) 6%, transparent); border-radius: 2px; }
+body.simple .explain b { color: var(--text); }
+body.simple .explain i { display: block; font-style: normal; margin-top: 3px; }
+body.simple .explain .try { display: block; margin-top: 3px; color: var(--led); font-weight: 700; }
+body.simple .fxcard { max-width: 340px; }
+.tabexplain { margin: 6px 12px 0; }
+body.simple .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0; border: 0; background: none; }
+.step { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 9px; text-align: left; padding: 8px 10px; border-radius: 3px; }
+.step .num { grid-row: span 2; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 400 15px var(--label); border: 1px solid var(--led); color: var(--led); }
+.step b { font: 400 15px var(--label); letter-spacing: .08em; }
+.step small { color: var(--dim); font-size: 11px; }
+.step.on { border-color: var(--led); box-shadow: 0 0 16px -6px var(--glow); }
+.step.done .num { background: var(--green); border-color: var(--green); color: #111; box-shadow: 0 0 10px var(--green); }
+@media (max-width: 700px) { body.simple .steps { grid-template-columns: 1fr; } }
+
+/* moods */
+.moods { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mood { font: 400 14px var(--label); letter-spacing: .08em; padding: 3px 10px; border-radius: 2px; display: inline-flex; gap: 6px; align-items: center; --m: var(--led); }
+.mood small { font: 600 9px var(--mono); opacity: .6; }
+.mood.on { color: #111; background: var(--m); border-color: var(--m); box-shadow: 0 0 16px -2px var(--m); }
+.mood:hover { border-color: var(--m); color: var(--m); }
+.mood.on:hover { color: #111; }
+[data-m=Fun] { --m: #ffd84a; } [data-m=Scary] { --m: #ff4a5e; } [data-m=Robot] { --m: #5ed3ff; } [data-m=Retro] { --m: #ffb347; }
+[data-m=Places] { --m: #6dffb0; } [data-m=Dreamy] { --m: #c08bff; } [data-m=Clear] { --m: #9fe8ff; } [data-m=Warm] { --m: #ff9a5e; } [data-m=Loud] { --m: #ff5ea8; } [data-m=Space] { --m: #8a9bff; }
+.moodtag { font: 400 11px var(--label); letter-spacing: .08em; padding: 0 5px; border: 1px solid var(--m); color: var(--m); border-radius: 2px; margin-left: auto; }
+.precard[class] .prehead { display: flex; align-items: center; gap: 6px; }
+.precard:has(.moodtag):hover { box-shadow: 0 12px 26px -16px var(--glow), inset 0 -2px 0 color-mix(in srgb, var(--led) 60%, transparent); }
+.surprise { font: 400 15px var(--label); letter-spacing: .1em; }
+.surprise::before { content: '⚄ '; }
+
+/* live bars on what is on */
+.eqbars { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; flex: none; }
+.eqbars i { width: 3px; background: var(--led); box-shadow: 0 0 6px var(--led); animation: eqb .9s ease-in-out infinite; }
+.eqbars i:nth-child(2) { animation-delay: -.3s; } .eqbars i:nth-child(3) { animation-delay: -.6s; } .eqbars i:nth-child(4) { animation-delay: -.15s; }
+@keyframes eqb { 0%, 100% { height: 3px; } 50% { height: 12px; } }
+
+/* text glow (Appearance) */
+html.tglow body { text-shadow: 0 0 calc(var(--tga) * 4px) color-mix(in srgb, var(--tgc) 70%, transparent), 0 0 calc(var(--tga) * 14px) color-mix(in srgb, var(--tgc) 45%, transparent); }
+html.tglow.tg-soft body { text-shadow: 0 0 calc(var(--tga) * 10px) color-mix(in srgb, var(--tgc) 40%, transparent); }
+html.tglow input, html.tglow select, html.tglow textarea, html.tglow kbd, html.tglow .inside span { text-shadow: none; }
+html.tglow :is(h1, .ed-head h2, .modal-head h3, .stacktitle, .itab.on, .navbtn.on) { text-shadow: 0 0 calc(var(--tga) * 8px) var(--tgc), 0 0 calc(var(--tga) * 26px) var(--tgc); }
+html.tg-pulse :is(.ed-head h2, .modal-head h3, .stacktitle, .h2, .insp-sub) { animation: tgPulse 3.2s ease-in-out infinite; }
+@keyframes tgPulse { 50% { text-shadow: 0 0 calc(var(--tga) * 14px) var(--tgc), 0 0 calc(var(--tga) * 40px) var(--tgc); } }
+.glowdemo { font: 400 22px var(--display); color: var(--text); text-shadow: 0 0 calc(var(--tga) * 8px) var(--tgc), 0 0 calc(var(--tga) * 26px) var(--tgc); padding: 0 10px; }
+html:not(.tglow) .glowdemo { text-shadow: none; }
+
+/* mouse fx */
+#curfx .spot { position: absolute; left: 0; top: 0; width: 360px; height: 360px; margin: -180px 0 0 -180px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--cc) 16%, transparent), transparent 65%); mix-blend-mode: screen; display: none; }
+#curfx .halo.h-orbit, #curfx .halo.h-breathe { display: block; }
+#curfx .halo.h-orbit::after { content: ''; position: absolute; left: 50%; top: 0; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--cc); box-shadow: 0 0 8px var(--cc); transform-origin: 3px calc(var(--cs) / 2); animation: hspin 1.2s linear infinite; }
+#curfx .halo.h-breathe::after { content: ''; position: absolute; inset: 20%; border-radius: 50%; background: radial-gradient(circle, var(--cc), transparent 70%); animation: hbreathe 2s ease-in-out infinite; }
+@keyframes hbreathe { 50% { transform: scale(1.8); opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .eqbars i, html.tg-pulse * { animation: none !important; } }
+.recipes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.recipe { font: 400 14px var(--label); letter-spacing: .08em; padding: 4px 10px; border-color: color-mix(in srgb, var(--led) 50%, var(--line)); background: linear-gradient(180deg, color-mix(in srgb, var(--led) 14%, var(--btn)), var(--btn)); }
+.recipe::before { content: '◆ '; color: var(--led); }
+.np-views { display: flex; gap: 4px; flex-wrap: wrap; }
+.np-menu { max-height: calc(100vh - 16px); overflow-y: auto; }
+.np-menu > b { font: 400 15px var(--label); letter-spacing: .1em; color: var(--led); }
+#nowplaying.vizonly { filter: drop-shadow(0 12px 26px rgba(0,0,0,.5)); }

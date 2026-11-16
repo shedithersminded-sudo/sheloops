@@ -52,7 +52,10 @@ export const look = Object.assign({
   cursor: { on: false, design: 'dot', color: '#ff6a1a', size: 24, glow: 0.5, trail: 'none', click: 'ripple', anim: 'none', image: null, safe: true },
   layout: { ...DEFAULT_LAYOUT }, workspaces: [],
   font: 'Fredoka', logo: { has: false, size: 34, shape: 'none', text: true },
+  glow: { on: true, color: '', amount: 0.45, style: 'neon', text: '' },
 }, JSON.parse(localStorage.getItem(KEY) || '{}'));
+look.glow = { on: true, color: '', amount: 0.45, style: 'neon', text: '', ...(look.glow || {}) };
+look.cursor = { trailLen: 450, spot: false, ...look.cursor };
 look.layout = { ...DEFAULT_LAYOUT, ...look.layout };
 // 2026-11 new studio look: move the old default font to the new one once
 if ((look.skinV || 0) < 2) { if (!look.font || look.font === 'Fredoka') look.font = 'Comfortaa'; look.skinV = 2; }
@@ -77,6 +80,7 @@ export async function applyLook() {
   root.classList.toggle('light', lum(th.c.bg) > 0.5);
   resetCssVars();
   applyFont();
+  applyGlow();
   await applyLogo();
   await applyBackground();
   applyCursor();
@@ -111,6 +115,16 @@ export async function setBackgroundImage(file) {
   look.bg.hasImage = true; look.bg.type = 'image'; saveLook(); await applyBackground();
 }
 
+// ---------- text glow ----------
+export function applyGlow() {
+  const g = look.glow, root = document.documentElement, th = currentTheme();
+  root.classList.toggle('tglow', !!g.on);
+  root.classList.toggle('tg-pulse', !!g.on && g.style === 'pulse');
+  root.classList.toggle('tg-soft', !!g.on && g.style === 'soft');
+  root.style.setProperty('--tgc', g.color || th.c.led);
+  root.style.setProperty('--tga', String(g.amount));
+  if (g.text) root.style.setProperty('--text', g.text); else root.style.setProperty('--text', th.c.text);
+}
 // ---------- font ----------
 export const FONTS_UI = [['Comfortaa', 'SHELOOPS look (default)'], ['Fredoka', 'Round and friendly'], ['Baloo 2', 'Bubbly and bold'], ['Nunito', 'Soft and clean'], ['Quicksand', 'Light and airy'], ['Space Grotesk', 'Modern and simple'], ['Cascadia Mono', 'Studio code look (original)']];
 export function applyFont() {
@@ -143,7 +157,7 @@ export async function applyLogo() {
   document.dispatchEvent(new Event('logochange'));
 }
 // ---------- cursor ----------
-let curStyle, overlay, halo, trailCv, trailPts = [], lastSafe = false;
+let curStyle, overlay, halo, spot, trailCv, trailPts = [], parts = [], lastSafe = false, hue = 0;
 export function cursorImage(c = look.cursor) {
   const S = clamp(c.size, 12, 64), pad = Math.round(c.glow * 12), W = S + pad * 2, cv = el('canvas', { width: W, height: W }), g = cv.getContext('2d');
   g.translate(pad, pad);
@@ -180,31 +194,49 @@ function hideFx() { if (overlay) overlay.style.display = 'none'; }
 function setupFx() {
   const c = look.cursor;
   if (!overlay) {
-    overlay = el('div', { id: 'curfx' }); halo = el('div', { class: 'halo' }); trailCv = el('canvas', { class: 'trail' });
-    overlay.append(trailCv, halo); document.body.append(overlay);
+    overlay = el('div', { id: 'curfx' }); halo = el('div', { class: 'halo' }); spot = el('div', { class: 'spot' }); trailCv = el('canvas', { class: 'trail' });
+    overlay.append(spot, trailCv, halo); document.body.append(overlay);
     const size = () => { trailCv.width = innerWidth; trailCv.height = innerHeight; }; size(); addEventListener('resize', size);
     addEventListener('pointermove', e => {
       if (!look.cursor.on) return;
       lastSafe = look.cursor.safe && !!(e.target.closest && e.target.closest(SAFE));
       halo.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`; halo.style.opacity = lastSafe ? 0 : 1;
+      spot.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
       if (look.cursor.trail !== 'none' && !lastSafe) trailPts.push({ x: e.clientX, y: e.clientY, t: performance.now(), r: Math.random() });
     }, { passive: true });
     addEventListener('pointerdown', e => {
       const k = look.cursor.click; if (!look.cursor.on || k === 'none') return;
+      if (PARTICLE_CLICKS.has(k)) { burstParts(k, e.clientX, e.clientY); return; }
       const r = el('div', { class: 'clickfx ' + k, style: `left:${e.clientX}px;top:${e.clientY}px;--cc:${look.cursor.color}` });
       overlay.append(r); setTimeout(() => r.remove(), 600);
     }, { passive: true, capture: true });
     const loop = () => {
       const g = trailCv.getContext('2d'), now = performance.now(), col = look.cursor.color, mode = look.cursor.trail;
       g.clearRect(0, 0, trailCv.width, trailCv.height);
-      trailPts = trailPts.filter(p => now - p.t < 450);
+      const life = look.cursor.trailLen || 450; hue = (hue + 2) % 360;
+      trailPts = trailPts.filter(p => now - p.t < life);
       if (look.cursor.on && mode !== 'none' && trailPts.length) {
         g.fillStyle = col; g.strokeStyle = col; g.shadowColor = col; g.shadowBlur = 8 * look.cursor.glow;
-        if (mode === 'line') { g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); trailPts.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.globalAlpha = 0.6; g.stroke(); }
+        if (mode === 'comet') { g.lineCap = 'round'; for (let i = 1; i < trailPts.length; i++) { const a = i / trailPts.length; g.globalAlpha = a * 0.8; g.lineWidth = 1 + a * 9; g.beginPath(); g.moveTo(trailPts[i - 1].x, trailPts[i - 1].y); g.lineTo(trailPts[i].x, trailPts[i].y); g.stroke(); } }
+        else if (mode === 'rainbow') for (const p of trailPts) { const a = 1 - (now - p.t) / life; g.globalAlpha = a; g.fillStyle = g.shadowColor = `hsl(${(p.t / 4) % 360} 100% 65%)`; g.beginPath(); g.arc(p.x, p.y, 5 * a + 1, 0, 7); g.fill(); }
+        else if (mode === 'notes') for (const p of trailPts) { if (p.r > 0.3) continue; const a = 1 - (now - p.t) / life; g.globalAlpha = a; g.font = `${12 + p.r * 20}px sans-serif`; g.fillText(p.r > 0.15 ? '♪' : '♫', p.x + (p.r - 0.15) * 60, p.y - (1 - a) * 30); }
+        else if (mode === 'bubbles') for (const p of trailPts) { const a = 1 - (now - p.t) / life; g.globalAlpha = a * 0.7; g.lineWidth = 1.5; g.beginPath(); g.arc(p.x + (p.r - 0.5) * 20, p.y - (1 - a) * 24, 2 + p.r * 6, 0, 7); g.stroke(); }
+        else if (mode === 'line') { g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); trailPts.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.globalAlpha = 0.6; g.stroke(); }
         else for (const p of trailPts) {
-          const a = 1 - (now - p.t) / 450; g.globalAlpha = a * 0.8;
+          const a = 1 - (now - p.t) / life; g.globalAlpha = a * 0.8;
           if (mode === 'sparkle') { const s = 2 + p.r * 4, x = p.x + (p.r - 0.5) * 16, y = p.y + ((p.r * 7) % 1 - 0.5) * 16; g.fillRect(x - s / 2, y - 0.5, s, 1); g.fillRect(x - 0.5, y - s / 2, 1, s); }
           else { g.beginPath(); g.arc(p.x, p.y, 4 * a + 1, 0, 7); g.fill(); }
+        }
+        g.globalAlpha = 1;
+      }
+      if (parts.length) {
+        parts = parts.filter(q => now - q.t < q.life);
+        for (const q of parts) {
+          const k = (now - q.t) / 1000, a = 1 - (now - q.t) / q.life, x = q.x + q.vx * k, y = q.y + q.vy * k + 260 * q.gr * k * k;
+          g.globalAlpha = a; g.fillStyle = g.shadowColor = q.c; g.shadowBlur = 10 * look.cursor.glow;
+          if (q.ch) { g.font = `${q.s}px sans-serif`; g.fillText(q.ch, x, y); }
+          else if (q.ring) { g.strokeStyle = q.c; g.lineWidth = 2 * a; g.beginPath(); g.arc(q.x, q.y, 6 + k * q.vx, 0, 7); g.stroke(); }
+          else { g.save(); g.translate(x, y); g.rotate(k * q.rot); g.fillRect(-q.s / 2, -q.s / 4, q.s, q.s / 2); g.restore(); }
         }
         g.globalAlpha = 1;
       }
@@ -213,10 +245,22 @@ function setupFx() {
     loop();
   }
   overlay.style.display = '';
+  spot.style.display = c.spot ? 'block' : 'none'; spot.style.setProperty('--cc', c.color);
   halo.className = 'halo ' + (c.anim !== 'none' ? 'h-' + c.anim : '');
   halo.style.setProperty('--cc', c.color); halo.style.setProperty('--cs', (c.size * 1.6) + 'px');
 }
-export function resetCursor() { look.cursor = { on: false, design: 'dot', color: currentTheme().c.led, size: 24, glow: 0.5, trail: 'none', click: 'ripple', anim: 'none', image: null, safe: true }; saveLook(); applyCursor(); }
+const PARTICLE_CLICKS = new Set(['notes', 'confetti', 'shockwave', 'stars']);
+function burstParts(k, x, y) {
+  const col = look.cursor.color, t = performance.now(), R = Math.random;
+  if (k === 'shockwave') { for (const [v, d] of [[90, 0], [150, 70], [210, 140]]) parts.push({ ring: true, x, y, vx: v, t: t + d, life: 600, c: col }); return; }
+  for (let i = 0; i < (k === 'confetti' ? 22 : 8); i++) {
+    const a = R() * Math.PI * 2, sp = 60 + R() * 160;
+    if (k === 'confetti') parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120, gr: 1, s: 5 + R() * 5, rot: R() * 12, t, life: 900, c: `hsl(${R() * 360} 95% 62%)` });
+    else if (k === 'notes') parts.push({ x, y, vx: (R() - 0.5) * 120, vy: -60 - R() * 120, gr: 0.2, ch: R() > 0.5 ? '♪' : '♫', s: 14 + R() * 12, t, life: 900, c: col });
+    else parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, gr: 0.4, ch: '✦', s: 10 + R() * 10, t, life: 700, c: col });
+  }
+}
+export function resetCursor() { look.cursor = { on: false, design: 'dot', color: currentTheme().c.led, size: 24, glow: 0.5, trail: 'none', click: 'ripple', anim: 'none', image: null, safe: true, trailLen: 450, spot: false }; saveLook(); applyCursor(); }
 
 // ---------- layout ----------
 export function applyLayout() {

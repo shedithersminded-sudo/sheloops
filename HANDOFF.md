@@ -185,3 +185,11 @@ Stage 8 (AI helper, tour, desktop app) was skipped by the user on 2026-11-16 ("d
 - Beat tracks now have fx chains (engine nodeFor, syncFx for beat tracks). UI: beat.js `fxDrawer()` uses fxui `beatFxPanel()`. `BEAT_FX` in fx.js.
 - New fx types: bitcrush, autowah, tremolo, vibrato, delay, room. Tune has `shift`.
 - Fonts: headings Bungee, labels Bebas Neue (both already vendored), body still the chosen font.
+
+## 1.3.0 explanations, moods, genres, glow, visualizer
+- Simple mode: `.explain` blocks are hidden unless body.simple. studio.js TAB_EXPLAIN, fxui steps(), fxCard shows HELP what/how/start.
+- presets.js MOODS + moodOf (MOOD_OF by preset name). fxui: mood row, Surprise me, eqBars on active items.
+- Genres: STARTERS Jungle, Drum & Bass, Breakcore, Heavenly Breakcore. PERC adds breaksnare, ghost, airhorn, siren, rewind (kit Jungle). fxui BEAT_RECIPES = Quick sounds. BPM max 300.
+- look.glow {on,color,amount,style,text} -> applyGlow() sets html.tglow and --tgc/--tga, can override --text.
+- Cursor: trails comet/rainbow/notes/bubbles, trailLen, particle clicks (notes, confetti, shockwave, stars), spot, halo orbit/breathe.
+- nowplaying.js: view 'cd' | 'viz', vizOn, vizStyle ring/bars/mirror/wave/dots, vizColor, rainbow, vizGlow, vizSens, vizBars. Reads E.g.analyser.

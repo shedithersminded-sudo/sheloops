@@ -6,7 +6,7 @@ import { settings, saveSettings } from './store.js';
 import { openPlayerSettings } from './nowplaying.js';
 import { playIntro, introOn, setIntro } from './intro.js';
 import { FONTS_UI, applyFont, setLogo, removeLogo, logoURL, applyLogo } from './look.js';
-import { look, saveLook, applyLook, applyCursor, applyLayout, allThemes, currentTheme, THEME_KEYS, THEMES, derive, BUILT_IN_WORKSPACES, TOOL_NAMES, setBackgroundImage, resetCursor, trackColors, cursorImage } from './look.js';
+import { look, saveLook, applyLook, applyCursor, applyGlow, applyLayout, allThemes, currentTheme, THEME_KEYS, THEMES, derive, BUILT_IN_WORKSPACES, TOOL_NAMES, setBackgroundImage, resetCursor, trackColors, cursorImage } from './look.js';
 
 const redraw = () => renderAppearance();
 const pickFile = accept => new Promise(res => { const i = el('input', { type: 'file', accept }); i.onchange = () => res(i.files[0] || null); i.click(); });
@@ -18,7 +18,7 @@ export function renderAppearance() {
   view.append(el('div', { class: 'appearance' },
     el('div', { class: 'ptop' }, el('h1', {}, 'My studio appearance'), helpBtn('appearance')),
     el('p', { class: 'hint' }, 'Everything here saves by itself and is included in your studio file (My sound page).'),
-    logoFontPanel(), themesPanel(), backgroundPanel(), cursorPanel(), playerPanel(), layoutPanel()));
+    logoFontPanel(), glowPanel(), themesPanel(), backgroundPanel(), cursorPanel(), playerPanel(), layoutPanel()));
 }
 
 // ---------- logo + font ----------
@@ -99,6 +99,27 @@ function backgroundPanel() {
       knob('See-through panels', 0, 0.7, 0.01, look.see, async v => { look.see = v; saveLook(); await applyLook(); }, v => Math.round(v * 100) + '%', 'seeThrough')));
 }
 
+// ---------- text glow ----------
+function glowPanel() {
+  const g = look.glow, set = (k, v, re = true) => { g[k] = v; saveLook(); applyGlow(); if (re) redraw(); };
+  return el('div', { class: 'panel mpanel glowpanel' },
+    el('div', { class: 'insp-sub' }, 'Text glow and color', helpBtn('textGlow')),
+    el('p', { class: 'hint' }, 'Makes the words in the app glow. Pick the glow color, how strong it is, and the text color.'),
+    el('div', { class: 'fxtop' },
+      el('button', { class: 'tog' + (g.on ? ' on' : ''), onclick: () => set('on', !g.on) }, g.on ? 'Glow ON' : 'Glow OFF'),
+      el('span', { class: 'glowdemo' }, 'SHELOOPS glow')),
+    g.on ? [
+      chips([['soft', 'Soft'], ['neon', 'Neon'], ['pulse', 'Pulse (titles breathe)']], g.style, v => set('style', v)),
+      el('div', { class: 'knobrow' },
+        el('label', { class: 'num' }, 'Glow color', color(g.color || currentTheme().c.led, v => set('color', v, false))),
+        g.color ? el('button', { onclick: () => set('color', '') }, 'Use theme accent') : null,
+        knob('Strength', 0, 1, 0.01, g.amount, v => set('amount', v, false), v => Math.round(v * 100) + '%', null, 'dial')),
+    ] : null,
+    el('div', { class: 'knobrow' },
+      el('label', { class: 'num' }, 'Text color', color(g.text || currentTheme().c.text, v => set('text', v, false))),
+      g.text ? el('button', { onclick: () => set('text', '') }, 'Use theme text color') : null));
+}
+
 // ---------- cursor ----------
 function cursorPanel() {
   const c = look.cursor;
@@ -128,9 +149,13 @@ function cursorPanel() {
         el('label', { class: 'num' }, 'Color', color(c.color, v => set('color', v, false))),
         knob('Size', 12, 64, 1, c.size, v => set('size', v, false), v => v + 'px'),
         knob('Glow', 0, 1, 0.01, c.glow, v => set('glow', v, false), v => Math.round(v * 100) + '%'),
-        el('label', { class: 'num' }, 'Animation', select([['none', 'None'], ['pulse', 'Pulse'], ['spin', 'Spinning ring']], c.anim, v => set('anim', v, false))),
-        el('label', { class: 'num' }, 'Trail', select([['none', 'None'], ['dots', 'Dots'], ['sparkle', 'Sparkles'], ['line', 'Line']], c.trail, v => set('trail', v, false))),
-        el('label', { class: 'num' }, 'Click effect', select([['none', 'None'], ['ripple', 'Ripple'], ['burst', 'Burst']], c.click, v => set('click', v, false)))),
+        el('label', { class: 'num' }, 'Animation', select([['none', 'None'], ['pulse', 'Pulse'], ['spin', 'Spinning ring'], ['orbit', 'Orbiting dot'], ['breathe', 'Breathing glow']], c.anim, v => set('anim', v, false)))),
+      el('div', { class: 'insp-sub' }, 'Trail (follows the mouse)'),
+      chips([['none', 'None'], ['dots', 'Dots'], ['sparkle', 'Sparkles'], ['line', 'Line'], ['comet', 'Comet'], ['rainbow', 'Rainbow'], ['notes', 'Music notes'], ['bubbles', 'Bubbles']], c.trail, v => set('trail', v)),
+      c.trail !== 'none' ? knob('Trail length', 150, 1500, 10, c.trailLen || 450, v => set('trailLen', v, false), v => (v / 1000).toFixed(2) + 's') : null,
+      el('div', { class: 'insp-sub' }, 'Click effect'),
+      chips([['none', 'None'], ['ripple', 'Ripple'], ['burst', 'Burst'], ['shockwave', 'Shockwave'], ['stars', 'Stars'], ['notes', 'Music notes'], ['confetti', 'Confetti']], c.click, v => set('click', v)),
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!c.spot, onchange: e => set('spot', e.target.checked, false) }), 'Spotlight: a soft glow that follows the mouse'),
       el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: c.safe, onchange: e => set('safe', e.target.checked, false) }), 'Use the normal cursor on the timeline, drum grid, piano roll and faders (recommended)', helpBtn('cursorSafe')),
     ] : null);
 }
@@ -139,7 +164,7 @@ function cursorPanel() {
 function playerPanel() {
   return el('div', { class: 'panel mpanel' }, el('div', { class: 'insp-sub' }, 'Now playing CD player', helpBtn('cdplayer')),
     el('p', { class: 'hint' }, 'A see-through CD player with your own disc spinning inside whenever music plays. Change its color, size, text, which disc it shows, and when it appears.'),
-    el('button', { class: 'hot', onclick: () => openPlayerSettings() }, 'Customize the CD player'));
+    el('button', { class: 'hot', onclick: () => openPlayerSettings() }, 'Customize the CD player and visualizer'));
 }
 // ---------- layout + workspaces ----------
 function layoutPanel() {
