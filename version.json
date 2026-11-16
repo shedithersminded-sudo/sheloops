@@ -1,16 +1,27 @@
 {
-  "version": "1.4.0",
+  "version": "1.5.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "New Pad machine: 16 glowing pads in 4 banks with an LCD screen and LED meter. Play drums, instruments, chords, My sounds or your own voice recorded onto a pad.",
-    "Every pad has its own effects and knobs. Record loops, then save them to My sounds with effects, send them to the beat maker, or download a WAV.",
-    "Outsider house tools: Outsider House, Acid House and Rave Breaks starters, house organ, house piano, rave stab, hoover and acid bass, a House drum kit with vinyl crackle.",
-    "New effects: Filter sweep and Vinyl dust. New Quick sounds: Outsider dust, House pump, Filter sweep, Acid squelch, Warehouse.",
-    "House voice effects: Muffled Diva, Warehouse, Filter Sweep Vocal, Old Soul Sample, Underground, Late Night Radio, Fighting Demons and more. Lonely Breakcore starter.",
-    "Home now has a welcome guide: try themes and glow, pick Simple or Advanced, and start a song in any of 17 styles with one click."
+    "84 new drum sounds: 15 kicks, 15 snares, 7 claps, 9 hi-hats, 8 open hats and cymbals, 11 808s, 5 toms, 9 percs and 5 FX hits. 137 drum sounds in all.",
+    "Sounds come in styles: trap, drill, 909 house, jungle, breakcore, gabber, lo-fi, boom bap, DnB, R&B, Afro, gospel and more.",
+    "12 new genre kits under + Percussion: Trap, Drill, Boom bap, House 909, Jungle breaks, Breakcore, Drum & Bass, Lo-fi, Rave and gabber, R&B soft, Afro and Gospel.",
+    "Drum menus are now grouped by type (Kicks, Snares, 808s and so on).",
+    "Pad machine: 4 new banks (E to H) for trap and drill, jungle and breakcore, house and lo-fi, 808s and toms. Use the ◀ ▶ buttons to flip through every sound on a pad."
   ],
   "history": [
+    {
+      "version": "1.4.0",
+      "date": "2026-11-16",
+      "notes": [
+        "New Pad machine: 16 glowing pads in 4 banks with an LCD screen and LED meter. Play drums, instruments, chords, My sounds or your own voice recorded onto a pad.",
+        "Every pad has its own effects and knobs. Record loops, then save them to My sounds with effects, send them to the beat maker, or download a WAV.",
+        "Outsider house tools: Outsider House, Acid House and Rave Breaks starters, house organ, house piano, rave stab, hoover and acid bass, a House drum kit with vinyl crackle.",
+        "New effects: Filter sweep and Vinyl dust. New Quick sounds: Outsider dust, House pump, Filter sweep, Acid squelch, Warehouse.",
+        "House voice effects: Muffled Diva, Warehouse, Filter Sweep Vocal, Old Soul Sample, Underground, Late Night Radio, Fighting Demons and more. Lonely Breakcore starter.",
+        "Home now has a welcome guide: try themes and glow, pick Simple or Advanced, and start a song in any of 17 styles with one click."
+      ]
+    },
     {
       "version": "1.3.2",
       "date": "2026-11-16",

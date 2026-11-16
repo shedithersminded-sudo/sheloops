@@ -241,6 +241,7 @@ export const PERC_KITS = {
   'Jungle': ['breaksnare', 'ghost', 'ride', 'crash', 'airhorn', 'siren', 'rewind', 'vinyl'],
 };
 export function playPerc(c, dest, sound, t, vel) {
+  if (VARIANTS[sound]) return playVariant(c, dest, sound, t, vel);
   const out = c.createGain(); out.gain.value = vel; out.connect(dest);
   const drop = (f0, f1, amp, dec, type = 'sine') => { const o = part(c, out, f0, t, amp, dec, type, 0.002); o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dec * 0.4); };
   switch (sound) {
@@ -304,4 +305,159 @@ export function playPerc(c, dest, sound, t, vel) {
       x.connect(bp); bp.connect(g); g.connect(out); x.start(t); x.stop(t + 1.05); noise(c, out, t, 0.15, 0.9, 'bandpass', 1200, 1); break; }
     case 'glitch': for (let i = 0; i < 6; i++) part(c, out, [200, 1600, 400, 3200, 800, 6400][i], t + i * 0.018, 0.3, 0.015, 'square', 0.001); break;
   }
+}
+
+// ---------- drum variations: many kicks, snares, claps, hats, 808s, toms, percs and FX ----------
+// Each one is a recipe for one of a few synth voices, so they all stay small and need no samples.
+function vdrive(c, out, k) { if (!k) return out; const s = c.createWaveShaper(), g = c.createGain(), n = 1024, a = new Float32Array(n), d = Math.tanh(k); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; a[i] = Math.tanh(k * x) / d; } s.curve = a; s.oversample = '2x'; g.gain.value = 0.85; s.connect(g); g.connect(out); return s; }
+function sweep(c, out, t, f0, f1, pd, amp, dec, type = 'sine', det = 0) {
+  const o = c.createOscillator(), g = c.createGain(); o.type = type; o.detune.value = det;
+  o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + pd);
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(amp, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+  o.connect(g); g.connect(out); o.start(t); o.stop(t + dec + 0.05);
+}
+const V = {
+  kick(c, out, t, v, p) { const d = vdrive(c, out, p.drive); sweep(c, d, t, p.f0, p.f1, p.pd, v * (p.amp || 1), p.dec); if (p.click) noise(c, d, t, v * p.click, 0.012, 'highpass', p.clickF || 3000, 0.7); if (p.body) sweep(c, d, t, p.f0 * 1.6, p.f1 * 1.5, p.pd * 0.6, v * p.body, p.dec * 0.4, 'triangle'); },
+  b808(c, out, t, v, p) { const d = vdrive(c, out, p.drive); sweep(c, d, t, p.f * (p.glide || 2.2), p.f, p.pd || 0.04, v * 0.9, p.dec); if (p.det) sweep(c, d, t, p.f * (p.glide || 2.2), p.f, p.pd || 0.04, v * 0.6, p.dec, 'sawtooth', p.det); if (p.click) noise(c, d, t, v * p.click, 0.01, 'highpass', 2500, 0.7); },
+  snare(c, out, t, v, p) { const d = vdrive(c, out, p.drive); v *= 0.8; sweep(c, d, t, p.f * 1.3, p.f, 0.03, v * p.tone, p.tdec, 'triangle'); noise(c, d, t, v * p.nz, p.ndec, p.ntype || 'highpass', p.nf, p.q || 0.8); if (p.tail) noise(c, d, t, v * p.tail, p.tailDec || 0.6, 'bandpass', p.nf * 0.8, 0.6); if (p.crack) noise(c, d, t, v * p.crack, 0.02, 'bandpass', 4500, 1.5); },
+  clap(c, out, t, v, p) { const d = vdrive(c, out, p.drive); v *= 2.4; for (let k = 0; k < (p.n || 3); k++) noise(c, d, t + k * (p.sp || 0.011), v * (p.amp || 0.55), 0.03, 'bandpass', p.f, p.q || 1.4); noise(c, d, t + (p.n || 3) * (p.sp || 0.011), v * (p.amp || 0.55) * 0.8, p.dec, 'bandpass', p.f, p.q || 1.2); },
+  hat(c, out, t, v, p) {
+    v *= 1.5;
+    const bp = c.createBiquadFilter(), hp = c.createBiquadFilter(), g = c.createGain(); bp.type = 'bandpass'; bp.frequency.value = p.bp || 10000; bp.Q.value = 0.8; hp.type = 'highpass'; hp.frequency.value = p.hp || 7000;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * (p.metal ?? 0.35), t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + p.dec);
+    for (const r of [2, 3, 4.16, 5.43, 6.79, 8.21]) { const o = c.createOscillator(); o.type = 'square'; o.frequency.value = (p.base || 40) * r; o.connect(bp); o.start(t); o.stop(t + p.dec + 0.05); }
+    bp.connect(hp); hp.connect(g); g.connect(vdrive(c, out, p.drive));
+    if (p.nz) noise(c, out, t, v * p.nz, p.dec, 'highpass', p.hp || 7000, 0.7);
+  },
+  tom(c, out, t, v, p) { sweep(c, vdrive(c, out, p.drive), t, p.f0, p.f1, p.dec * 0.7, v * 0.85, p.dec); noise(c, out, t, v * 0.08, 0.02, 'bandpass', 2000, 1); },
+  perc(c, out, t, v, p) { for (const [f, a, d, ty] of p.parts) part(c, vdrive(c, out, p.drive), f, t, v * a, d, ty || 'sine', 0.001); if (p.nz) noise(c, out, t, v * p.nz, p.ndec || 0.03, 'bandpass', p.nf || 3000, p.q || 2); },
+  swell(c, out, t, v, p) { const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = noiseBuf(c); s.loop = true; f.type = p.ftype || 'highpass'; f.frequency.setValueAtTime(p.f0, t); f.frequency.exponentialRampToValueAtTime(p.f1, t + p.len);
+    g.gain.setValueAtTime(p.rise ? 0.0001 : v * 0.6, t); g.gain.exponentialRampToValueAtTime(p.rise ? v * 0.6 : 0.0001, t + p.len); if (p.rise) g.gain.exponentialRampToValueAtTime(0.0001, t + p.len + 0.03);
+    s.connect(f); f.connect(g); g.connect(out); s.start(t); s.stop(t + p.len + 0.06); },
+  impact(c, out, t, v, p) { sweep(c, out, t, 120, 30, 0.4, v, p.dec || 2); noise(c, out, t, v * 0.5, p.dec || 2, 'lowpass', 1200, 0.5); noise(c, out, t, v * 0.3, 0.6, 'highpass', 5000, 0.5); },
+};
+const K = (name, p) => ({ g: 'Kicks', name, f: 'kick', p }), S = (name, p) => ({ g: 'Snares', name, f: 'snare', p }), C = (name, p) => ({ g: 'Claps', name, f: 'clap', p });
+const H = (name, p) => ({ g: 'Hi-hats', name, f: 'hat', p }), O = (name, p) => ({ g: 'Open hats and cymbals', name, f: 'hat', p }), B8 = (name, p) => ({ g: '808s', name, f: 'b808', p });
+const T = (name, p) => ({ g: 'Toms', name, f: 'tom', p }), PC = (name, p) => ({ g: 'Percs and rims', name, f: 'perc', p }), FX = (name, f, p) => ({ g: 'FX hits', name, f, p });
+export const VARIANTS = {
+  // kicks
+  k_punch: K('Punchy kick', { f0: 180, f1: 50, pd: 0.07, dec: 0.4, click: 0.35 }),
+  k_boom: K('Boom kick', { f0: 140, f1: 42, pd: 0.12, dec: 0.75 }),
+  k_trap: K('Trap kick', { f0: 220, f1: 48, pd: 0.05, dec: 0.45, click: 0.5, drive: 2 }),
+  k_drill: K('Drill kick', { f0: 200, f1: 52, pd: 0.04, dec: 0.3, click: 0.6, drive: 1.5 }),
+  k_909: K('909 house kick', { f0: 230, f1: 50, pd: 0.06, dec: 0.5, click: 0.45, clickF: 4000, body: 0.15 }),
+  k_techno: K('Techno kick', { f0: 160, f1: 46, pd: 0.09, dec: 0.6, drive: 3, click: 0.2 }),
+  k_lofi: K('Lo-fi dusty kick', { f0: 120, f1: 48, pd: 0.06, dec: 0.35, drive: 1.2, amp: 0.85 }),
+  k_jungle: K('Jungle break kick', { f0: 150, f1: 55, pd: 0.05, dec: 0.25, click: 0.5, body: 0.3, drive: 1.5 }),
+  k_breakcore: K('Breakcore smash kick', { f0: 260, f1: 50, pd: 0.05, dec: 0.4, click: 0.6, drive: 6 }),
+  k_gabber: K('Gabber kick', { f0: 300, f1: 60, pd: 0.08, dec: 0.5, drive: 12, amp: 0.8 }),
+  k_soft: K('Soft R&B kick', { f0: 110, f1: 45, pd: 0.08, dec: 0.45, amp: 0.85 }),
+  k_sub: K('Deep sub kick', { f0: 90, f1: 38, pd: 0.15, dec: 0.9 }),
+  k_acoustic: K('Acoustic kick', { f0: 120, f1: 58, pd: 0.04, dec: 0.3, click: 0.25, body: 0.35 }),
+  k_afro: K('Afro thump kick', { f0: 130, f1: 60, pd: 0.05, dec: 0.28, body: 0.3 }),
+  k_dnb: K('DnB tight kick', { f0: 200, f1: 58, pd: 0.035, dec: 0.22, click: 0.55 }),
+  // snares
+  s_tight: S('Tight snare', { f: 220, tone: 0.4, tdec: 0.08, nz: 0.6, ndec: 0.12, nf: 2500 }),
+  s_fat: S('Fat snare', { f: 180, tone: 0.55, tdec: 0.14, nz: 0.7, ndec: 0.25, nf: 1800 }),
+  s_trap: S('Trap snare', { f: 240, tone: 0.35, tdec: 0.09, nz: 0.75, ndec: 0.18, nf: 3000, crack: 0.3 }),
+  s_drill: S('Drill snare', { f: 330, tone: 0.45, tdec: 0.08, nz: 0.7, ndec: 0.14, nf: 3500, crack: 0.4 }),
+  s_909: S('909 snare', { f: 200, tone: 0.45, tdec: 0.1, nz: 0.65, ndec: 0.2, nf: 4000, ntype: 'highpass' }),
+  s_lofi: S('Lo-fi snare', { f: 190, tone: 0.4, tdec: 0.1, nz: 0.5, ndec: 0.16, nf: 1600, ntype: 'bandpass', drive: 1.5 }),
+  s_jungle: S('Jungle crack snare', { f: 260, tone: 0.4, tdec: 0.07, nz: 0.8, ndec: 0.13, nf: 2700, ntype: 'bandpass', crack: 0.5 }),
+  s_breakcore: S('Breakcore crunch snare', { f: 230, tone: 0.5, tdec: 0.09, nz: 0.8, ndec: 0.16, nf: 2600, drive: 6, crack: 0.4 }),
+  s_rimshot: S('Rimshot snare', { f: 420, tone: 0.5, tdec: 0.05, nz: 0.45, ndec: 0.08, nf: 3500, crack: 0.5 }),
+  s_brush: S('Brush snare', { f: 200, tone: 0.1, tdec: 0.05, nz: 0.4, ndec: 0.3, nf: 5000, ntype: 'highpass' }),
+  s_verb: S('Big reverb snare', { f: 200, tone: 0.45, tdec: 0.1, nz: 0.7, ndec: 0.2, nf: 2200, tail: 0.25, tailDec: 1.2 }),
+  s_pop: S('Pop snare', { f: 210, tone: 0.45, tdec: 0.11, nz: 0.7, ndec: 0.22, nf: 2800, tail: 0.1 }),
+  s_gospel: S('Gospel snare', { f: 240, tone: 0.4, tdec: 0.08, nz: 0.75, ndec: 0.16, nf: 3200, crack: 0.35 }),
+  s_dnb: S('DnB snare', { f: 250, tone: 0.5, tdec: 0.08, nz: 0.8, ndec: 0.16, nf: 3000, crack: 0.45, drive: 1.5 }),
+  s_house: S('House snare', { f: 190, tone: 0.35, tdec: 0.08, nz: 0.6, ndec: 0.18, nf: 3800, tail: 0.1, tailDec: 0.5 }),
+  // claps
+  c_trap: C('Trap clap', { f: 1300, dec: 0.18, n: 3 }),
+  c_house: C('House clap', { f: 1100, dec: 0.25, n: 4, sp: 0.009 }),
+  c_wide: C('Wide clap', { f: 1500, dec: 0.35, n: 5, sp: 0.014 }),
+  c_lofi: C('Lo-fi clap', { f: 900, dec: 0.15, n: 3, drive: 1.5 }),
+  c_tight: C('Tight clap', { f: 1800, dec: 0.08, n: 2, sp: 0.007 }),
+  c_gospel: C('Gospel clap', { f: 1200, dec: 0.3, n: 6, sp: 0.016, amp: 0.45 }),
+  c_rave: C('Rave clap', { f: 1400, dec: 0.22, n: 3, drive: 4 }),
+  // hats
+  h_808: H('808 closed hat', { dec: 0.05 }),
+  h_trap: H('Trap tight hat', { dec: 0.03, base: 45, hp: 8000 }),
+  h_crispy: H('Crispy hat', { dec: 0.06, nz: 0.25, hp: 9000 }),
+  h_lofi: H('Lo-fi hat', { dec: 0.05, bp: 7000, hp: 5000, drive: 1.5, metal: 0.25 }),
+  h_909: H('909 hat', { dec: 0.07, base: 47, nz: 0.2 }),
+  h_jungle: H('Jungle ride hat', { dec: 0.1, base: 52, bp: 8000, nz: 0.15 }),
+  h_shaker: H('Shaker hat', { dec: 0.07, metal: 0.05, nz: 0.4, hp: 6000 }),
+  h_drill: H('Drill hat', { dec: 0.035, base: 50, hp: 9000, nz: 0.1 }),
+  h_dark: H('Dark hat', { dec: 0.06, bp: 6000, hp: 4000, metal: 0.3 }),
+  // open hats and cymbals
+  o_808: O('808 open hat', { dec: 0.35 }),
+  o_909: O('909 open hat', { dec: 0.45, base: 47, nz: 0.2 }),
+  o_long: O('Long open hat', { dec: 0.8, nz: 0.15 }),
+  o_trash: O('Trashy open hat', { dec: 0.5, drive: 4, nz: 0.2 }),
+  o_lofi: O('Lo-fi open hat', { dec: 0.4, bp: 7000, hp: 4500, drive: 1.5, metal: 0.25 }),
+  o_house: O('House open hat', { dec: 0.28, base: 44, hp: 8000, nz: 0.25 }),
+  o_crash: O('Bright crash', { dec: 1.6, base: 55, nz: 0.35, hp: 5000 }),
+  o_ride: O('Ping ride', { dec: 1.2, base: 70, bp: 6000, hp: 3000, metal: 0.25 }),
+  // 808s
+  b_clean: B8('Clean 808', { f: 46, dec: 1.1 }),
+  b_long: B8('Long 808', { f: 44, dec: 2.2 }),
+  b_dist: B8('Distorted 808', { f: 46, dec: 1.2, drive: 5 }),
+  b_slide: B8('Drill slide 808', { f: 44, dec: 1.4, glide: 1.5, pd: 0.3, drive: 1.5 }),
+  b_punch: B8('Punch 808', { f: 50, dec: 0.8, click: 0.4, drive: 1.5 }),
+  b_soft: B8('Soft 808', { f: 44, dec: 1.2, glide: 1.4 }),
+  b_boom: B8('Trap boom 808', { f: 41, dec: 1.8, drive: 2, click: 0.2 }),
+  b_gritty: B8('Gritty 808', { f: 48, dec: 1, drive: 9 }),
+  b_short: B8('Short 808', { f: 50, dec: 0.4, click: 0.3 }),
+  b_reese: B8('Reese 808', { f: 46, dec: 1.4, det: 25, drive: 2 }),
+  b_high: B8('High 808', { f: 62, dec: 1, drive: 2 }),
+  // toms
+  t_high: T('High tom', { f0: 260, f1: 200, dec: 0.3 }),
+  t_mid: T('Mid tom', { f0: 190, f1: 140, dec: 0.4 }),
+  t_low: T('Floor tom', { f0: 130, f1: 90, dec: 0.55 }),
+  t_elec: T('Electronic tom', { f0: 400, f1: 120, dec: 0.4 }),
+  t_808: T('808 tom', { f0: 180, f1: 150, dec: 0.6 }),
+  // percs and rims
+  p_rim: PC('Tight rim', { parts: [[1700, 0.5, 0.03, 'triangle'], [820, 0.3, 0.04]], nz: 0.3, nf: 4000 }),
+  p_click: PC('Click', { parts: [[3000, 0.4, 0.008, 'square']], nz: 0.3, ndec: 0.008, nf: 6000 }),
+  p_wood: PC('Woodpecker', { parts: [[1300, 0.6, 0.05], [2600, 0.2, 0.03]] }),
+  p_trap: PC('Trap pluck perc', { parts: [[880, 0.6, 0.12, 'triangle'], [1760, 0.2, 0.06]] }),
+  p_drill: PC('Drill perc', { parts: [[620, 0.6, 0.15, 'triangle'], [1240, 0.3, 0.08]], drive: 2 }),
+  p_metal: PC('Metal ping', { parts: [[1480, 0.4, 0.6], [2210, 0.25, 0.4], [3970, 0.12, 0.3]] }),
+  p_bell: PC('Cowbell 808', { parts: [[540, 0.4, 0.25, 'square'], [800, 0.35, 0.25, 'square']], drive: 1 }),
+  p_blip: PC('Blip', { parts: [[1200, 0.5, 0.05, 'square']] }),
+  p_knock: PC('Knock', { parts: [[300, 0.8, 0.08], [600, 0.3, 0.04]], nz: 0.2, nf: 1500 }),
+  // fx
+  f_rev: FX('Reverse cymbal', 'swell', { f0: 3000, f1: 9000, len: 1.2, rise: true }),
+  f_impact: FX('Impact boom', 'impact', { dec: 2.2 }),
+  f_down: FX('Sweep down', 'swell', { f0: 9000, f1: 200, len: 1, ftype: 'bandpass' }),
+  f_up: FX('Short riser', 'swell', { f0: 400, f1: 8000, len: 0.8, rise: true, ftype: 'bandpass' }),
+  f_noise: FX('Noise burst', 'swell', { f0: 1000, f1: 900, len: 0.25, ftype: 'highpass' }),
+};
+export function playVariant(c, dest, key, t, vel) { const v = VARIANTS[key]; if (!v) return false; const out = c.createGain(); out.connect(dest); V[v.f](c, out, t, vel, v.p); return true; }
+export const VARIANT_GROUPS = (() => { const g = {}; for (const [k, v] of Object.entries(VARIANTS)) (g[v.g] ||= []).push(k); return g; })();
+// add the variations to the percussion lists so every drum menu, pad and kit can use them
+export const BASE_PERC = PERC.slice();
+for (const [k, v] of Object.entries(VARIANTS)) PERC_NAMES[k] = v.name;
+PERC.push(...Object.keys(VARIANTS));
+Object.assign(PERC_KITS, {
+  'Trap kit': ['k_trap', 's_trap', 'c_trap', 'h_trap', 'o_808', 'b_boom', 'p_trap', 'f_rev'],
+  'Drill kit': ['k_drill', 's_drill', 'c_tight', 'h_drill', 'o_808', 'b_slide', 'p_drill', 'p_rim'],
+  'Boom bap kit': ['k_acoustic', 's_fat', 'c_lofi', 'h_lofi', 'o_lofi', 'p_rim', 't_mid', 'vinyl'],
+  'House 909 kit': ['k_909', 's_house', 'c_house', 'h_909', 'o_909', 'o_ride', 'p_bell', 'crackle'],
+  'Jungle breaks kit': ['k_jungle', 's_jungle', 'ghost', 'h_jungle', 'o_crash', 'b_reese', 'airhorn', 'siren'],
+  'Breakcore kit': ['k_breakcore', 's_breakcore', 'c_rave', 'h_crispy', 'o_trash', 'b_dist', 'glitch', 'f_impact'],
+  'Drum & Bass kit': ['k_dnb', 's_dnb', 'ghost', 'h_crispy', 'o_ride', 'b_reese', 'p_click', 'f_up'],
+  'Lo-fi kit': ['k_lofi', 's_lofi', 'c_lofi', 'h_lofi', 'o_lofi', 'p_knock', 'crackle', 'vinyl'],
+  'Rave and gabber kit': ['k_gabber', 's_909', 'c_rave', 'h_909', 'o_trash', 'b_gritty', 'f_noise', 'f_up'],
+  'R&B soft kit': ['k_soft', 's_brush', 'c_wide', 'h_shaker', 'o_house', 'b_soft', 'p_wood', 'f_rev'],
+  'Afro kit': ['k_afro', 's_rimshot', 'c_wide', 'h_shaker', 'p_knock', 'p_wood', 'b_short', 'conga'],
+  'Gospel kit': ['k_punch', 's_gospel', 'c_gospel', 'h_crispy', 'o_long', 'b_clean', 't_low', 't_high'],
+});
+// grouped list for drum menus: [[group, [[id, name], ...]], ...]
+export function drumMenu(DRUMS, DRUM_NAMES) {
+  const order = ['Kicks', 'Snares', 'Claps', 'Hi-hats', 'Open hats and cymbals', '808s', 'Toms', 'Percs and rims', 'FX hits'];
+  return [['Classic kit', DRUMS.map(s => [s, DRUM_NAMES[s]])],
+    ...order.map(g => [g, VARIANT_GROUPS[g].map(k => [k, PERC_NAMES[k]])]),
+    ['World and special', BASE_PERC.map(k => [k, PERC_NAMES[k]])]];
 }

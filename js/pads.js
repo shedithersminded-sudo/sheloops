@@ -5,7 +5,7 @@ import { $, el, clamp, toast, knob, select, ask, download, uid, safeName } from 
 import { helpBtn, HELP } from './help.js';
 import { app, save, snapshot, DRUMS, DRUM_NAMES, PRESETS, newBeatTrack } from './state.js';
 import { E, ensureCtx, playDrum, playNote, encodeWav, workletURL } from './engine.js';
-import { PERC, PERC_NAMES } from './instruments.js';
+import { PERC, PERC_NAMES, drumMenu } from './instruments.js';
 import { SOUNDS, loadSounds, soundBuffer } from './library.js';
 import { db, saveAudio } from './store.js';
 import { FX, FX_ORDER, newFx, buildFx } from './fx.js';
@@ -22,6 +22,15 @@ const soundLabel = s => DRUM_NAMES[s] || PERC_NAMES[s] || s;
 const drumPad = (sound, color) => ({ kind: 'drum', sound, name: soundLabel(sound), color, vol: 0.9, pitch: 0, fx: [] });
 const notePad = (preset, note, chord, color) => ({ kind: 'note', preset, note, chord, len: 0.5, name: (chord !== 'single' ? noteName(note) + ' ' + chord : noteName(note)), color, vol: 0.8, pitch: 0, fx: [] });
 const emptyPad = color => ({ kind: 'empty', name: 'Empty', color, vol: 0.9, pitch: 0, fx: [] });
+// banks E to H: genre kits built from the drum variations
+const MORE = {
+  E: ['k_trap', 's_trap', 'c_trap', 'h_trap', 'o_808', 'b_boom', 'p_trap', 'f_rev', 'k_drill', 's_drill', 'c_tight', 'h_drill', 'b_slide', 'p_drill', 'p_rim', 'f_impact'],
+  F: ['k_jungle', 's_jungle', 'ghost', 'h_jungle', 'o_crash', 'b_reese', 'airhorn', 'siren', 'k_breakcore', 's_breakcore', 'c_rave', 'h_crispy', 'o_trash', 'b_dist', 'glitch', 'rewind'],
+  G: ['k_909', 's_house', 'c_house', 'h_909', 'o_909', 'o_ride', 'p_bell', 'crackle', 'k_lofi', 's_lofi', 'c_lofi', 'h_lofi', 'o_lofi', 'p_knock', 'vinyl', 'f_down'],
+  H: ['b_clean', 'b_long', 'b_dist', 'b_slide', 'b_punch', 'b_soft', 'b_boom', 'b_gritty', 'b_short', 'b_reese', 'b_high', 't_808', 't_high', 't_mid', 't_low', 't_elec'],
+};
+const BANK_NAMES = { A: 'Drums', B: 'House', C: 'Keys', D: 'Empty, for your voice', E: 'Trap and drill', F: 'Jungle and breakcore', G: 'House and lo-fi', H: '808s and toms' };
+function moreBanks() { const c = i => COLORS[i % COLORS.length]; return Object.fromEntries(Object.entries(MORE).map(([b, list], bi) => [b, list.map((snd, i) => drumPad(snd, c(Math.floor(i / 4) + bi * 2)))])); }
 function defaultBanks() {
   const c = i => COLORS[i % COLORS.length];
   return {
@@ -31,10 +40,13 @@ function defaultBanks() {
       ...[[45, 'single'], [43, 'single'], [41, 'single'], [40, 'single']].map(([n, ch]) => notePad('acid bass', n, ch, c(7)))],
     C: [57, 59, 60, 62, 64, 65, 67, 69, 45, 48, 50, 52, 53, 55, 57, 60].map((n, i) => notePad(i < 8 ? 'piano' : 'electric piano', n, 'single', c(i < 8 ? 5 : 3))),
     D: Array.from({ length: 16 }, (_, i) => emptyPad(c(i % 8))),
+    ...moreBanks(),
   };
 }
 export const PADS = Object.assign({ bank: 'A', banks: null, loops: {}, bars: 2, quant: true, metro: true, sel: 0 }, JSON.parse(localStorage.getItem(KEY) || '{}'));
 PADS.banks ||= defaultBanks();
+for (const [b, pads] of Object.entries(moreBanks())) PADS.banks[b] ||= pads; // older saves get the new banks
+for (const b of 'EFGH') PADS.loops[b] ||= [];
 for (const b of 'ABCD') PADS.loops[b] ||= [];
 const savePads = () => localStorage.setItem(KEY, JSON.stringify(PADS));
 const bank = () => PADS.banks[PADS.bank];
@@ -271,10 +283,11 @@ function renderEditor() {
     else Object.assign(pad, { kind: 'empty', name: 'Empty' });
     rr();
   } }, l)));
+  function stepSound(d) { const all = drumMenu(DRUMS, DRUM_NAMES).flatMap(([, l]) => l.map(x => x[0])), k = (all.indexOf(pad.sound) + d + all.length) % all.length; pad.sound = all[k]; pad.name = soundLabel(pad.sound); rr(); hit(i); }
   let src = null;
   if (pad.kind === 'drum') src = el('label', { class: 'num' }, 'Sound', el('select', { onchange: e => { pad.sound = e.target.value; pad.name = soundLabel(pad.sound); rr(); hit(i); } },
-    el('optgroup', { label: 'Drum kit' }, DRUMS.map(s => el('option', { value: s, selected: pad.sound === s }, DRUM_NAMES[s]))),
-    el('optgroup', { label: 'Percussion and FX' }, PERC.map(s => el('option', { value: s, selected: pad.sound === s }, PERC_NAMES[s])))));
+    drumMenu(DRUMS, DRUM_NAMES).map(([g, list]) => el('optgroup', { label: g }, list.map(([s, n]) => el('option', { value: s, selected: pad.sound === s }, n))))),
+    el('button', { class: 'sq', title: 'Previous sound', onclick: () => stepSound(-1) }, '◀'), el('button', { class: 'sq', title: 'Next sound (try them fast)', onclick: () => stepSound(1) }, '▶'));
   else if (pad.kind === 'note') src = [
     el('label', { class: 'num' }, 'Instrument', select(Object.keys(PRESETS).filter(k => k !== 'my sound'), pad.preset, v => { pad.preset = v; rr(); hit(i); })),
     el('label', { class: 'num' }, 'Note', select(Array.from({ length: 49 }, (_, k) => [24 + k, noteName(24 + k)]), pad.note, v => { pad.note = +v; pad.name = noteName(pad.note) + (pad.chord !== 'single' ? ' ' + pad.chord : ''); rr(); hit(i); })),
@@ -309,7 +322,7 @@ export function renderPads() {
       el('div', { class: 'lcd' }, el('div', { class: 'lcd-time' }, 'STOP'), el('div', { class: 'lcd-hit' }, 'TAP A PAD')),
       el('div', { class: 'leds' }, Array.from({ length: 16 }, () => el('i')))),
     el('div', { class: 'ptop' }, el('h1', {}, 'Pad machine'), helpBtn('pads'), el('span', { class: 'spacer' }),
-      el('div', { class: 'banks' }, el('span', { class: 'hint' }, 'Bank'), 'ABCD'.split('').map(b => el('button', { class: 'bankbtn' + (PADS.bank === b ? ' on' : ''), title: { A: 'Drums', B: 'House', C: 'Keys', D: 'Empty, for your voice' }[b], onclick: () => { PADS.bank = b; savePads(); if (L.playing) stopLoop(); renderPads(); } }, b))),
+      el('div', { class: 'banks' }, el('span', { class: 'hint' }, 'Bank'), 'ABCDEFGH'.split('').map(b => el('button', { class: 'bankbtn' + (PADS.bank === b ? ' on' : ''), title: BANK_NAMES[b], onclick: () => { PADS.bank = b; savePads(); if (L.playing) stopLoop(); renderPads(); } }, b))),
       el('button', { onclick: () => { if (!confirm('Reset all pads in every bank to the starting sounds? Your recordings stay in My sounds.')) return; PADS.banks = defaultBanks(); savePads(); renderPads(); } }, 'Reset pads')),
     el('div', { class: 'explain' }, 'Tap the pads with your mouse, your fingers on a touch screen, or the keys shown on each pad. Press near the top of a pad for a louder hit, or hold Shift. Record a loop, then save it to My sounds or send it to the beat maker.'),
     el('div', { class: 'padmain' },

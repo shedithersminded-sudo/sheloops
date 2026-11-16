@@ -4,7 +4,7 @@ import { helpBtn } from './help.js';
 import { app, stepDur, save, snapshot, DRUMS, DRUM_NAMES, PRESETS, STARTERS, PAT_IDS, newBeatTrack, applyStarter, patData, setNotes, copyPattern } from './state.js';
 import { applyMix, previewDrum, previewNote, liveNote, currentPos, T, refresh, ensureCtx } from './engine.js';
 import { SOUNDS, loadSounds, soundName, soundBuffer } from './library.js';
-import { PERC, PERC_NAMES, PERC_KITS, isString } from './instruments.js';
+import { PERC, PERC_NAMES, PERC_KITS, isString, drumMenu } from './instruments.js';
 import { openGuitarMaker, voicing, chordName } from './guitar.js';
 import { modal } from './util.js';
 import { openKeyGuide } from './keyguide.js';
@@ -190,12 +190,12 @@ const head = (t, ...kids) => el('div', { class: 'ed-head' }, el('h2', {}, `${t.n
 // ---------- drums ----------
 let paint = null, painted = false;
 window.addEventListener('pointerup', () => { paint = null; if (painted) { save(); painted = false; } });
-const soundOptions = () => [
-  ...DRUMS.map(s => ['b:' + s, 'Built-in ' + DRUM_NAMES[s]]),
-  ...PERC.map(s => ['b:' + s, 'Percussion ' + PERC_NAMES[s]]),
-  ...SOUNDS.filter(s => s.kind === 'one-shot').map(s => ['s:' + s.id, s.folder + ' / ' + s.name]),
-  ...SOUNDS.filter(s => s.kind === 'loop').map(s => ['s:' + s.id, 'Loop: ' + s.name]),
-];
+// grouped menu: built-in sounds by type, then my one-shots and loops
+const soundGroups = () => [
+  ...drumMenu(DRUMS, DRUM_NAMES).map(([g, list]) => [g, list.map(([k, n]) => ['b:' + k, n])]),
+  ['My sounds', SOUNDS.filter(s => s.kind === 'one-shot').map(s => ['s:' + s.id, s.folder + ' / ' + s.name])],
+  ['My loops', SOUNDS.filter(s => s.kind === 'loop').map(s => ['s:' + s.id, s.name])],
+].filter(([, l]) => l.length);
 function drumEditor(t, box) {
   const steps = B().bars * 16, data = patData(t, cur()).steps;
   const grid = el('div', { class: 'dgrid', style: `--steps:${steps}` });
@@ -209,7 +209,7 @@ function drumEditor(t, box) {
         snapshot(); const v = e.target.value;
         if (v.startsWith('s:')) { r.sample = v.slice(2); await soundBuffer(r.sample); } else { r.sample = null; r.sound = v.slice(2); }
         save(); renderBeatEditor(); previewDrum(t, r);
-      } }, soundOptions().map(([v, l]) => el('option', { value: v, selected: v === (r.sample ? 's:' + r.sample : 'b:' + r.sound) }, l))),
+      } }, soundGroups().map(([g, list]) => el('optgroup', { label: g }, list.map(([v, l]) => el('option', { value: v, selected: v === (r.sample ? 's:' + r.sample : 'b:' + r.sound) }, l))))),
       el('input', { type: 'range', class: 'rowvol adv', min: 0, max: 1.5, step: 0.01, value: r.vol ?? 1, title: 'Row volume', oninput: e => { r.vol = +e.target.value; save(); } }),
       el('button', { class: 'sq adv', title: 'Remove this row', onclick: () => { snapshot(); t.rows.splice(ri, 1); for (const p of Object.values(t.pats || {})) p.steps.splice(ri, 1); save(); renderBeatEditor(); } }, '×')));
     const row = data[ri];
