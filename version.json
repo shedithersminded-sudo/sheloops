@@ -1,16 +1,30 @@
 {
-  "version": "1.6.0",
+  "version": "1.7.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Pad machine loops: every bank keeps as many loops as you want. Click a loop to switch, even while it plays. New, Copy, Rename and Delete.",
-    "Safe record: recording over a loop makes a new take, then you choose Keep new, Go back to old, or Keep both. Your good loop is never lost.",
-    "Play all in order plays your loops one after another like a song, and Save loop to My sounds saves them all together.",
-    "Record voice loop: sing or rap over your beat. It records exactly one loop long, stays in time, and lands on a pad where you can add effects.",
-    "Customize the machine: pad shape (square, rounded, round, hexagon), hit lights (flash, ripple, sparks), body (graphite, white, neon, see-through, wood), screen color, glow and pad size.",
-    "5 new visualizers: Spectrum, LED blocks, Orb, Particles and Halo. Hover the player to flip through them."
+    "New DJ booth: two turntables you can scratch, with play, cue, sync, tempo, nudge, 4 hot cues, beat loops and a scrolling waveform.",
+    "Mixer with gain, High, Mid and Low EQ with kills, a one-knob filter, channel faders with meters, and a crossfader with smooth, linear or sharp curves.",
+    "An effect on each deck, timed to the beat: echo, reverb, flanger, phaser, lo-fi, stutter, auto filter, distortion, vinyl dust and wobble.",
+    "9 one-click transitions: Smooth blend, Bass swap, Filter fade, Echo out, Reverb wash, Spinback, Vinyl brake, Stutter cut and Quick cut, from 2 to 32 beats.",
+    "Drag and drop music from your device, your Studio song, or your loops and pad loops onto a deck.",
+    "Light show and visualizer: beams, sweep, pulse and chase lights, 6 visualizers, and a strobe.",
+    "Customize the booth: vinyl or CDJ decks, body color, record and label colors, your own art on the labels, glow and light colors, beams, speed, tempo range, and your own keys.",
+    "Record your mix and save it to My sounds, or download WAV or MP3."
   ],
   "history": [
+    {
+      "version": "1.6.0",
+      "date": "2026-11-16",
+      "notes": [
+        "Pad machine loops: every bank keeps as many loops as you want. Click a loop to switch, even while it plays. New, Copy, Rename and Delete.",
+        "Safe record: recording over a loop makes a new take, then you choose Keep new, Go back to old, or Keep both. Your good loop is never lost.",
+        "Play all in order plays your loops one after another like a song, and Save loop to My sounds saves them all together.",
+        "Record voice loop: sing or rap over your beat. It records exactly one loop long, stays in time, and lands on a pad where you can add effects.",
+        "Customize the machine: pad shape (square, rounded, round, hexagon), hit lights (flash, ripple, sparks), body (graphite, white, neon, see-through, wood), screen color, glow and pad size.",
+        "5 new visualizers: Spectrum, LED blocks, Orb, Particles and Halo. Hover the player to flip through them."
+      ]
+    },
     {
       "version": "1.5.0",
       "date": "2026-11-16",

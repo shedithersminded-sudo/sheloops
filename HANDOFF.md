@@ -198,3 +198,9 @@ Stage 8 (AI helper, tour, desktop app) was skipped by the user on 2026-11-16 ("d
 - js/pads.js: PADS (localStorage loopden.pads) banks A-D x16, loops per bank. Pad kinds drum/note/sample/voice/empty. Per-pad fx chains (chainFor). Voice recordings go to My sounds folder "Pad recordings". renderLoop bakes effects; loopToBeat makes drum + synth tracks. Keys 1234 qwer asdf zxcv, Space loop.
 - fx: filter (mode/cutoff/res/rate/depth), dust (crackle/hiss/tone). Starters support `stab` rhythm strings for chord hits.
 - Home welcome() in pages.js: theme swatches, glow toggle, Simple/Advanced cards (emit 'modechange'), style buttons -> createSong(false, style).
+
+## 1.5 to 1.7: drum variations, loop slots, DJ booth
+- instruments.js VARIANTS (84 synth drum recipes, V.kick/snare/clap/hat/b808/tom/perc/swell/impact), merged into PERC/PERC_NAMES, drumMenu() groups. PERC_KITS genre kits.
+- pads.js: PADS.slots[bank] = [{id,name,hits}], PADS.slot[bank]; Safe record copies the slot and shows a take bar; Play all in order (PADS.chain); recordVoiceLoop() uses engine captureMic(from,to) for in-time voice loops; PADS.skin looks.
+- nowplaying.js VIZ_STYLES (10) + hover picker (.np-quick).
+- js/dj.js: deck AudioWorklet 'sheloops-deck' (variable/negative rate for scratching, loops), channel EQ/filter/fx, crossfader, TRANSITIONS, light stage canvas, crate, mix recorder (cap worklet), DJ settings in localStorage loopden.dj.

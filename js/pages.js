@@ -121,6 +121,7 @@ export async function renderHome() {
       tile('Record vocals', 'Open the recording studio', () => P ? go('studio') : createSong(null)),
       tile('Fix my voice', 'Check a take and fix problems', () => { settings.inspTab = 'fix'; saveSettings(); P ? go('studio') : createSong(null); }),
       tile('Pad machine', 'Finger drum pads, your voice on a pad, loops', () => go('pads'), true),
+      tile('DJ booth', 'Mix songs, scratch, transitions, lights', () => go('dj'), true),
       tile('My sound', 'Your studio profile and defaults', () => go('profile')),
       tile('My studio appearance', 'Themes, backgrounds, cursor, layout', () => go('look')),
       tile('My cover art', 'Covers, CD discs, back covers and cases', () => go('art')),
