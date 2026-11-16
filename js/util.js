@@ -42,8 +42,28 @@ export function knob(label, min, max, step, val, on, fmt = v => v, help, cls = '
   const out = el('span', { class: 'val' }, fmt(val));
   const i = el('input', { type: 'range', min, max, step });
   i.value = val;
+  if (cls.split(' ').includes('dial')) return dial(label, +min, +max, +step, val, on, fmt, help, cls, out, i);
   i.addEventListener('input', () => { const v = +i.value; out.textContent = fmt(v); on(v); });
   return el('label', { class: 'knob ' + cls }, el('span', { class: 'lab' }, el('span', {}, label, help ? helpBtn(help) : null), out), i);
+}
+
+// Rotary knob that lights up. Drag up or down, scroll, use arrow keys, double-click to reset.
+function dial(label, min, max, step, val, on, fmt, help, cls, out, i) {
+  const def = val, ring = el('span', { class: 'ring' }), cap = el('span', { class: 'cap' }, el('span', { class: 'tick' }));
+  const d = el('span', { class: 'dialbody', title: 'Drag up or down. Double-click to reset.' }, ring, cap);
+  const paint = v => { const p = (v - min) / ((max - min) || 1); d.style.setProperty('--p', p.toFixed(4)); if (min < 0 && max > 0) d.style.setProperty('--z', ((0 - min) / (max - min)).toFixed(4)); out.textContent = fmt(v); };
+  const setV = v => { v = Math.round(clamp(v, min, max) / step) * step; v = +v.toFixed(6); if (v === +i.value) return; i.value = v; paint(v); on(v); };
+  i.className = 'sr'; i.addEventListener('input', () => { paint(+i.value); on(+i.value); });
+  d.addEventListener('pointerdown', e => {
+    e.preventDefault(); d.setPointerCapture(e.pointerId); d.classList.add('drag'); i.focus({ preventScroll: true });
+    let y = e.clientY, acc = +i.value;
+    d.onpointermove = ev => { acc += (y - ev.clientY) * (max - min) / (ev.shiftKey ? 600 : 160); y = ev.clientY; setV(acc); };
+    d.onpointerup = () => { d.onpointermove = null; d.classList.remove('drag'); };
+  });
+  d.addEventListener('wheel', e => { e.preventDefault(); setV(+i.value - Math.sign(e.deltaY) * Math.max(step, (max - min) / 50)); }, { passive: false });
+  d.addEventListener('dblclick', () => setV(def));
+  paint(val);
+  return el('label', { class: 'knob dialknob ' + cls }, d, out, el('span', { class: 'lab' }, el('span', {}, label, help ? helpBtn(help) : null)), i);
 }
 
 export function toggle(label, on, set, help, cls = '') {

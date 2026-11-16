@@ -1,18 +1,30 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Export window: save your song, beat, vocals or each track as WAV or MP3 with your own file name.",
-    "Save a song or everything as a .sheloops file and open it on any computer.",
-    "Play the guitar: chord pads and a fretboard you can strum, plus big drum pads.",
-    "Keys guide: press ? to see what every key does.",
-    "Over 70 instruments: orchestra, Japanese, world, folk, mallets and fun ones.",
-    "38 percussion sounds in Latin, Japanese, World, Orchestra and FX kits.",
-    "Guitar loop maker with 16 styles.",
-    "New studio look and a new intro."
+    "Presets now stack: one Vocal plus any Enhance and Voice FX. Take any of them off again.",
+    "Light-up rotary knobs on every effect, including Auto-Tune (new Transpose knob).",
+    "Effects in the beat maker for every drum and instrument track.",
+    "New effects: Echo, Reverb room, Lo-fi crusher, Auto-wah, Tremolo / chop, Vibrato.",
+    "More presets: 28 Vocal, 18 Enhance, 28 Voice FX.",
+    "Bolder fonts, glowing hover and animated cards."
   ],
   "history": [
+    {
+      "version": "1.1.0",
+      "date": "2026-11-16",
+      "notes": [
+        "Export window: save your song, beat, vocals or each track as WAV or MP3 with your own file name.",
+        "Save a song or everything as a .sheloops file and open it on any computer.",
+        "Play the guitar: chord pads and a fretboard you can strum, plus big drum pads.",
+        "Keys guide: press ? to see what every key does.",
+        "Over 70 instruments: orchestra, Japanese, world, folk, mallets and fun ones.",
+        "38 percussion sounds in Latin, Japanese, World, Orchestra and FX kits.",
+        "Guitar loop maker with 16 styles.",
+        "New studio look and a new intro."
+      ]
+    },
     {
       "version": "1.0.0",
       "date": "2026-11-16",

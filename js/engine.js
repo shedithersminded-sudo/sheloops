@@ -172,7 +172,7 @@ export function nodeFor(g, t, isBeat, kind) {
   n = { kind, input: c.createGain(), vol: c.createGain(), auto: c.createGain(), pan: c.createStereoPanner(), rs: c.createGain(), ds: c.createGain(), gate: null, dest: null };
   let head = n.input;
   if (kind === 'vocal') { n.gate = new AudioWorkletNode(c, 'gate', { outputChannelCount: [2] }); n.input.connect(n.gate); head = n.gate; }
-  if (kind !== 'beat') { n.fxIn = c.createGain(); n.fxOut = c.createGain(); head.connect(n.fxIn); n.fxIn.connect(n.fxOut); n.fx = []; n.sig = ''; head = n.fxOut; }
+  { n.fxIn = c.createGain(); n.fxOut = c.createGain(); head.connect(n.fxIn); n.fxIn.connect(n.fxOut); n.fx = []; n.sig = ''; head = n.fxOut; }
   head.connect(n.vol); n.vol.connect(n.auto); n.auto.connect(n.pan);
   n.pan.connect(n.rs); n.rs.connect(g.rev); n.pan.connect(n.ds); n.ds.connect(g.dly);
   if (g.live) { n.an = c.createAnalyser(); n.an.fftSize = 512; n.pan.connect(n.an); }
@@ -229,6 +229,7 @@ export function applyMix(g = E.g, instant = false, only = null, bypassMaster = f
     const n = nodeFor(g, t, true), on = audible(t, P.beat.tracks);
     setP(n.vol.gain, on ? t.vol : 0, g, instant); setP(n.pan.pan, t.pan, g, instant);
     setP(n.rs.gain, on ? t.rev * sendScale : 0, g, instant); setP(n.ds.gain, on ? t.dly * sendScale : 0, g, instant);
+    syncFx(g, n, t, instant);
   }
 }
 // ---------- automation (track volume) ----------

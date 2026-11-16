@@ -900,3 +900,101 @@ button.hot:hover::after { animation: shine .7s ease; }
 @keyframes shine { to { left: 120%; } }
 @keyframes tick { to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .ticker-track, .tile:hover, .brand .brandtext > span, .ticker .led, .tile.hot b::before { animation: none !important; } }
+
+/* ===== 1.2 skin: louder type, light-up knobs, sound stack, hover glow ===== */
+:root { --display: 'Bungee', 'Righteous', var(--font); --label: 'Bebas Neue', var(--display); }
+body { font-weight: 600; letter-spacing: .01em; }
+h1 { letter-spacing: .02em; background: linear-gradient(90deg, var(--text), var(--led) 60%, var(--text)); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: chrome 7s linear infinite; }
+.ed-head h2, .modal-head h3, .tile b { letter-spacing: .02em; }
+.itab, .navbtn, .chip, .knob .lab, .pow, .cattag, .stacktitle, .drawerbtn, .ptab, .modeswitch button { font-family: var(--label); letter-spacing: .1em; font-weight: 400; }
+.itab, .navbtn { font-size: 15px; }
+.chip { font-size: 13px; }
+.knob .lab { font-size: 12px; }
+.sr { position: absolute !important; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* hover glow on everything you can press */
+button, select, .chip { transition: box-shadow .18s, border-color .18s, color .18s, transform .12s, background .18s; }
+button:hover:not(:disabled), select:hover { border-color: var(--led); box-shadow: 0 0 0 1px color-mix(in srgb, var(--led) 40%, transparent), 0 0 14px -2px var(--glow); }
+button:active:not(:disabled) { transform: translateY(1px) scale(.98); }
+.chip:hover { color: var(--led); text-shadow: 0 0 8px var(--glow); }
+.chip.on { box-shadow: 0 0 14px var(--glow); }
+.itab.on { text-shadow: 0 0 10px var(--glow); box-shadow: inset 0 -2px 0 var(--led), 0 8px 18px -12px var(--led); }
+button.danger:hover { border-color: var(--red); box-shadow: 0 0 14px -2px var(--red); color: var(--red); }
+
+/* rotary knobs */
+.dialknob { display: grid; justify-items: center; gap: 2px; text-transform: uppercase; position: relative; min-width: 62px; }
+.dialknob .lab { justify-content: center; text-align: center; color: var(--dim); }
+.dialknob .val { font: 600 10px var(--mono); color: var(--led); text-shadow: 0 0 6px var(--glow); min-height: 12px; }
+.dialbody { --p: 0; --s: 46px; position: relative; width: var(--s); height: var(--s); border-radius: 50%; cursor: ns-resize; touch-action: none; display: grid; place-items: center; }
+.sm.dialknob .dialbody { --s: 36px; }
+.dialbody .ring { position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from -135deg, var(--led) 0 calc(var(--p) * 270deg), color-mix(in srgb, var(--line2) 80%, transparent) 0 270deg, transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  filter: drop-shadow(0 0 calc(2px + var(--p) * 6px) var(--glow)); transition: filter .2s; }
+.dialbody .cap { position: relative; width: calc(var(--s) - 12px); height: calc(var(--s) - 12px); border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--text) 22%, var(--well)), var(--well) 55%, #000 120%);
+  box-shadow: inset 0 1px 1px #ffffff22, inset 0 -3px 6px #0008, 0 3px 6px #0009; transform: rotate(calc(-135deg + var(--p) * 270deg)); transition: transform .06s; }
+.dialbody .tick { position: absolute; left: 50%; top: 3px; width: 3px; height: 32%; margin-left: -1.5px; border-radius: 2px; background: var(--led); box-shadow: 0 0 6px var(--led); }
+.dialbody:hover .ring, .dialbody.drag .ring { filter: drop-shadow(0 0 10px var(--led)); }
+.dialbody:hover .cap, .dialbody.drag .cap { box-shadow: inset 0 1px 1px #ffffff33, inset 0 -3px 6px #0008, 0 0 16px -2px var(--glow); }
+.dialknob:focus-within .dialbody { outline: 1px dashed var(--led); outline-offset: 3px; }
+body.simple .dialknob.adv { display: none; }
+
+/* effect cards */
+.fxparams:has(.dialknob) { display: flex; flex-wrap: wrap; gap: 10px 8px; justify-content: flex-start; }
+.fxcard { border-radius: 3px; border-top-width: 1px; position: relative; overflow: hidden; transition: box-shadow .2s, transform .2s, border-color .2s; animation: cardIn .35s ease both; }
+.fxcard::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--led), transparent); background-size: 200% 100%; animation: sweepX 3s linear infinite; }
+.fxcard.off::before { animation: none; background: var(--line2); }
+.fxcard:hover { border-color: color-mix(in srgb, var(--led) 60%, var(--line)); box-shadow: 0 10px 26px -14px var(--glow); }
+.fxhead .led, .drawerbtn .led { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: ledPulse 2s ease-in-out infinite; flex: none; }
+.fxcard.off .led, .drawerbtn .led:not(.on) { background: #444; box-shadow: none; animation: none; }
+.fxhead b { font-family: var(--display); font-weight: 400; font-size: 12px; letter-spacing: .03em; }
+.fxcard[data-g=Pitch] { --led: #c08bff; --glow: #c08bff77; }
+.fxcard[data-g=Space] { --led: #5ed3ff; --glow: #5ed3ff77; }
+.fxcard[data-g=Motion] { --led: #ff5ea8; --glow: #ff5ea877; }
+.fxcard[data-g=Color] { --led: #ffb347; --glow: #ffb34777; }
+.pow { min-width: 34px; }
+.pow.on { box-shadow: 0 0 10px -2px var(--green); text-shadow: 0 0 6px var(--green); }
+.cattag { font-size: 11px; padding: 0 6px; border: 1px solid var(--line2); border-radius: 2px; color: var(--dim); white-space: nowrap; }
+.cattag.c-Vocal { color: var(--led); border-color: var(--led); }
+.cattag.c-Enhance { color: #5ed3ff; border-color: #5ed3ff; }
+.cattag.c-VoiceFX { color: #ff5ea8; border-color: #ff5ea8; }
+
+/* sound stack */
+.stack { border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; position: relative;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--led) 7%, var(--well)), var(--well)); box-shadow: inset 0 0 0 1px #ffffff06, 0 0 22px -16px var(--led); }
+.stack.empty { flex-direction: row; align-items: center; gap: 10px; flex-wrap: wrap; }
+.stackhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.stacktitle { font-size: 16px; color: var(--led); text-shadow: 0 0 10px var(--glow); }
+.layer { border: 1px solid var(--line); border-left: 3px solid var(--line2); border-radius: 2px; padding: 5px 8px; background: var(--panel); animation: cardIn .3s ease both; transition: border-color .2s, box-shadow .2s; }
+.layer.on { border-left-color: var(--led); box-shadow: -6px 0 16px -10px var(--led); }
+.layer:hover { border-color: color-mix(in srgb, var(--led) 50%, var(--line)); }
+.layerhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.layerhead small { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layerfx { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 8px; }
+.gear.on { color: var(--led); border-color: var(--led); }
+
+/* preset cards */
+.precard { border-radius: 3px; position: relative; transition: transform .15s, box-shadow .2s, border-color .2s; animation: cardIn .35s ease both; }
+.pregrid .precard:nth-child(3n+2) { animation-delay: .04s; } .pregrid .precard:nth-child(3n) { animation-delay: .08s; }
+.precard:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--led) 60%, var(--line)); box-shadow: 0 12px 26px -16px var(--glow); }
+.precard.on { border-color: var(--led); box-shadow: 0 0 0 1px var(--led), 0 0 22px -6px var(--glow); background: linear-gradient(180deg, color-mix(in srgb, var(--led) 12%, var(--well)), var(--well)); }
+.precard.on .prehead b::after { content: ' ON'; font: 400 12px var(--label); letter-spacing: .1em; color: var(--green); text-shadow: 0 0 8px var(--green); }
+.precard.prev { border-style: dashed; border-color: var(--led); }
+.prehead b { font-family: var(--display); font-weight: 400; font-size: 12px; }
+.inside { display: flex; flex-wrap: wrap; gap: 3px; }
+.inside span { font: 600 9px var(--mono); padding: 1px 5px; border-radius: 2px; color: var(--dim); background: color-mix(in srgb, var(--line) 60%, transparent); }
+.precard:hover .inside span { color: var(--text); }
+
+/* beat maker effects drawer */
+.fxdrawer { margin: 10px 12px 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--well); }
+.drawerbtn { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: transparent; padding: 8px 10px; font-size: 16px; text-align: left; }
+.drawerbtn small { font-family: var(--font); letter-spacing: 0; font-size: 11px; color: var(--dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drawerbtn:hover { box-shadow: none; color: var(--led); }
+.fxdrawer .beatfx { padding: 0 10px 10px; }
+.fxdrawer .fxchain { display: flex; gap: 8px; flex-wrap: wrap; }
+
+@keyframes chrome { to { background-position: -200% 0; } }
+@keyframes sweepX { to { background-position: -200% 0; } }
+@keyframes cardIn { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { h1, .fxcard, .fxcard::before, .precard, .layer, .fxhead .led { animation: none !important; } }

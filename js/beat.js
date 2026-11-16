@@ -8,6 +8,18 @@ import { PERC, PERC_NAMES, PERC_KITS, isString } from './instruments.js';
 import { openGuitarMaker, voicing, chordName } from './guitar.js';
 import { modal } from './util.js';
 import { openKeyGuide } from './keyguide.js';
+import { beatFxPanel } from './fxui.js';
+import { FX } from './fx.js';
+
+// effects drawer under each beat track editor
+let fxOpen = true;
+function fxDrawer(t) {
+  const n = (t.fx || []).length;
+  return el('div', { class: 'fxdrawer' + (fxOpen ? ' open' : '') },
+    el('button', { class: 'drawerbtn', onclick: () => { fxOpen = !fxOpen; renderBeatEditor(); } },
+      el('span', { class: 'led' + (n ? ' on' : '') }), `Effects and knobs (${n})`, el('small', {}, n ? (t.fx || []).map(f => FX[f.type].name).join(' + ') : 'Echo, wah, lo-fi, chop, reverb and more'), el('span', { class: 'chev' }, fxOpen ? '▾' : '▸')),
+    fxOpen ? beatFxPanel(t, renderBeatEditor) : null);
+}
 const dname = s => DRUM_NAMES[s] || PERC_NAMES[s] || s;
 // instrument menu groups (anything not listed lands in Synths)
 const GROUPS = [
@@ -224,6 +236,7 @@ function drumEditor(t, box) {
       el('button', { onclick: () => { snapshot(); data.forEach(r => r.fill(0)); save(); renderBeatEditor(); } }, 'Clear')),
     el('div', { class: 'ed-body' }, grid),
     drumPads(t),
+    fxDrawer(t),
     SOUNDS.length ? null : el('p', { class: 'hint pad12' }, 'Tip: upload your own drum sounds in My sounds, then pick them in each row menu.'),
   ].filter(Boolean));
 }
@@ -323,6 +336,7 @@ function synthEditor(t, box) {
     ),
     body,
     playPanel(t),
+    fxDrawer(t),
   );
   body.append(el('div', { class: 'roll' }, keys, el('div', { class: 'gridwrap' }, cv, ED.ph)));
   draw();

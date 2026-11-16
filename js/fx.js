@@ -13,8 +13,8 @@ export const TUNE_SCALES = { chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 
 const p = (k, label, min, max, step, def, fmt, adv) => ({ k, label, min, max, step, def, fmt, adv });
 export const FX = {
   denoise: { name: 'Noise remover', group: 'Clean up', params: [p('amount', 'Amount', 0, 1, 0.01, 0.6, pc)] },
-  tune:    { name: 'Auto-Tune', group: 'Pitch', params: [p('speed', 'Retune speed', 0, 1, 0.01, 0.5, pc), p('key', 'Key', -1, 11, 1, -1, v => v < 0 ? 'song' : NOTE[v]), p('scale', 'Scale', 0, 6, 1, 2, v => Object.keys(TUNE_SCALES)[v], true), p('mix', 'Mix', 0, 1, 0.01, 1, pc, true)] },
-  pitch:   { name: 'Pitch shift', group: 'Pitch', params: [p('semis', 'Semitones', -12, 12, 1, 0, st), p('mix', 'Mix', 0, 1, 0.01, 1, pc, true)] },
+  tune:    { name: 'Auto-Tune', group: 'Pitch', params: [p('speed', 'Retune speed', 0, 1, 0.01, 0.5, pc), p('key', 'Key', -1, 11, 1, -1, v => v < 0 ? 'song' : NOTE[v]), p('scale', 'Scale', 0, 6, 1, 2, v => Object.keys(TUNE_SCALES)[v], true), p('shift', 'Transpose', -12, 12, 1, 0, st), p('mix', 'Mix', 0, 1, 0.01, 1, pc)] },
+  pitch:   { name: 'Pitch shift', group: 'Pitch', params: [p('semis', 'Semitones', -12, 12, 1, 0, st), p('mix', 'Mix', 0, 1, 0.01, 1, pc)] },
   harmony: { name: 'Harmonizer', group: 'Pitch', params: [p('v1', 'Voice 1', -12, 12, 1, 4, st), p('v2', 'Voice 2', -12, 12, 1, 7, st), p('mix', 'Harmony level', 0, 1, 0.01, 0.35, pc)] },
   eq:      { name: 'EQ (tone)', group: 'Tone', params: [p('lowcut', 'Low cut', 20, 600, 1, 80, hz), p('body', 'Body', -12, 12, 0.5, 0, db), p('mud', 'Mud', -12, 12, 0.5, 0, db), p('presence', 'Presence', -12, 12, 0.5, 0, db), p('air', 'Air', -12, 12, 0.5, 0, db), p('hicut', 'High cut', 2000, 20000, 100, 20000, hz, true)] },
   comp:    { name: 'Compressor', group: 'Dynamics', params: [p('thresh', 'Amount', -45, 0, 1, -18, v => v + ' dB'), p('ratio', 'Ratio', 1, 20, 0.5, 4, v => v + ':1', true), p('attack', 'Attack', 0.001, 0.1, 0.001, 0.005, sec, true), p('release', 'Release', 0.03, 1, 0.01, 0.15, sec, true), p('makeup', 'Makeup', 0, 18, 0.5, 4, db)] },
@@ -28,8 +28,16 @@ export const FX = {
   flanger: { name: 'Flanger', group: 'Space', params: [p('rate', 'Speed', 0.05, 2, 0.01, 0.25, v => (+v).toFixed(2) + ' Hz'), p('depth', 'Depth', 0, 1, 0.01, 0.6, pc), p('feedback', 'Feedback', 0, 0.9, 0.01, 0.5, pc, true), p('mix', 'Mix', 0, 1, 0.01, 0.5, pc)] },
   phaser:  { name: 'Phaser', group: 'Space', params: [p('rate', 'Speed', 0.05, 3, 0.01, 0.4, v => (+v).toFixed(2) + ' Hz'), p('depth', 'Depth', 0, 1, 0.01, 0.7, pc), p('feedback', 'Feedback', 0, 0.9, 0.01, 0.4, pc, true), p('mix', 'Mix', 0, 1, 0.01, 0.5, pc)] },
   widen:   { name: 'Stereo widener', group: 'Space', params: [p('amount', 'Width', 0, 1, 0.01, 0.5, pc)] },
+  bitcrush:{ name: 'Lo-fi crusher', group: 'Color', params: [p('bits', 'Bits', 2, 12, 1, 6, v => v + ' bit'), p('tone', 'Tone', 500, 12000, 50, 6000, hz), p('mix', 'Mix', 0, 1, 0.01, 0.6, pc)] },
+  autowah: { name: 'Auto-wah', group: 'Motion', params: [p('rate', 'Speed', 0.1, 8, 0.05, 1.5, v => (+v).toFixed(2) + ' Hz'), p('freq', 'Center', 200, 3000, 10, 900, hz), p('depth', 'Sweep', 0, 1, 0.01, 0.7, pc), p('q', 'Squeal', 0.5, 15, 0.1, 5, v => (+v).toFixed(1)), p('mix', 'Mix', 0, 1, 0.01, 0.8, pc)] },
+  tremolo: { name: 'Tremolo / chop', group: 'Motion', params: [p('rate', 'Speed', 0.5, 16, 0.1, 5, v => (+v).toFixed(1) + ' Hz'), p('depth', 'Depth', 0, 1, 0.01, 0.6, pc), p('shape', 'Choppy', 0, 1, 0.01, 0, pc)] },
+  vibrato: { name: 'Vibrato', group: 'Motion', params: [p('rate', 'Speed', 0.5, 12, 0.1, 5, v => (+v).toFixed(1) + ' Hz'), p('depth', 'Depth', 0, 1, 0.01, 0.4, pc)] },
+  delay:   { name: 'Echo', group: 'Space', params: [p('time', 'Time', 0.03, 1.5, 0.01, 0.33, v => (+v).toFixed(2) + 's'), p('feedback', 'Repeats', 0, 0.92, 0.01, 0.4, pc), p('tone', 'Tone', 500, 12000, 50, 4000, hz), p('mix', 'Mix', 0, 1, 0.01, 0.35, pc)] },
+  room:    { name: 'Reverb room', group: 'Space', params: [p('size', 'Size', 0.2, 6, 0.1, 1.8, v => (+v).toFixed(1) + 's'), p('tone', 'Tone', 1000, 16000, 100, 8000, hz), p('mix', 'Mix', 0, 1, 0.01, 0.3, pc)] },
 };
-export const FX_ORDER = ['denoise', 'tune', 'pitch', 'harmony', 'eq', 'comp', 'deess', 'sat', 'dist', 'ring', 'chorus', 'doubler', 'flanger', 'phaser', 'widen', 'limiter'];
+export const FX_ORDER = ['denoise', 'tune', 'pitch', 'harmony', 'eq', 'comp', 'deess', 'sat', 'dist', 'bitcrush', 'ring', 'autowah', 'tremolo', 'vibrato', 'chorus', 'doubler', 'flanger', 'phaser', 'delay', 'room', 'widen', 'limiter'];
+// effects that make sense on instruments in the beat maker
+export const BEAT_FX = ['eq', 'comp', 'sat', 'dist', 'bitcrush', 'autowah', 'tremolo', 'vibrato', 'chorus', 'flanger', 'phaser', 'delay', 'room', 'widen', 'pitch', 'ring', 'limiter'];
 
 export function newFx(type, params = {}) {
   const def = {}; for (const q of FX[type].params) def[q.k] = q.def;
@@ -153,13 +161,54 @@ const BUILD = {
     input.connect(m, 0, 0); input.connect(d); d.connect(m, 0, 1); m.connect(wet); wet.connect(out);
     return { in: input, out, set(p, _, i) { sp(c, d.delayTime, 0.004 + p.amount * 0.014, i); sp(c, wet.gain, p.amount * 0.7, i); sp(c, dry.gain, 1 - p.amount * 0.5, i); } };
   },
+  bitcrush(c) {
+    const w = wetDry(c), sh = c.createWaveShaper(), tone = c.createBiquadFilter(); tone.type = 'lowpass';
+    w.input.connect(sh); sh.connect(tone); tone.connect(w.wet);
+    let last = -1;
+    return { in: w.input, out: w.out, set(p, _, i) {
+      if (p.bits !== last) { const n = 4096, a = new Float32Array(n), q = Math.pow(2, p.bits - 1); for (let k = 0; k < n; k++) { const x = k / (n - 1) * 2 - 1; a[k] = Math.round(x * q) / q; } sh.curve = a; last = p.bits; }
+      sp(c, tone.frequency, p.tone, i); w.mix(p.mix, i); } };
+  },
+  autowah(c) {
+    const w = wetDry(c), f = c.createBiquadFilter(); f.type = 'bandpass';
+    const mk = c.createGain(); mk.gain.value = 2.2;
+    const l = lfo(c, 1.5, 400, f.frequency);
+    w.input.connect(f); f.connect(mk); mk.connect(w.wet);
+    return { in: w.input, out: w.out, set(p, _, i) { sp(c, f.frequency, p.freq, i); sp(c, l.o.frequency, p.rate, i); sp(c, l.g.gain, p.freq * 0.9 * p.depth, i); sp(c, f.Q, p.q, i); w.mix(p.mix, i); }, stop() { l.o.stop(); } };
+  },
+  tremolo(c) {
+    const input = c.createGain(), amp = c.createGain(), o = c.createOscillator(), sh = c.createWaveShaper(), dep = c.createGain();
+    o.connect(sh); sh.connect(dep); dep.connect(amp.gain); input.connect(amp); o.start();
+    let last = -1;
+    return { in: input, out: amp, set(p, _, i) {
+      if (p.shape !== last) { const n = 512, a = new Float32Array(n), k = 1 + p.shape * 40; for (let j = 0; j < n; j++) { const x = j / (n - 1) * 2 - 1; a[j] = Math.tanh(k * x) / Math.tanh(k); } sh.curve = a; last = p.shape; }
+      sp(c, o.frequency, p.rate, i); sp(c, amp.gain, 1 - p.depth / 2, i); sp(c, dep.gain, p.depth / 2, i); }, stop() { o.stop(); } };
+  },
+  vibrato(c) {
+    const d = c.createDelay(0.05); d.delayTime.value = 0.008;
+    const l = lfo(c, 5, 0.002, d.delayTime);
+    return { in: d, out: d, set(p, _, i) { sp(c, l.o.frequency, p.rate, i); sp(c, l.g.gain, p.depth * 0.004, i); }, stop() { l.o.stop(); } };
+  },
+  delay(c) {
+    const w = wetDry(c), d = c.createDelay(2), fb = c.createGain(), tone = c.createBiquadFilter(); tone.type = 'lowpass';
+    w.input.connect(d); d.connect(tone); tone.connect(fb); fb.connect(d); tone.connect(w.wet);
+    return { in: w.input, out: w.out, set(p, _, i) { sp(c, d.delayTime, p.time, i); sp(c, fb.gain, p.feedback, i); sp(c, tone.frequency, p.tone, i); sp(c, w.dry.gain, 1, i); sp(c, w.wet.gain, p.mix, i); } };
+  },
+  room(c) {
+    const w = wetDry(c), cv = c.createConvolver(), tone = c.createBiquadFilter(); tone.type = 'lowpass';
+    w.input.connect(cv); cv.connect(tone); tone.connect(w.wet);
+    let last = -1;
+    return { in: w.input, out: w.out, set(p, _, i) {
+      if (p.size !== last) { const len = Math.floor(c.sampleRate * p.size), b = c.createBuffer(2, len, c.sampleRate); for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let k = 0; k < len; k++) d[k] = (Math.random() * 2 - 1) * Math.pow(1 - k / len, 2.5); } cv.buffer = b; last = p.size; }
+      sp(c, tone.frequency, p.tone, i); sp(c, w.dry.gain, 1, i); sp(c, w.wet.gain, p.mix, i); } };
+  },
   tune(c) {
     const n = new AudioWorkletNode(c, 'pitch', { outputChannelCount: [2] });
     n.parameters.get('mode').value = 2;
     return { in: n, out: n, set(p, info) {
       // key -1 means: follow the song key and scale from the Beat tab
       n.parameters.get('mask').value = p.key < 0 ? scaleMask(info.key, info.scaleIdx) : scaleMask(p.key, p.scale);
-      n.parameters.get('speed').value = p.speed; n.parameters.get('mix').value = p.mix;
+      n.parameters.get('speed').value = p.speed; n.parameters.get('mix').value = p.mix; n.parameters.get('semis').value = p.shift || 0;
     } };
   },
   pitch(c) {

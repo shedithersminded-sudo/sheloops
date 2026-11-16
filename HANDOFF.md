@@ -178,3 +178,10 @@ Not tested: printing on real paper.
 
 ## Next: upload to GitHub
 Stage 8 (AI helper, tour, desktop app) was skipped by the user on 2026-11-16 ("dont need that really"). Next step is the public GitHub upload: code only, no personal files, .gitignore and a README that says all songs, sounds and art stay in each person's own browser.
+
+## 1.2.0 sound stack, knobs, beat effects
+- Presets layer: fx made by a preset carry `f.layer` = preset id; `t.layers` lists active presets, `t.layerBase` keeps rev/dly from before. One Vocal at a time, others stack. Logic in fxui.js `layered()`, panel `stackPanel()`.
+- `knob(..., cls)` with `dial` in cls draws a rotary knob (util.js `dial()`): drag, wheel, arrows, double-click resets.
+- Beat tracks now have fx chains (engine nodeFor, syncFx for beat tracks). UI: beat.js `fxDrawer()` uses fxui `beatFxPanel()`. `BEAT_FX` in fx.js.
+- New fx types: bitcrush, autowah, tremolo, vibrato, delay, room. Tune has `shift`.
+- Fonts: headings Bungee, labels Bebas Neue (both already vendored), body still the chosen font.
