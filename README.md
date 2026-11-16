@@ -2,6 +2,8 @@
 
 A free music studio that runs in your browser. Record vocals over your beats, make beats, mix, master and design your cover art.
 
+**Try it now:** https://shedithersminded-sudo.github.io/sheloops/ (Chrome or Edge, nothing to install)
+
 ## What it does
 
 - **Record:** sing over your own beat (drag and drop an MP3 or WAV), with takes, punch in and Fix my voice
