@@ -1,13 +1,20 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Bug check: all 70 instruments, 46 drum sounds, 22 effects, 74 presets and 9 starter beats tested.",
-    "Saved presets no longer carry hidden stack tags.",
-    "Auto-wah is a bit louder."
+    "Keys guide: the lists no longer overlap. Each key now sits above what it does."
   ],
   "history": [
+    {
+      "version": "1.2.1",
+      "date": "2026-11-16",
+      "notes": [
+        "Bug check: all 70 instruments, 46 drum sounds, 22 effects, 74 presets and 9 starter beats tested.",
+        "Saved presets no longer carry hidden stack tags.",
+        "Auto-wah is a bit louder."
+      ]
+    },
     {
       "version": "1.2.0",
       "date": "2026-11-16",
