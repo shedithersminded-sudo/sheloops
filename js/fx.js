@@ -33,12 +33,14 @@ export const FX = {
   tremolo: { name: 'Tremolo / chop', group: 'Motion', params: [p('rate', 'Speed', 0.5, 16, 0.1, 5, v => (+v).toFixed(1) + ' Hz'), p('depth', 'Depth', 0, 1, 0.01, 0.6, pc), p('shape', 'Choppy', 0, 1, 0.01, 0, pc)] },
   vibrato: { name: 'Vibrato', group: 'Motion', params: [p('rate', 'Speed', 0.5, 12, 0.1, 5, v => (+v).toFixed(1) + ' Hz'), p('depth', 'Depth', 0, 1, 0.01, 0.4, pc)] },
   delay:   { name: 'Echo', group: 'Space', params: [p('time', 'Time', 0.03, 1.5, 0.01, 0.33, v => (+v).toFixed(2) + 's'), p('feedback', 'Repeats', 0, 0.92, 0.01, 0.4, pc), p('tone', 'Tone', 500, 12000, 50, 4000, hz), p('mix', 'Mix', 0, 1, 0.01, 0.35, pc)] },
+  filter:  { name: 'Filter sweep', group: 'Tone', params: [p('mode', 'Type', 0, 2, 1, 0, v => ['Low pass', 'High pass', 'Band pass'][v]), p('cutoff', 'Cutoff', 60, 18000, 10, 2500, hz), p('res', 'Resonance', 0.5, 20, 0.1, 2, v => (+v).toFixed(1)), p('rate', 'Sweep speed', 0, 2, 0.01, 0, v => v ? (+v).toFixed(2) + ' Hz' : 'off'), p('depth', 'Sweep amount', 0, 1, 0.01, 0.6, pc)] },
+  dust:    { name: 'Vinyl dust', group: 'Color', params: [p('crackle', 'Crackle', 0, 1, 0.01, 0.4, pc), p('hiss', 'Hiss', 0, 1, 0.01, 0.25, pc), p('tone', 'Tone', 1000, 12000, 100, 5000, hz)] },
   repeat:  { name: 'Stutter repeat', group: 'Motion', params: [p('slice', 'Slice', 0.03, 0.5, 0.005, 0.09, v => Math.round(v * 1000) + 'ms'), p('count', 'Repeats', 2, 8, 1, 4, v => v + 'x'), p('mix', 'Mix', 0, 1, 0.01, 0.8, pc)] },
   room:    { name: 'Reverb room', group: 'Space', params: [p('size', 'Size', 0.2, 10, 0.1, 1.8, v => (+v).toFixed(1) + 's'), p('tone', 'Tone', 1000, 16000, 100, 8000, hz), p('mix', 'Mix', 0, 1, 0.01, 0.3, pc)] },
 };
-export const FX_ORDER = ['denoise', 'tune', 'pitch', 'harmony', 'eq', 'comp', 'deess', 'sat', 'dist', 'bitcrush', 'ring', 'autowah', 'tremolo', 'vibrato', 'repeat', 'chorus', 'doubler', 'flanger', 'phaser', 'delay', 'room', 'widen', 'limiter'];
+export const FX_ORDER = ['denoise', 'tune', 'pitch', 'harmony', 'eq', 'filter', 'comp', 'deess', 'sat', 'dist', 'bitcrush', 'ring', 'autowah', 'tremolo', 'vibrato', 'repeat', 'chorus', 'doubler', 'flanger', 'phaser', 'delay', 'room', 'widen', 'dust', 'limiter'];
 // effects that make sense on instruments in the beat maker
-export const BEAT_FX = ['eq', 'comp', 'sat', 'dist', 'bitcrush', 'autowah', 'tremolo', 'vibrato', 'repeat', 'chorus', 'flanger', 'phaser', 'delay', 'room', 'widen', 'pitch', 'ring', 'limiter'];
+export const BEAT_FX = ['eq', 'filter', 'dust', 'comp', 'sat', 'dist', 'bitcrush', 'autowah', 'tremolo', 'vibrato', 'repeat', 'chorus', 'flanger', 'phaser', 'delay', 'room', 'widen', 'pitch', 'ring', 'limiter'];
 
 export function newFx(type, params = {}) {
   const def = {}; for (const q of FX[type].params) def[q.k] = q.def;
@@ -189,6 +191,24 @@ const BUILD = {
     const d = c.createDelay(0.05); d.delayTime.value = 0.008;
     const l = lfo(c, 5, 0.002, d.delayTime);
     return { in: d, out: d, set(p, _, i) { sp(c, l.o.frequency, p.rate, i); sp(c, l.g.gain, p.depth * 0.004, i); }, stop() { l.o.stop(); } };
+  },
+  filter(c) {
+    const f = c.createBiquadFilter(), l = lfo(c, 0.1, 0, f.detune);
+    return { in: f, out: f, set(p, _, i) {
+      f.type = ['lowpass', 'highpass', 'bandpass'][p.mode] || 'lowpass';
+      sp(c, f.frequency, p.cutoff, i); sp(c, f.Q, p.res, i);
+      sp(c, l.o.frequency, Math.max(0.01, p.rate), i); sp(c, l.g.gain, p.rate ? p.depth * 3000 : 0, i); // sweep in cents, so it moves evenly through the octaves
+    }, stop() { l.o.stop(); } };
+  },
+  // vinyl crackle and tape hiss laid over the sound
+  dust(c) {
+    const input = c.createGain(), out = c.createGain(), len = c.sampleRate * 3, b = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let k = 0; k < len; k++) if (Math.random() < 0.00035) { const a = (Math.random() * 2 - 1) * (0.3 + Math.random() * 0.7); for (let j = 0; j < 40 && k + j < len; j++) d[k + j] += a * Math.exp(-j / 6) * (j % 2 ? -1 : 1); } }
+    const hb = c.createBuffer(2, c.sampleRate * 2, c.sampleRate); for (let ch = 0; ch < 2; ch++) { const d = hb.getChannelData(ch); for (let k = 0; k < d.length; k++) d[k] = Math.random() * 2 - 1; }
+    const cr = c.createBufferSource(), hs = c.createBufferSource(), cg = c.createGain(), hg = c.createGain(), tone = c.createBiquadFilter();
+    cr.buffer = b; hs.buffer = hb; cr.loop = hs.loop = true; tone.type = 'lowpass';
+    input.connect(out); cr.connect(cg); hs.connect(hg); cg.connect(tone); hg.connect(tone); tone.connect(out); cr.start(); hs.start();
+    return { in: input, out, set(p, _, i) { sp(c, cg.gain, p.crackle * 0.5, i); sp(c, hg.gain, p.hiss * 0.025, i); sp(c, tone.frequency, p.tone, i); }, stop() { cr.stop(); hs.stop(); } };
   },
   // grabs a short slice and repeats it, then grabs the next one (beat-repeat stutter)
   repeat(c) {

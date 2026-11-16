@@ -7,15 +7,19 @@ import { E, ensureCtx, openMic, reopenMic, setInputGain, peakOf, rmsOf, testReco
 import { importBeatFile } from './studio.js';
 import { U, check, whatsNew, install } from './update.js';
 import { exportSongFile, exportEverything, openSheloopsFile } from './exporter.js';
+import { look, saveLook, applyLook, allThemes, applyGlow } from './look.js';
+import { STARTERS } from './state.js';
 
 const go = v => emit('goto:' + v);
 const ago = ts => { const s = (Date.now() - ts) / 1000; return s < 60 ? 'just now' : s < 3600 ? Math.floor(s / 60) + ' min ago' : s < 86400 ? Math.floor(s / 3600) + ' h ago' : new Date(ts).toLocaleDateString(); };
 const coverEl = (p, cls = 'cover') => p.cover ? el('img', { class: cls, src: p.cover, alt: '' }) : el('div', { class: cls + ' blank' }, (p.name || '?').slice(0, 2).toUpperCase());
 
-export async function createSong(withFile) {
-  const name = await ask('New song', 'Song name', 'New song');
+export async function createSong(withFile, style) {
+  const name = await ask('New song', 'Song name', style ? style + ' song' : 'New song');
   if (!name) return;
+  const keep = settings.defaultStarter; if (style) settings.defaultStarter = style;
   const p = newProject(name);
+  settings.defaultStarter = keep;
   if (withFile) { p.beat.mute = true; }
   await db.put('projects', p.id, p);
   await openProject(p);
@@ -25,6 +29,37 @@ export async function createSong(withFile) {
 function pickFile(accept) {
   return new Promise(res => { const i = el('input', { type: 'file', accept }); i.onchange = () => res(i.files[0] || null); i.click(); });
 }
+
+// ---------- welcome guide on Home: make it yours, Simple vs Advanced, what you can make ----------
+const GENRES = [['Trap', 'hard 808s'], ['Drill', 'sliding bass'], ['R&B', 'smooth'], ['Hip-Hop', 'boom bap'], ['Afrobeats', 'bouncy'], ['Pop', 'bright'], ['Lo-fi', 'dusty chill'],
+  ['Jungle', 'chopped breaks'], ['Drum & Bass', 'fast and deep'], ['Breakcore', 'chaos breaks'], ['Heavenly Breakcore', 'dreamy and fast'], ['Lonely Breakcore', 'sad piano'],
+  ['Outsider House', 'dusty house'], ['Acid House', 'squelchy'], ['Rave Breaks', 'hoovers'], ['Gospel', 'church keys'], ['Soul', 'warm']];
+function welcome() {
+  const open = !settings.hideWelcome;
+  const step = (n, title, text, ...kids) => el('div', { class: 'wcard' }, el('div', { class: 'wnum' }, n), el('b', {}, title), el('p', {}, text), ...kids);
+  const themes = allThemes().slice(0, 8);
+  const d = el('details', { class: 'welcome', open },
+    el('summary', {}, el('span', { class: 'wled' }), 'Welcome to your studio', el('small', {}, open ? 'Click to hide this guide' : 'Click to show the guide')),
+    el('div', { class: 'wgrid' },
+      step('1', 'Make it yours', 'Every color, the background, the font, the glow, the mouse and the CD player can be changed. Try a theme right now:',
+        el('div', { class: 'wthemes' }, themes.map(t => el('button', { class: 'wtheme' + (t.id === look.theme ? ' on' : ''), title: t.name, style: `--tb:${t.c.bg};--ta:${t.c.led};--tt:${t.c.text}`, onclick: async e => { look.theme = t.id; saveLook(); await applyLook(); e.target.closest('.wthemes').querySelectorAll('.wtheme').forEach(b => b.classList.toggle('on', b === e.currentTarget)); toast(`Theme: ${t.name}. Go to Appearance for more.`); } }, el('i'), el('span', {}, t.name)))),
+        el('div', { class: 'wrow' },
+          el('button', { class: 'tog' + (look.glow && look.glow.on ? ' on' : ''), onclick: e => { look.glow.on = !look.glow.on; saveLook(); applyGlow(); e.target.classList.toggle('on', look.glow.on); e.target.textContent = look.glow.on ? 'Text glow ON' : 'Text glow OFF'; } }, look.glow && look.glow.on ? 'Text glow ON' : 'Text glow OFF'),
+          el('button', { class: 'hot', onclick: () => go('look') }, 'Open Appearance'))),
+      step('2', 'Simple or Advanced', settings.simple
+        ? 'You are in Simple mode: fewer buttons, and every screen explains itself in plain words. Switch to Advanced when you want every knob and tool.'
+        : 'You are in Advanced mode: every tool and knob is out. Switch to Simple for fewer buttons and plain-word explanations on every screen.',
+        el('div', { class: 'wmodes' },
+          el('button', { class: 'wmode' + (settings.simple ? ' on' : ''), onclick: () => setMode(true) }, el('b', {}, 'Simple'), el('small', {}, 'Explains everything. Best to start.')),
+          el('button', { class: 'wmode' + (!settings.simple ? ' on' : ''), onclick: () => setMode(false) }, el('b', {}, 'Advanced'), el('small', {}, 'All tools, mixer, automation, effects chain.'))),
+        el('p', { class: 'hint' }, 'The same switch is always at the top right. Press ? on any screen for the keys, and click any ? button to learn what something does.')),
+      step('3', 'What do you want to make?', 'Pick a style. You get a new song with a ready beat in that style, then you can change everything.',
+        el('div', { class: 'wgenres' }, GENRES.filter(([g]) => STARTERS[g]).map(([g, s]) => el('button', { class: 'wgenre', onclick: () => createSong(false, g) }, el('b', {}, g), el('small', {}, s)))),
+        el('div', { class: 'wrow' }, el('button', { onclick: () => go('pads') }, 'Or tap a beat on the Pad machine'), el('button', { onclick: () => go('learn') }, 'Step by step lessons')))));
+  d.addEventListener('toggle', () => { settings.hideWelcome = !d.open; saveSettings(); d.querySelector('summary small').textContent = d.open ? 'Click to hide this guide' : 'Click to show the guide'; });
+  return d;
+}
+function setMode(v) { settings.simple = v; saveSettings(); document.body.classList.toggle('simple', v); emit('modechange'); toast(v ? 'Simple mode: plain explanations everywhere.' : 'Advanced mode: every tool is out.'); }
 
 // Updates & app box on Home
 function updatesPanel() {
@@ -79,11 +114,13 @@ export async function renderHome() {
       el('div', { class: 'dropzone', id: 'homedrop' }, el('b', {}, 'Drop a beat file here'), el('span', {}, 'Starts a new song with your beat, ready to record.')),
     ),
     ticker(P, all),
+    welcome(),
     el('div', { class: 'tiles' },
       tile('Start with my beat', 'Pick an MP3 or WAV and record over it', async () => { const f = await pickFile('audio/*'); if (f) createSong(f); }, true),
       tile('Create new song', 'Starts with a simple built-in beat', () => createSong(null)),
       tile('Record vocals', 'Open the recording studio', () => P ? go('studio') : createSong(null)),
       tile('Fix my voice', 'Check a take and fix problems', () => { settings.inspTab = 'fix'; saveSettings(); P ? go('studio') : createSong(null); }),
+      tile('Pad machine', 'Finger drum pads, your voice on a pad, loops', () => go('pads'), true),
       tile('My sound', 'Your studio profile and defaults', () => go('profile')),
       tile('My studio appearance', 'Themes, backgrounds, cursor, layout', () => go('look')),
       tile('My cover art', 'Covers, CD discs, back covers and cases', () => go('art')),

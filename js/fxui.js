@@ -264,6 +264,11 @@ export function buildTab(t) {
 
 // ---------- Beat maker effects (per instrument or drum row) ----------
 const BEAT_RECIPES = [
+  { name: 'Outsider dust', what: 'Dusty, warm, filtered, like an old house record.', fx: [['sat', { drive: 0.4 }], ['filter', { mode: 0, cutoff: 3500, res: 1 }], ['dust', { crackle: 0.45, hiss: 0.25, tone: 5000 }]] },
+  { name: 'House pump', what: 'Ducks with the kick at about 122 BPM, like sidechain.', fx: [['tremolo', { rate: 2.03, depth: 0.7, shape: 0.1 }]] },
+  { name: 'Filter sweep', what: 'Slowly opens and closes, the classic house build.', fx: [['filter', { mode: 0, cutoff: 800, res: 6, rate: 0.06, depth: 0.9 }]] },
+  { name: 'Acid squelch', what: 'Squelchy resonant acid sound for the acid bass.', fx: [['filter', { mode: 0, cutoff: 600, res: 14, rate: 0.25, depth: 0.8 }], ['dist', { drive: 0.3, tone: 3000, mix: 0.35 }]] },
+  { name: 'Warehouse', what: 'Big room with a long echo.', fx: [['delay', { time: 0.37, feedback: 0.35, tone: 3000, mix: 0.22 }], ['room', { size: 5, tone: 5000, mix: 0.35 }]] },
   { name: 'Breakcore crunch', what: 'Smashed, distorted, crunchy drums.', fx: [['comp', { thresh: -30, ratio: 8, makeup: 8, attack: 0.002 }], ['dist', { drive: 0.55, tone: 5000, mix: 0.45 }], ['bitcrush', { bits: 8, tone: 9000, mix: 0.3 }], ['limiter', { ceiling: -1, drive: 3 }]] },
   { name: 'Jungle break', what: 'Punchy, gritty old-school break sound.', fx: [['eq', { lowcut: 40, body: 2, presence: 3, air: 2 }], ['comp', { thresh: -24, ratio: 5, makeup: 6, attack: 0.003 }], ['sat', { drive: 0.5 }]] },
   { name: 'Stutter', what: 'Fast on and off chop.', fx: [['tremolo', { rate: 12, depth: 1, shape: 1 }]] },

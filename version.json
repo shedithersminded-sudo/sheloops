@@ -1,13 +1,25 @@
 {
-  "version": "1.3.2",
+  "version": "1.4.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "New effect: Stutter repeat. Grabs a tiny slice and repeats it, for chopped glitchy vocals and drums.",
-    "New Breakcore mood in Voice FX with 16 presets: Frozen Heart, Anime Chop, Stutter Repeat, Digital Angel, Cassette Memory, Distant Signal, Pump, Glitch Angel, Whisper Haze, Crystal, Sad Robot, Hyper Bright and more.",
-    "Reverb room size now goes up to 10 seconds for frozen, endless spaces."
+    "New Pad machine: 16 glowing pads in 4 banks with an LCD screen and LED meter. Play drums, instruments, chords, My sounds or your own voice recorded onto a pad.",
+    "Every pad has its own effects and knobs. Record loops, then save them to My sounds with effects, send them to the beat maker, or download a WAV.",
+    "Outsider house tools: Outsider House, Acid House and Rave Breaks starters, house organ, house piano, rave stab, hoover and acid bass, a House drum kit with vinyl crackle.",
+    "New effects: Filter sweep and Vinyl dust. New Quick sounds: Outsider dust, House pump, Filter sweep, Acid squelch, Warehouse.",
+    "House voice effects: Muffled Diva, Warehouse, Filter Sweep Vocal, Old Soul Sample, Underground, Late Night Radio, Fighting Demons and more. Lonely Breakcore starter.",
+    "Home now has a welcome guide: try themes and glow, pick Simple or Advanced, and start a song in any of 17 styles with one click."
   ],
   "history": [
+    {
+      "version": "1.3.2",
+      "date": "2026-11-16",
+      "notes": [
+        "New effect: Stutter repeat. Grabs a tiny slice and repeats it, for chopped glitchy vocals and drums.",
+        "New Breakcore mood in Voice FX with 16 presets: Frozen Heart, Anime Chop, Stutter Repeat, Digital Angel, Cassette Memory, Distant Signal, Pump, Glitch Angel, Whisper Haze, Crystal, Sad Robot, Hyper Bright and more.",
+        "Reverb room size now goes up to 10 seconds for frozen, endless spaces."
+      ]
+    },
     {
       "version": "1.3.1",
       "date": "2026-11-16",

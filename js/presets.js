@@ -139,13 +139,25 @@ export const BUILTIN = [
   P('Voice FX', 'Crystal', 'Glassy high octave with bright echoes.', 0.3, 0.2, () => [F('pitch', { semis: 12, mix: 0.4 }), eq({ lowcut: 300, air: 8 }), F('delay', { time: 0.3, feedback: 0.45, tone: 10000, mix: 0.25 }), F('room', { size: 4, tone: 13000, mix: 0.35 })]),
   P('Voice FX', 'Sad Robot', 'Tuned, a bit lower, cold and lonely.', 0.3, 0.1, () => [tune(1), F('pitch', { semis: -2 }), eq({ air: -3, hicut: 8000 }), F('room', { size: 4, tone: 5000, mix: 0.4 })]),
   P('Voice FX', 'Hyper Bright', 'Sped up, squeezed and sparkly.', 0.15, 0.1, () => [F('pitch', { semis: 4 }), comp(-26, 6, 2), sat(0.3), eq({ lowcut: 200, presence: 2, air: 5 }), F('limiter', { ceiling: -1 })]),
+  P('Voice FX', 'Muffled Diva', 'A big vocal heard through the club wall.', 0.25, 0.15, () => [F('filter', { mode: 0, cutoff: 1200, res: 2 }), F('room', { size: 2.5, tone: 4000, mix: 0.3 })]),
+  P('Voice FX', 'Warehouse', 'Huge empty warehouse at 4 in the morning.', 0, 0, () => [eq({ lowcut: 200, presence: 2 }), F('delay', { time: 0.37, feedback: 0.4, tone: 3000, mix: 0.25 }), F('room', { size: 6, tone: 5000, mix: 0.45 })]),
+  P('Voice FX', 'Filter Sweep Vocal', 'The voice slowly opens and closes like a house filter.', 0.2, 0.1, () => [F('filter', { mode: 0, cutoff: 1800, res: 4, rate: 0.08, depth: 0.85 })]),
+  P('Voice FX', 'Old Soul Sample', 'Slowed, warm and dusty, like a sampled soul record.', 0.2, 0, () => [F('pitch', { semis: -2 }), eq({ lowcut: 250, air: -3, hicut: 6000 }), sat(0.5), F('dust', { crackle: 0.5, hiss: 0.3, tone: 5000 })]),
+  P('Voice FX', 'Dusty Sample', 'Crunchy old sampler with vinyl dust.', 0.1, 0, () => [eq({ lowcut: 200, hicut: 7000 }), F('bitcrush', { bits: 10, tone: 7000, mix: 0.35 }), F('dust', { crackle: 0.45, hiss: 0.2, tone: 6000 })]),
+  P('Voice FX', 'Underground', 'Dark, low passed and pumping with the kick.', 0.2, 0, () => [F('filter', { mode: 0, cutoff: 900, res: 3 }), F('tremolo', { rate: 2.03, depth: 0.7, shape: 0.1 }), F('room', { size: 3, tone: 3500, mix: 0.3 })]),
+  P('Voice FX', 'Rave Call', 'Shouted into a rave with echoes everywhere.', 0, 0, () => [eq({ lowcut: 250, presence: 4 }), F('dist', { drive: 0.3, tone: 3500, mix: 0.3 }), F('delay', { time: 0.25, feedback: 0.5, tone: 3000, mix: 0.3 }), F('room', { size: 4, tone: 5000, mix: 0.35 })]),
+  P('Voice FX', 'Late Night Radio', 'Pirate radio with hiss, late at night.', 0, 0, () => [eq({ lowcut: 400, presence: 3, hicut: 5000 }), comp(-26, 6, 5), F('dust', { crackle: 0.15, hiss: 0.6, tone: 4500 })]),
+  P('Voice FX', 'Fighting Demons', 'Dark, doubled lower voice drowned in a filtered room.', 0.3, 0.1, () => [F('pitch', { semis: -4, mix: 0.5 }), F('filter', { mode: 0, cutoff: 1800, res: 2 }), sat(0.4), F('room', { size: 5, tone: 3000, mix: 0.45 })]),
+  P('Voice FX', 'Telephone House', 'Thin high passed vocal, a classic house trick.', 0.15, 0.15, () => [F('filter', { mode: 1, cutoff: 900, res: 2 }), eq({ presence: 4, hicut: 6000 }), F('delay', { time: 0.24, feedback: 0.35, tone: 3500, mix: 0.2 })]),
+  P('Enhance', 'Tape Dust', 'A light layer of vinyl crackle and hiss.', 0, 0, () => [F('dust', { crackle: 0.3, hiss: 0.15, tone: 6000 })]),
+  P('Enhance', 'Lowpass Glow', 'Rounds off the top for a soft, warm glow.', 0, 0, () => [F('filter', { mode: 0, cutoff: 6000, res: 1 }), sat(0.25)]),
 ];
 export const CATS = ['Vocal', 'Enhance', 'Voice FX'];
 
 // Moods: quick filters inside Enhance and Voice FX
 export const MOODS = {
   Enhance: ['Clear', 'Warm', 'Loud', 'Space'],
-  'Voice FX': ['Breakcore', 'Fun', 'Scary', 'Robot', 'Retro', 'Places', 'Dreamy'],
+  'Voice FX': ['Breakcore', 'House', 'Fun', 'Scary', 'Robot', 'Retro', 'Places', 'Dreamy'],
 };
 const MOOD_OF = {
   Clarity: 'Clear', Brightness: 'Clear', Presence: 'Clear', Sparkle: 'Clear', Silky: 'Clear', 'Noise Cleanup': 'Clear', 'Crisp Words': 'Clear', 'Breathy Air': 'Clear', 'De-harsh': 'Clear', Smooth: 'Clear',
@@ -157,7 +169,7 @@ const MOOD_OF = {
   'Robotic Voice': 'Robot', 'Alien Voice': 'Robot', 'Futuristic Voice': 'Robot', '8-Bit': 'Robot', 'Space Station': 'Robot', 'Robot Choir': 'Robot', Hologram: 'Robot', Glitch: 'Robot', 'Arcade Boss': 'Robot',
   'Telephone Voice': 'Retro', 'Radio Voice FX': 'Retro', 'Vintage Voice': 'Retro', Megaphone: 'Retro', 'Walkie-Talkie': 'Retro', Intercom: 'Retro', 'Drive-Thru': 'Retro', 'Distorted Voice': 'Retro',
   'Echo Voice': 'Places', 'Dub Echo': 'Places', 'Sound System': 'Places', 'Jungle Chop': 'Fun', 'Pitched Sample': 'Retro', Cave: 'Places', Underwater: 'Places', Announcer: 'Places', Tunnel: 'Places', Whisper: 'Places',
-  'Dreamy Voice': 'Dreamy', 'Frozen Heart': 'Breakcore', 'Anime Chop': 'Breakcore', 'Stutter Repeat': 'Breakcore', 'Digital Angel': 'Breakcore', 'Cassette Memory': 'Breakcore', 'Distant Signal': 'Breakcore', Pump: 'Breakcore', 'Glitch Angel': 'Breakcore', 'Whisper Haze': 'Breakcore', Crystal: 'Breakcore', 'Sad Robot': 'Breakcore', 'Hyper Bright': 'Breakcore', 'Breakcore Chop': 'Breakcore', Ethereal: 'Breakcore', 'Dark Blue': 'Breakcore', Nightcore: 'Breakcore',  'Choir of Me': 'Dreamy', Vaporwave: 'Dreamy',
+  'Dreamy Voice': 'Dreamy', 'Muffled Diva': 'House', Warehouse: 'House', 'Filter Sweep Vocal': 'House', 'Old Soul Sample': 'House', 'Dusty Sample': 'House', Underground: 'House', 'Rave Call': 'House', 'Late Night Radio': 'House', 'Fighting Demons': 'House', 'Telephone House': 'House', 'Tape Dust': 'Warm', 'Lowpass Glow': 'Warm', 'Frozen Heart': 'Breakcore', 'Anime Chop': 'Breakcore', 'Stutter Repeat': 'Breakcore', 'Digital Angel': 'Breakcore', 'Cassette Memory': 'Breakcore', 'Distant Signal': 'Breakcore', Pump: 'Breakcore', 'Glitch Angel': 'Breakcore', 'Whisper Haze': 'Breakcore', Crystal: 'Breakcore', 'Sad Robot': 'Breakcore', 'Hyper Bright': 'Breakcore', 'Breakcore Chop': 'Breakcore', Ethereal: 'Breakcore', 'Dark Blue': 'Breakcore', Nightcore: 'Breakcore',  'Choir of Me': 'Dreamy', Vaporwave: 'Dreamy',
 };
 export const moodOf = p => MOOD_OF[p.name] || '';
 

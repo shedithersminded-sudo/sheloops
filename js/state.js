@@ -38,6 +38,11 @@ export const PRESETS = {
   'choir': { wave: 'sine', cutoff: 9000, res: 0, env: 0, attack: 0.002, sustain: 1, release: 0.6, detune: 0, engine: 'choir' },
   'brass': { wave: 'sine', cutoff: 9000, res: 0, env: 0, attack: 0.002, sustain: 1, release: 0.2, detune: 0, engine: 'brass' },
   'organ': { wave: 'sine', cutoff: 8000, res: 0, env: 0, attack: 0.002, sustain: 1, release: 0.1, detune: 0, engine: 'organ' },
+  'house organ': { wave: 'sine', cutoff: 6000, res: 0, env: 0, attack: 0.002, sustain: 1, release: 0.06, detune: 0, engine: 'organ' },
+  'house piano': { wave: 'sine', cutoff: 9000, res: 0, env: 0, attack: 0.002, sustain: 1, release: 0.2, detune: 0, engine: 'piano' },
+  'rave stab': { wave: 'sawtooth', cutoff: 2200, res: 6, env: 0.9, attack: 0.002, sustain: 0.15, release: 0.25, detune: 22 },
+  'hoover': { wave: 'sawtooth', cutoff: 1800, res: 3, env: 0.4, attack: 0.03, sustain: 0.9, release: 0.5, detune: 35 },
+  'acid bass': { wave: 'sawtooth', cutoff: 450, res: 16, env: 1, attack: 0.002, sustain: 0.3, release: 0.12, detune: 0 },
   'electric piano': { wave: 'sine', cutoff: 9000, res: 0, env: 0, attack: 0.002, sustain: 1, release: 0.4, detune: 0, engine: 'epiano' },
   '808 bass': { wave: 'sine', cutoff: 4000, res: 0, env: 0, attack: 0.002, sustain: 1, release: 0.2, detune: 0, engine: 'bass808' },
   'reese bass': { wave: 'sine', cutoff: 8000, res: 0, env: 0, attack: 0.002, sustain: 1, release: 0.25, detune: 0, engine: 'reese' },
@@ -80,6 +85,14 @@ export const STARTERS = {
     chords: [[0, 8, [0, 3, 7, 10]], [8, 8, [-4, 0, 3, 7]], [16, 8, [-7, -4, 0, 3]], [24, 8, [-2, 2, 5, 9]]], bassR: [[0, 4], [6, 2], [8, 6]] },
   'Heavenly Breakcore': { bpm: 175, swing: 0, scale: 'major', keys: 'choir', bassPreset: 'sub', kick: 'x.x.......x..x..', snare: '....X..x.xX.X.xx', hat: 'x.xxx.xxx.xxx.xx', rim: '.......x......x.',
     chords: [[0, 16, [0, 4, 7, 11]], [16, 16, [-3, 0, 4, 7]]], bassR: [[0, 8], [10, 6]] },
+  'Outsider House': { bpm: 122, swing: 0.1, scale: 'minor', keys: 'house organ', stab: '..x...x...x..x..', bassPreset: 'bass', kick: 'x...x...x...x...', clap: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', openhat: '..x...x...x...x.', rim: '...x......x.....',
+    chords: [[0, 8, [0, 3, 7, 10]], [8, 8, [-2, 2, 5, 9]], [16, 8, [-4, 0, 3, 7]], [24, 8, [-5, -2, 2, 5]]], bassR: [[0, 2], [3, 1], [6, 2], [10, 2]] },
+  'Rave Breaks': { bpm: 132, swing: 0, scale: 'minor', keys: 'rave stab', stab: 'x.....x...x.....', bassPreset: 'hoover', kick: 'x.......x.x.....', snare: '....X.......X...', hat: 'x.xxx.xxx.xxx.xx', openhat: '......x.......x.',
+    chords: [[0, 16, [0, 3, 7]], [16, 16, [-2, 2, 5]]], bassR: [[0, 6], [8, 6]] },
+  'Acid House': { bpm: 124, swing: 0.05, scale: 'minor', keys: 'house piano', stab: '..x.....x.x.....', bassPreset: 'acid bass', kick: 'x...x...x...x...', clap: '....x.......x...', hat: '..x...x...x...x.', openhat: '..x...x...x...x.',
+    chords: [[0, 16, [0, 3, 7, 10]], [16, 16, [-4, 0, 3, 7]]], bassR: [[0, 1], [2, 1], [3, 1], [6, 1], [8, 1], [10, 1], [11, 1], [14, 1]] },
+  'Lonely Breakcore': { bpm: 168, swing: 0, scale: 'minor', keys: 'piano', bassPreset: 'sub', kick: 'x.x.....x.x..x..', snare: '....X..x..x.X.xx', hat: 'x.x.x.x.x.x.x.x.', openhat: '..............x.',
+    chords: [[0, 8, [0, 3, 7, 10]], [8, 8, [-4, 0, 3, 7]], [16, 8, [-7, -3, 0, 5]], [24, 8, [-5, -2, 2, 7]]], bassR: [[0, 8]] },
   'Lo-fi':     { bpm: 80,  swing: 0.35, scale: 'major', keys: 'piano', bassPreset: 'bass', kick: 'x......x..x.....', snare: '....X.......X...', hat: 'x.x.x.x.x.x.x.x.', rim: '...x.......x....',
     chords: [[0, 8, [5, 9, 12, 16]], [8, 8, [4, 7, 11, 14]], [16, 8, [2, 5, 9, 12]], [24, 8, [0, 4, 7, 11]]], bassR: [[0, 4], [6, 2]] },
 };
@@ -141,7 +154,8 @@ export function applyStarter(beat, name, pid = 'A') {
   const kn = [], bn = [];
   for (let rep = 0; rep < beat.bars / 2; rep++) for (const [step, len, semis] of st.chords) {
     const s0 = step + rep * 32;
-    for (const iv of semis) kn.push({ step: s0, pitch: kRoot + iv, len: len - 1, vel: 0.7 });
+    if (st.stab) { for (let k = 0; k < len; k++) { const ch = st.stab[(step + k) % 16]; if (ch === 'x' || ch === 'X') for (const iv of semis) kn.push({ step: s0 + k, pitch: kRoot + iv, len: ch === 'X' ? 2 : 1, vel: 0.75 }); } }
+    else for (const iv of semis) kn.push({ step: s0, pitch: kRoot + iv, len: len - 1, vel: 0.7 });
     for (const [off, l] of st.bassR) if (off < len) bn.push({ step: s0 + off, pitch: bRoot + ((semis[0] % 12) + 12) % 12 - (semis[0] < -6 ? 0 : 0), len: Math.min(l, len - off), vel: off ? 0.7 : 0.9 });
   }
   setNotes(keys, pid, kn.filter(n => n.step < 64)); setNotes(bass, pid, bn.filter(n => n.step < 64));

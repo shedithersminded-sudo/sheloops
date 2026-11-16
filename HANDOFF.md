@@ -193,3 +193,8 @@ Stage 8 (AI helper, tour, desktop app) was skipped by the user on 2026-11-16 ("d
 - look.glow {on,color,amount,style,text} -> applyGlow() sets html.tglow and --tgc/--tga, can override --text.
 - Cursor: trails comet/rainbow/notes/bubbles, trailLen, particle clicks (notes, confetti, shockwave, stars), spot, halo orbit/breathe.
 - nowplaying.js: view 'cd' | 'viz', vizOn, vizStyle ring/bars/mirror/wave/dots, vizColor, rainbow, vizGlow, vizSens, vizBars. Reads E.g.analyser.
+
+## 1.4.0 pad machine, house, welcome guide
+- js/pads.js: PADS (localStorage loopden.pads) banks A-D x16, loops per bank. Pad kinds drum/note/sample/voice/empty. Per-pad fx chains (chainFor). Voice recordings go to My sounds folder "Pad recordings". renderLoop bakes effects; loopToBeat makes drum + synth tracks. Keys 1234 qwer asdf zxcv, Space loop.
+- fx: filter (mode/cutoff/res/rate/depth), dust (crackle/hiss/tone). Starters support `stab` rhythm strings for chord hits.
+- Home welcome() in pages.js: theme swatches, glow toggle, Simple/Advanced cards (emit 'modechange'), style buttons -> createSong(false, style).

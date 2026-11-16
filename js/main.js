@@ -1,3 +1,4 @@
+import { renderPads } from './pads.js';
 import { $, el, toast, knob, select, pct, cssVar } from './util.js';
 import { helpBtn } from './help.js';
 import { app, on, emit, save, flush, newProject, openProject, newBeatTrack, STARTERS } from './state.js';
@@ -23,7 +24,7 @@ import { renderHome, renderProjects, renderMic, renderLearn, createSong } from '
 
 setDecoder(async ab => (await ensureCtx()).decodeAudioData(ab));
 
-const VIEWS = { home: renderHome, studio: renderStudio, beat: renderBeat, mixer: renderMixer, master: renderMaster, profile: renderProfile, look: renderAppearance, art: renderArt, player: renderPlayer, sounds: renderLibrary, projects: renderProjects, mic: renderMic, learn: renderLearn };
+const VIEWS = { home: renderHome, studio: renderStudio, beat: renderBeat, mixer: renderMixer, master: renderMaster, profile: renderProfile, look: renderAppearance, art: renderArt, player: renderPlayer, sounds: renderLibrary, projects: renderProjects, mic: renderMic, learn: renderLearn, pads: renderPads };
 const NEEDS_SONG = ['studio', 'beat', 'mixer', 'master'];
 const PLAYS = ['studio', 'beat', 'mixer', 'master', 'player'];
 
@@ -34,9 +35,9 @@ function nav() {
   bar.append(...[
     brandEl(),
     settings.simple
-      ? el('nav', {}, item('home', 'Home'), item('studio', 'Studio'), item('beat', 'Beat'), item('master', 'Master'), item('art', 'Cover art'), item('projects', 'Projects'),
+      ? el('nav', {}, item('home', 'Home'), item('studio', 'Studio'), item('beat', 'Beat'), item('pads', 'Pads'), item('master', 'Master'), item('art', 'Cover art'), item('projects', 'Projects'),
         moreMenu([['mixer', 'Mixer'], ['player', 'Player'], ['sounds', 'My sounds'], ['profile', 'My sound'], ['look', 'Appearance'], ['mic', 'Mic setup'], ['learn', 'Learn']]))
-      : el('nav', {}, item('home', 'Home'), item('studio', 'Studio'), item('beat', 'Beat'), item('mixer', 'Mixer'), item('master', 'Master'), item('art', 'Cover art'), item('player', 'Player'), item('projects', 'Projects'),
+      : el('nav', {}, item('home', 'Home'), item('studio', 'Studio'), item('beat', 'Beat'), item('pads', 'Pads'), item('mixer', 'Mixer'), item('master', 'Master'), item('art', 'Cover art'), item('player', 'Player'), item('projects', 'Projects'),
         moreMenu([['sounds', 'My sounds'], ['profile', 'My sound'], ['look', 'Appearance'], ['mic', 'Mic setup'], ['learn', 'Learn']])),
     el('span', { class: 'spacer' }),
     P ? el('div', { class: 'songchip', title: 'Current song', onclick: () => goto('projects') },
@@ -102,6 +103,7 @@ export function goto(v) {
 }
 on(kind => {
   if (kind.startsWith('goto:')) goto(kind.slice(5));
+  else if (kind === 'modechange') { nav(); if (app.view) goto(app.view); }
   else if (kind === 'tick') { updatePlayhead(); beatTick(); }
   else if (kind === 'transport') updateTransport();
   else if (kind === 'project') { clearPreview(); resetNodes(); applyMix(undefined, true); updateMonitor(); nav(); footer(); if (VIEWS[app.view]) VIEWS[app.view](); }

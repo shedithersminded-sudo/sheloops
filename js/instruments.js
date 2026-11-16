@@ -228,6 +228,7 @@ export function playExtra(c, dest, syn, midi, t, dur, vel) {
 export const PERC_NAMES = { conga: 'Conga', bongo: 'Bongo', shaker: 'Shaker', cowbell: 'Cowbell', tambourine: 'Tambourine', triangle: 'Triangle', woodblock: 'Woodblock', snap: 'Finger snap', timbale: 'Timbale', guiro: 'Guiro',
   claves: 'Claves', agogo: 'Agogo bell', castanets: 'Castanets', cabasa: 'Cabasa', vibraslap: 'Vibraslap', djembe: 'Djembe', djembeslap: 'Djembe slap', tabla: 'Tabla', tablabayan: 'Tabla bass', cajon: 'Cajon', cajonslap: 'Cajon slap', gong: 'Gong', timpani: 'Timpani', crash: 'Crash cymbal', ride: 'Ride cymbal', chime: 'Wind chimes',
   taiko: 'Taiko', odaiko: 'O-daiko', shime: 'Shime-daiko', tsuzumi: 'Tsuzumi', mokugyo: 'Mokugyo', suzu: 'Kagura suzu', hyoshigi: 'Hyoshigi clap', rin: 'Rin bowl', laser: 'Laser zap', vinyl: 'Vinyl scratch', riser: 'Riser', glitch: 'Glitch',
+  crackle: 'Vinyl crackle', housekick: 'Dusty kick',
   breaksnare: 'Break snare', ghost: 'Ghost snare', airhorn: 'Air horn', siren: 'Dub siren', rewind: 'Rewind' };
 export const PERC = Object.keys(PERC_NAMES);
 export const PERC_KITS = {
@@ -236,6 +237,7 @@ export const PERC_KITS = {
   'World': ['djembe', 'djembeslap', 'tabla', 'tablabayan', 'cajon', 'cajonslap', 'tambourine', 'castanets'],
   'Orchestra': ['timpani', 'crash', 'ride', 'gong', 'triangle', 'chime', 'snap', 'woodblock'],
   'FX': ['laser', 'vinyl', 'riser', 'glitch', 'snap', 'chime'],
+  'House': ['housekick', 'crackle', 'shaker', 'tambourine', 'ride', 'snap', 'cowbell', 'crash'],
   'Jungle': ['breaksnare', 'ghost', 'ride', 'crash', 'airhorn', 'siren', 'rewind', 'vinyl'],
 };
 export function playPerc(c, dest, sound, t, vel) {
@@ -279,6 +281,10 @@ export function playPerc(c, dest, sound, t, vel) {
     case 'laser': { const o = part(c, out, 3000, t, 0.4, 0.25, 'sawtooth'); o.frequency.setValueAtTime(3000, t); o.frequency.exponentialRampToValueAtTime(120, t + 0.25); break; }
     case 'vinyl': { const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain(); s.buffer = noiseBuf(c); bp.type = 'bandpass'; bp.Q.value = 4; bp.frequency.setValueAtTime(400, t); bp.frequency.exponentialRampToValueAtTime(2500, t + 0.09); bp.frequency.exponentialRampToValueAtTime(300, t + 0.22); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(3.5, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25); s.connect(bp); bp.connect(g); g.connect(out); s.start(t); s.stop(t + 0.3); break; }
     case 'riser': { const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain(); s.buffer = noiseBuf(c); s.loop = true; bp.type = 'bandpass'; bp.Q.value = 3; bp.frequency.setValueAtTime(300, t); bp.frequency.exponentialRampToValueAtTime(9000, t + 1.8); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.6, t + 1.7); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.9); s.connect(bp); bp.connect(g); g.connect(out); s.start(t); s.stop(t + 2); break; }
+    case 'crackle': { const len = Math.floor(c.sampleRate * 1.8), b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
+      for (let k = 0; k < len; k++) { d[k] += (Math.random() * 2 - 1) * 0.02; if (Math.random() < 0.0008) { const a = Math.random() * 2 - 1; for (let j = 0; j < 30 && k + j < len; j++) d[k + j] += a * Math.exp(-j / 5); } }
+      const s = c.createBufferSource(), lp = c.createBiquadFilter(), g = c.createGain(); lp.type = 'lowpass'; lp.frequency.value = 6000; g.gain.value = 0.7; s.buffer = b; s.connect(lp); lp.connect(g); g.connect(out); s.start(t); break; }
+    case 'housekick': { drop(140, 48, 1, 0.38); const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(out); noise(c, lp, t, 0.25, 0.03, 'bandpass', 600, 1); break; }
     case 'breaksnare': noise(c, out, t, 0.75, 0.13, 'bandpass', 2600, 0.8); noise(c, out, t, 0.35, 0.05, 'highpass', 6000, 0.7); drop(330, 210, 0.5, 0.07, 'triangle'); break;
     case 'ghost': noise(c, out, t, 0.22, 0.06, 'bandpass', 3000, 0.9); drop(300, 220, 0.12, 0.04, 'triangle'); break;
     case 'airhorn': for (const [o, l] of [[0, 0.11], [0.14, 0.11], [0.28, 0.42]]) {
