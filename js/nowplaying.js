@@ -37,7 +37,9 @@ function build() {
   const gear = el('button', { class: 'np-btn np-gear', title: 'Customize', onclick: e => { e.stopPropagation(); toggleMenu(); } }, '⚙');
   const min = el('button', { class: 'np-btn np-min', title: 'Close (shrink to a small disc)', onclick: e => { e.stopPropagation(); setCollapsed(true); } }, '–');
   const grip = el('div', { class: 'np-grip', title: 'Drag to move' }, '⠿ drag');
-  box.append(cv, gear, min, grip);
+  const quick = el('div', { class: 'np-quick', title: 'Pick a visualizer' }, el('button', { class: 'np-btn', title: 'Previous visualizer', onclick: e => { e.stopPropagation(); cycleViz(-1); } }, '◀'), el('span', { class: 'np-qname' }), el('button', { class: 'np-btn', title: 'Next visualizer', onclick: e => { e.stopPropagation(); cycleViz(1); } }, '▶'));
+  quick.addEventListener('pointerdown', e => e.stopPropagation());
+  box.append(cv, gear, min, grip, quick); updateQuick();
   document.body.append(box);
   // drag anywhere to move; a click without moving presses the drawn buttons (or opens the small disc)
   box.addEventListener('pointerdown', e => {
@@ -59,6 +61,11 @@ function build() {
   addEventListener('resize', () => box && place());
   place();
 }
+function cycleViz(d) {
+  const p = P(), i = VIZ_STYLES.findIndex(x => x[0] === p.vizStyle), n = VIZ_STYLES[(i + d + VIZ_STYLES.length) % VIZ_STYLES.length][0];
+  p.vizStyle = n; p.vizOn = true; saveLook(); updateQuick(); if (menu) { toggleMenu(); toggleMenu(); }
+}
+function updateQuick() { const q = box && box.querySelector('.np-qname'); if (q) q.textContent = (VIZ_STYLES.find(x => x[0] === P().vizStyle) || ['', 'Ring'])[1]; }
 function setCollapsed(v) { P().collapsed = v; saveLook(); if (v && menu) { menu.remove(); menu = null; } place(); }
 function place() {
   const p = P(), s = p.collapsed ? 64 : p.size, viz = p.view === 'viz' && !p.collapsed, w = viz ? Math.round(s * 1.5) : s, h = viz ? Math.round(s * 0.55) : s;
@@ -90,7 +97,7 @@ function toggleMenu() {
     el('b', {}, 'Player and visualizer'),
     el('div', { class: 'np-views' }, [['cd', 'CD player'], ['viz', 'Visualizer only']].map(([v, l]) => el('button', { class: 'chip' + (p.view === v ? ' on' : ''), onclick: () => { set('view', v); place(); toggleMenu(); toggleMenu(); } }, l))),
     el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: p.view === 'viz' || p.vizOn, disabled: p.view === 'viz', onchange: e => set('vizOn', e.target.checked) }), 'Music visualizer'),
-    el('div', { class: 'np-views' }, [['ring', 'Ring'], ['bars', 'Bars'], ['mirror', 'Mirror'], ['wave', 'Wave'], ['dots', 'Dots']].map(([v, l]) => el('button', { class: 'chip' + (p.vizStyle === v ? ' on' : ''), onclick: () => { set('vizStyle', v); toggleMenu(); toggleMenu(); } }, l))),
+    el('div', { class: 'np-views' }, VIZ_STYLES.map(([v, l]) => el('button', { class: 'chip' + (p.vizStyle === v ? ' on' : ''), onclick: () => { set('vizStyle', v); toggleMenu(); toggleMenu(); } }, l))),
     el('div', { class: 'np-colors' }, el('span', { class: 'hint' }, 'Visualizer color'), el('input', { type: 'color', value: p.vizColor || p.color, oninput: e => set('vizColor', e.target.value) }),
       el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: p.rainbow, onchange: e => set('rainbow', e.target.checked) }), 'Rainbow')),
     el('label', { class: 'knob' }, 'Glow', el('input', { type: 'range', min: 0, max: 1, step: 0.01, value: p.vizGlow, oninput: e => set('vizGlow', +e.target.value) })),
@@ -139,7 +146,8 @@ function fitMenu() {
 addEventListener('resize', fitMenu);
 
 // ---------- visualizer ----------
-let fbuf = null, tbuf = null, smooth = new Float32Array(128), peaks = new Float32Array(128);
+const VIZ_STYLES = [['ring', 'Ring'], ['bars', 'Bars'], ['mirror', 'Mirror'], ['wave', 'Wave'], ['dots', 'Dots'], ['spectrum', 'Spectrum'], ['blocks', 'LED blocks'], ['orb', 'Orb'], ['particles', 'Particles'], ['halo', 'Halo']];
+let parts = [], fbuf = null, tbuf = null, smooth = new Float32Array(128), peaks = new Float32Array(128);
 function vizData(n) {
   const an = E.g && E.g.analyser, p = P();
   if (an) {
@@ -173,6 +181,34 @@ function drawViz(g, p, x, y, w, h, ring) {
       g.strokeStyle = c; glow(g, p, c);
       g.beginPath(); g.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); g.lineTo(cx + Math.cos(a) * (r + 6 + v * len), cy + Math.sin(a) * (r + 6 + v * len)); g.stroke();
     }
+  } else if (st === 'spectrum') { // smooth filled curve
+    const c = vcol(p, 0, 1), gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, c); gr.addColorStop(1, 'transparent');
+    g.beginPath(); g.moveTo(x, y + h);
+    for (let i = 0; i < n; i++) { const X = x + i / (n - 1) * w, Y = y + h - d.bars[i] * h; if (i) { const px = x + (i - 1) / (n - 1) * w, py = y + h - d.bars[i - 1] * h; g.quadraticCurveTo(px, py, (px + X) / 2, (py + Y) / 2); } else g.lineTo(X, Y); }
+    g.lineTo(x + w, y + h); g.closePath(); g.globalAlpha = 0.55; g.fillStyle = gr; g.fill(); g.globalAlpha = 1;
+    g.strokeStyle = c; g.lineWidth = Math.max(2, h / 40); glow(g, p, c); g.stroke();
+  } else if (st === 'blocks') { // LED blocks, green to yellow to red
+    const bw = w / n, rows = 12, rh = h / rows;
+    for (let i = 0; i < n; i++) { const lit = Math.round(d.bars[i] * rows); for (let j = 0; j < rows; j++) {
+      const on = j < lit, c = p.rainbow ? vcol(p, i, n) : j > 9 ? '#ff4a5e' : j > 6 ? '#ffd84a' : (p.vizColor || '#6dffb0');
+      g.globalAlpha = on ? 1 : 0.08; g.fillStyle = c; if (on) glow(g, p, c); else g.shadowBlur = 0; g.fillRect(x + i * bw + bw * 0.12, y + h - (j + 1) * rh + rh * 0.15, bw * 0.76, rh * 0.7); } }
+    g.globalAlpha = 1;
+  } else if (st === 'orb') { // glowing orb that swells with the bass
+    const bass = (d.bars[0] + d.bars[1] + d.bars[2] + d.bars[3]) / 4, cx = x + w / 2, cy = y + h / 2, R = Math.min(w, h) * (0.16 + bass * 0.22), c = vcol(p, 0, 1);
+    const gr = g.createRadialGradient(cx, cy, 0, cx, cy, R * 1.6); gr.addColorStop(0, '#fff'); gr.addColorStop(0.25, c); gr.addColorStop(1, 'transparent');
+    g.fillStyle = gr; glow(g, p, c); g.beginPath(); g.arc(cx, cy, R * 1.6, 0, 7); g.fill();
+    g.lineWidth = 2; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, v = d.bars[i]; g.strokeStyle = vcol(p, i, n); g.beginPath(); g.moveTo(cx + Math.cos(a) * R * 1.7, cy + Math.sin(a) * R * 1.7); g.lineTo(cx + Math.cos(a) * (R * 1.7 + v * Math.min(w, h) * 0.3), cy + Math.sin(a) * (R * 1.7 + v * Math.min(w, h) * 0.3)); g.stroke(); }
+  } else if (st === 'particles') { // sparks thrown out by the music
+    const lvl = d.bars.reduce((a, v) => a + v, 0) / n, cx = x + w / 2, cy = y + h / 2;
+    for (let k = 0; k < Math.round(lvl * 10); k++) { const a = Math.random() * Math.PI * 2, sp = (0.3 + Math.random()) * Math.min(w, h) * 0.02; parts.push({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1, c: vcol(p, Math.floor(Math.random() * n), n) }); }
+    if (parts.length > 400) parts.splice(0, parts.length - 400);
+    for (const q of parts) { q.x += q.vx; q.y += q.vy; q.life -= 0.015; if (q.life <= 0 || q.x < x || q.x > x + w || q.y < y || q.y > y + h) continue; g.globalAlpha = q.life; g.fillStyle = q.c; glow(g, p, q.c); g.beginPath(); g.arc(q.x, q.y, 2 + q.life * 4, 0, 7); g.fill(); }
+    for (let k = parts.length - 1; k >= 0; k--) if (parts[k].life <= 0) parts.splice(k, 1);
+    g.globalAlpha = 1;
+  } else if (st === 'halo') { // waveform wrapped around a circle
+    const cx = x + w / 2, cy = y + h / 2, R = Math.min(w, h) * 0.3, c = vcol(p, 0, 1); g.strokeStyle = c; g.lineWidth = Math.max(2, h / 60); glow(g, p, c); g.beginPath();
+    for (let i = 0; i <= 180; i++) { const a = i / 180 * Math.PI * 2, v = d.wave ? (d.wave[Math.floor(i / 180 * (d.wave.length - 1))] - 128) / 128 * p.vizSens : Math.sin(i / 6 + performance.now() / 300) * 0.05, r = R + v * R * 0.8; const X = cx + Math.cos(a) * r, Y = cy + Math.sin(a) * r; i ? g.lineTo(X, Y) : g.moveTo(X, Y); }
+    g.closePath(); g.stroke();
   } else if (st === 'wave') {
     g.lineWidth = Math.max(3, h / 30); const c = vcol(p, 0, 1); g.strokeStyle = c; glow(g, p, c); g.beginPath();
     for (let i = 0; i <= 200; i++) {
@@ -252,7 +288,7 @@ function draw(dt) {
   g.beginPath(); g.arc(cx, cy, 70, 0, 7); g.stroke();
   g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.arc(cx, cy, 34, 0, 7); g.fill();
   g.restore();
-  if (p.vizOn) { if (p.vizStyle === 'ring') drawViz(g, p, 0, 0, 0, 0, { cx, cy, r: R + 44, len: 62 }); else drawViz(g, p, 70, 800, 820, 85); }
+  if (p.vizOn) { if (p.vizStyle === 'ring') drawViz(g, p, 0, 0, 0, 0, { cx, cy, r: R + 44, len: 62 }); else if (['orb', 'particles', 'halo'].includes(p.vizStyle)) { g.save(); g.globalCompositeOperation = 'screen'; drawViz(g, p, cx - R, cy - R, 2 * R, 2 * R); g.restore(); } else drawViz(g, p, 70, 800, 820, 85); }
   // laser window (curved slot) with glitter
   g.beginPath(); g.arc(cx, cy, 300, Math.PI * 0.18, Math.PI * 0.82); g.arc(cx, cy, 225, Math.PI * 0.8, Math.PI * 0.2, true); g.closePath();
   g.save(); g.fillStyle = p.color; g.globalAlpha = Math.min(1, p.alpha + 0.35); g.fill(); g.restore();

@@ -753,3 +753,25 @@ export function encodeWav(buf) {
   for (let i = 0; i < len; i++) for (let c = 0; c < ch; c++) { const s = clamp(data[c][i], -1, 1); dv.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); o += 2; }
   return new Blob([dv], { type: 'audio/wav' });
 }
+
+// Record the mic between two audio-clock times (used by the pad machine for voice loops that stay in time).
+export async function captureMic(from, to, onState) {
+  const m = await openMic(), c = E.ctx, sr = c.sampleRate, lat = latency(), chunks = [];
+  const prev = m.cap.port.onmessage;
+  m.cap.port.onmessage = e => { if (e.data && e.data.t >= from - 0.2) chunks.push(e.data); if (prev) prev(e); };
+  m.cap.port.postMessage({ rec: true });
+  await new Promise(res => { const tick = () => { onState?.(c.currentTime < from ? 'wait' : 'rec', from - c.currentTime, to - c.currentTime); if (c.currentTime > to + lat + 0.15) res(); else setTimeout(tick, 50); }; tick(); });
+  m.cap.port.postMessage({ rec: false }); m.cap.port.onmessage = prev;
+  const len = Math.round((to - from) * sr), nch = chunks.length ? chunks[0].d.length : 1;
+  const outs = Array.from({ length: nch }, () => new Float32Array(len));
+  for (const ch of chunks) {
+    const off = Math.round((ch.t - lat - from) * sr);
+    for (let k = 0; k < nch; k++) { const s = ch.d[k] || ch.d[0], o = outs[k]; for (let i = 0; i < s.length; i++) { const j = off + i; if (j >= 0 && j < len) o[j] = s[i]; } }
+  }
+  const buf = new AudioBuffer({ length: len, numberOfChannels: nch, sampleRate: sr });
+  outs.forEach((o, k) => buf.copyToChannel(o, k));
+  // short fades so the loop point never clicks
+  const f = Math.floor(sr * 0.005); for (const o of outs) for (let i = 0; i < f; i++) { o[i] *= i / f; o[len - 1 - i] *= i / f; }
+  outs.forEach((o, k) => buf.copyToChannel(o, k));
+  return buf;
+}

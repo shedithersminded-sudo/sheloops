@@ -1,15 +1,27 @@
 {
-  "version": "1.5.0",
+  "version": "1.6.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "84 new drum sounds: 15 kicks, 15 snares, 7 claps, 9 hi-hats, 8 open hats and cymbals, 11 808s, 5 toms, 9 percs and 5 FX hits. 137 drum sounds in all.",
-    "Sounds come in styles: trap, drill, 909 house, jungle, breakcore, gabber, lo-fi, boom bap, DnB, R&B, Afro, gospel and more.",
-    "12 new genre kits under + Percussion: Trap, Drill, Boom bap, House 909, Jungle breaks, Breakcore, Drum & Bass, Lo-fi, Rave and gabber, R&B soft, Afro and Gospel.",
-    "Drum menus are now grouped by type (Kicks, Snares, 808s and so on).",
-    "Pad machine: 4 new banks (E to H) for trap and drill, jungle and breakcore, house and lo-fi, 808s and toms. Use the ◀ ▶ buttons to flip through every sound on a pad."
+    "Pad machine loops: every bank keeps as many loops as you want. Click a loop to switch, even while it plays. New, Copy, Rename and Delete.",
+    "Safe record: recording over a loop makes a new take, then you choose Keep new, Go back to old, or Keep both. Your good loop is never lost.",
+    "Play all in order plays your loops one after another like a song, and Save loop to My sounds saves them all together.",
+    "Record voice loop: sing or rap over your beat. It records exactly one loop long, stays in time, and lands on a pad where you can add effects.",
+    "Customize the machine: pad shape (square, rounded, round, hexagon), hit lights (flash, ripple, sparks), body (graphite, white, neon, see-through, wood), screen color, glow and pad size.",
+    "5 new visualizers: Spectrum, LED blocks, Orb, Particles and Halo. Hover the player to flip through them."
   ],
   "history": [
+    {
+      "version": "1.5.0",
+      "date": "2026-11-16",
+      "notes": [
+        "84 new drum sounds: 15 kicks, 15 snares, 7 claps, 9 hi-hats, 8 open hats and cymbals, 11 808s, 5 toms, 9 percs and 5 FX hits. 137 drum sounds in all.",
+        "Sounds come in styles: trap, drill, 909 house, jungle, breakcore, gabber, lo-fi, boom bap, DnB, R&B, Afro, gospel and more.",
+        "12 new genre kits under + Percussion: Trap, Drill, Boom bap, House 909, Jungle breaks, Breakcore, Drum & Bass, Lo-fi, Rave and gabber, R&B soft, Afro and Gospel.",
+        "Drum menus are now grouped by type (Kicks, Snares, 808s and so on).",
+        "Pad machine: 4 new banks (E to H) for trap and drill, jungle and breakcore, house and lo-fi, 808s and toms. Use the ◀ ▶ buttons to flip through every sound on a pad."
+      ]
+    },
     {
       "version": "1.4.0",
       "date": "2026-11-16",
