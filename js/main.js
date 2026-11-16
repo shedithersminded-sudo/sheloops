@@ -29,29 +29,69 @@ const VIEWS = { home: renderHome, studio: renderStudio, beat: renderBeat, mixer:
 const NEEDS_SONG = ['studio', 'beat', 'mixer', 'master'];
 const PLAYS = ['studio', 'beat', 'mixer', 'master', 'player'];
 
+// Top menu: pages grouped into categories, each with a short line about what it is for
+const MENU = [
+  ['Create', 'Make music', [
+    ['studio', 'Studio', 'Record your voice over a beat, with takes and vocal effects'],
+    ['beat', 'Beat maker', 'Drums, 75 instruments, patterns and the guitar maker'],
+    ['pads', 'Pad machine', 'Tap beats on 128 glowing pads, record loops and voice loops'],
+    ['dj', 'DJ booth', 'Mix two tracks with scratching, effects, transitions and lights']]],
+  ['Finish', 'Make it sound done', [
+    ['mixer', 'Mixer', 'Faders, meters and groups for every track'],
+    ['master', 'Master', 'Make your song loud, clear and polished'],
+    ['export', 'Export', 'Save your song, beat, vocals or everything'],
+    ['player', 'Player', 'Listen to your songs with their covers']]],
+  ['Design', 'Make it yours', [
+    ['art', 'Cover art', 'Covers, CDs, back covers and 3D cases'],
+    ['look', 'Appearance', 'Themes, fonts, glow, background, mouse and the CD player'],
+    ['profile', 'My sound', 'Your artist profile and default vocal sound']]],
+  ['Library', 'Your stuff', [
+    ['projects', 'Projects', 'All your songs: open, copy, export'],
+    ['sounds', 'My sounds', 'Your uploads, recordings, pad loops and DJ mixes']]],
+  ['Help', 'Learn the app', [
+    ['learn', 'Lessons', 'Short step by step lessons'],
+    ['mic', 'Mic setup', 'Set up and test your microphone'],
+    ['keys', 'Keys guide', 'Every keyboard shortcut (or press ?)'],
+    ['welcome', 'Welcome guide', 'Themes, Simple or Advanced, and quick starts on Home']]],
+];
+function menuGo(v) {
+  if (v === 'export') return openExport();
+  if (v === 'keys') return openKeyGuide(app.view);
+  if (v === 'welcome') { settings.hideWelcome = false; saveSettings(); goto('home'); return; }
+  goto(v);
+}
 function nav() {
   const bar = $('#nav'); bar.innerHTML = '';
   const P = app.P;
-  const item = (v, label) => el('button', { class: 'navbtn' + (app.view === v ? ' on' : ''), onclick: () => goto(v) }, label);
+  const cat = ([name, sub, items], ci) => {
+    const on = items.some(([v]) => v === app.view);
+    const d = el('details', { class: 'more navcat' + (on ? ' on' : ''), style: `--ci:${ci}` },
+      el('summary', { class: 'navbtn' + (on ? ' on' : '') }, name, el('i', { class: 'caret' })),
+      el('div', { class: 'megamenu' },
+        el('div', { class: 'mmhead' }, el('b', {}, name), el('small', {}, sub)),
+        ...items.map(([v, label, what], k) => el('button', { class: 'mmitem' + (app.view === v ? ' on' : ''), style: `--k:${k}`, onclick: () => { d.open = false; menuGo(v); } },
+          el('span', { class: 'mmdot' }), el('span', { class: 'mmtext' }, el('b', {}, label), el('small', {}, what))))));
+    d.addEventListener('toggle', () => { if (d.open) for (const o of bar.querySelectorAll('details.navcat[open]')) if (o !== d) o.open = false; });
+    // open on hover with a mouse, click works everywhere
+    d.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse' && bar.querySelector('details.navcat[open]')) d.open = true; });
+    return d;
+  };
   bar.append(...[
     brandEl(),
-    settings.simple
-      ? el('nav', {}, item('home', 'Home'), item('studio', 'Studio'), item('beat', 'Beat'), item('pads', 'Pads'), item('dj', 'DJ'), item('master', 'Master'), item('art', 'Cover art'), item('projects', 'Projects'),
-        moreMenu([['mixer', 'Mixer'], ['player', 'Player'], ['sounds', 'My sounds'], ['profile', 'My sound'], ['look', 'Appearance'], ['mic', 'Mic setup'], ['learn', 'Learn']]))
-      : el('nav', {}, item('home', 'Home'), item('studio', 'Studio'), item('beat', 'Beat'), item('pads', 'Pads'), item('dj', 'DJ'), item('mixer', 'Mixer'), item('master', 'Master'), item('art', 'Cover art'), item('player', 'Player'), item('projects', 'Projects'),
-        moreMenu([['sounds', 'My sounds'], ['profile', 'My sound'], ['look', 'Appearance'], ['mic', 'Mic setup'], ['learn', 'Learn']])),
+    el('nav', { class: 'catnav' }, el('button', { class: 'navbtn' + (app.view === 'home' ? ' on' : ''), onclick: () => goto('home') }, 'Home'), ...MENU.map(cat)),
     el('span', { class: 'spacer' }),
-    P ? el('div', { class: 'songchip', title: 'Current song', onclick: () => goto('projects') },
+    P ? el('div', { class: 'songchip', title: 'Your current song. Click to see all your projects.', onclick: () => goto('projects') },
       P.cover ? el('img', { src: P.cover, alt: '' }) : el('span', { class: 'blank' }, P.name.slice(0, 2).toUpperCase()),
       el('span', {}, P.name)) : null,
     el('button', { class: 'navbtn exportbtn', title: 'Export songs, beats, tracks or everything', onclick: openExport }, 'Export'),
-    el('span', { class: 'withhelp' },
-      el('div', { class: 'modeswitch', role: 'group', title: 'Simple hides the extra buttons. Advanced shows everything.' },
-        [[true, 'Simple'], [false, 'Advanced']].map(([v, l]) => el('button', { class: !!settings.simple === v ? 'on' : '', onclick: () => {
+    el('span', { class: 'withhelp modewrap' },
+      el('div', { class: 'modeswitch', role: 'group' },
+        [[true, 'Simple', 'Fewer buttons, and every screen explains itself'], [false, 'Advanced', 'Every tool, knob and setting']].map(([v, l, t]) => el('button', { class: !!settings.simple === v ? 'on' : '', title: t, onclick: () => {
           if (!!settings.simple === v) return;
           settings.simple = v; saveSettings(); applyMode(); nav(); if (app.view) goto(app.view);
-          toast(v ? 'Simple mode: only the main buttons show. Switch to Advanced any time for everything.' : 'Advanced mode: every tool and knob is showing.');
+          toast(v ? 'Simple mode: fewer buttons and plain explanations everywhere.' : 'Advanced mode: every tool and knob is showing.');
         } }, l))),
+      el('div', { class: 'modetip' }, el('b', {}, settings.simple ? 'You are in Simple mode' : 'You are in Advanced mode'), el('span', {}, 'Simple shows fewer buttons and explains every screen. Advanced shows every tool. Switch any time, nothing is lost.')),
       helpBtn('simple')),
   ].filter(Boolean));
 }

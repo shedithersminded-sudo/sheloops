@@ -1,18 +1,31 @@
 {
-  "version": "1.7.0",
+  "version": "1.8.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "New DJ booth: two turntables you can scratch, with play, cue, sync, tempo, nudge, 4 hot cues, beat loops and a scrolling waveform.",
-    "Mixer with gain, High, Mid and Low EQ with kills, a one-knob filter, channel faders with meters, and a crossfader with smooth, linear or sharp curves.",
-    "An effect on each deck, timed to the beat: echo, reverb, flanger, phaser, lo-fi, stutter, auto filter, distortion, vinyl dust and wobble.",
-    "9 one-click transitions: Smooth blend, Bass swap, Filter fade, Echo out, Reverb wash, Spinback, Vinyl brake, Stutter cut and Quick cut, from 2 to 32 beats.",
-    "Drag and drop music from your device, your Studio song, or your loops and pad loops onto a deck.",
-    "Light show and visualizer: beams, sweep, pulse and chase lights, 6 visualizers, and a strobe.",
-    "Customize the booth: vinyl or CDJ decks, body color, record and label colors, your own art on the labels, glow and light colors, beams, speed, tempo range, and your own keys.",
-    "Record your mix and save it to My sounds, or download WAV or MP3."
+    "DJ booth remastered: a real club light rig with haze, volumetric beams from moving heads, lasers, an LED wall visualizer, blinders, strobe, fog and floor reflections, all on the beat. Full screen light show.",
+    "Light desk: 12 scenes, 8 movements, beat-synced speed, fixtures, spread, beam width, haze, bloom, grain, 6 laser shows, 6 LED wall shows, color change timing, and an Auto show.",
+    "Realistic decks: turntables with aluminium platters, strobe dots, tonearm and real vinyl (black, colored, clear, splatter, picture disc), or CDJs with a screen in the jog wheel.",
+    "Club mixer: Color FX knob per channel (Filter, Space, Dub echo, Noise, Crush) and a Beat FX unit with 12 effects, beat timing and A, B or master. 8-pad sampler.",
+    "Deck tricks: beat jump, reverse, vinyl brake, spinback, half to 16 beat loops. 10 transitions now include Roll out and Noise sweep.",
+    "Booth materials: matte black, brushed aluminium, studio white, carbon, walnut and smoked glass, plus your own LED color and keys.",
+    "New top menu: pages grouped into Create, Finish, Design, Library and Help, each explaining what it is for. Glowing labels, animated menus, and a Simple or Advanced explainer."
   ],
   "history": [
+    {
+      "version": "1.7.0",
+      "date": "2026-11-16",
+      "notes": [
+        "New DJ booth: two turntables you can scratch, with play, cue, sync, tempo, nudge, 4 hot cues, beat loops and a scrolling waveform.",
+        "Mixer with gain, High, Mid and Low EQ with kills, a one-knob filter, channel faders with meters, and a crossfader with smooth, linear or sharp curves.",
+        "An effect on each deck, timed to the beat: echo, reverb, flanger, phaser, lo-fi, stutter, auto filter, distortion, vinyl dust and wobble.",
+        "9 one-click transitions: Smooth blend, Bass swap, Filter fade, Echo out, Reverb wash, Spinback, Vinyl brake, Stutter cut and Quick cut, from 2 to 32 beats.",
+        "Drag and drop music from your device, your Studio song, or your loops and pad loops onto a deck.",
+        "Light show and visualizer: beams, sweep, pulse and chase lights, 6 visualizers, and a strobe.",
+        "Customize the booth: vinyl or CDJ decks, body color, record and label colors, your own art on the labels, glow and light colors, beams, speed, tempo range, and your own keys.",
+        "Record your mix and save it to My sounds, or download WAV or MP3."
+      ]
+    },
     {
       "version": "1.6.0",
       "date": "2026-11-16",
