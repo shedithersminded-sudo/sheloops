@@ -2,18 +2,22 @@
 import { $, el, clamp, pct, panFmt, toast, knob, select, ask, confirmBox, cssVar } from './util.js';
 import { helpBtn } from './help.js';
 import { app, stepDur, save, snapshot, DRUMS, DRUM_NAMES, PRESETS, STARTERS, PAT_IDS, newBeatTrack, applyStarter, patData, setNotes, copyPattern } from './state.js';
-import { applyMix, previewDrum, previewNote, currentPos, T, refresh } from './engine.js';
+import { applyMix, previewDrum, previewNote, liveNote, currentPos, T, refresh, ensureCtx } from './engine.js';
 import { SOUNDS, loadSounds, soundName, soundBuffer } from './library.js';
-import { PERC, PERC_NAMES } from './instruments.js';
-import { openGuitarMaker } from './guitar.js';
+import { PERC, PERC_NAMES, PERC_KITS, isString } from './instruments.js';
+import { openGuitarMaker, voicing, chordName } from './guitar.js';
+import { modal } from './util.js';
+import { openKeyGuide } from './keyguide.js';
 const dname = s => DRUM_NAMES[s] || PERC_NAMES[s] || s;
 // instrument menu groups (anything not listed lands in Synths)
 const GROUPS = [
-  ['Keys', ['piano', 'keys', 'electric piano', 'organ']],
-  ['Guitars', ['guitar', 'acoustic guitar', 'nylon guitar', 'electric guitar', 'overdrive guitar', 'muted guitar', '12-string guitar', 'bass guitar', 'banjo']],
-  ['World', ['sitar', 'koto', 'harp', 'kalimba', 'steel drum', 'talking drum', 'pan flute']],
-  ['Mallets and bells', ['marimba', 'vibraphone', 'bells', 'music box']],
-  ['Voices and wind', ['choir', 'flute', 'brass', 'theremin']],
+  ['Keys', ['piano', 'keys', 'electric piano', 'organ', 'harpsichord', 'celesta', 'accordion', 'melodica']],
+  ['Guitars and plucked', ['guitar', 'acoustic guitar', 'nylon guitar', 'electric guitar', 'overdrive guitar', 'muted guitar', '12-string guitar', 'bass guitar', 'ukulele', 'mandolin', 'banjo', 'harp', 'hammered dulcimer']],
+  ['Orchestra', ['string section', 'violin', 'cello', 'trumpet', 'trombone', 'brass', 'saxophone', 'clarinet', 'oboe', 'flute', 'choir']],
+  ['Japanese', ['koto', 'shamisen', 'biwa', 'sanshin', 'kokyu', 'shakuhachi', 'shinobue', 'ryuteki', 'sho']],
+  ['World', ['sitar', 'erhu', 'kalimba', 'handpan', 'steel drum', 'gamelan', 'talking drum', 'pan flute', 'ocarina', 'didgeridoo', 'jaw harp', 'harmonica']],
+  ['Mallets and bells', ['marimba', 'xylophone', 'vibraphone', 'bells', 'tubular bells', 'music box', 'glass harmonica']],
+  ['Fun and electronic', ['theremin', 'stylophone', 'laser harp']],
   ['Bass', ['bass', 'sub', '808 bass', 'reese bass']],
 ];
 function instrSelect(value, on) {
@@ -77,7 +81,7 @@ export async function renderBeat() {
     el('div', { class: 'add' },
       el('button', { onclick: () => addTrack('drums') }, '+ Drums'),
       el('button', { onclick: () => addTrack('synth') }, '+ Instrument'),
-      el('button', { onclick: () => addTrack('perc') }, '+ Percussion'),
+      el('button', { onclick: pickPercKit }, '+ Percussion'),
       el('button', { class: 'hot', onclick: () => openGuitarMaker(cur(), () => { renderBeatTracks(); renderBeatEditor(); }) }, 'Guitar loop maker'), helpBtn('gtrMaker')));
   const ed = el('section', { id: 'beated', class: 'editor' });
   view.append(el('div', { class: 'beatview' }, top, pats, el('div', { class: 'beatmain' }, side, ed)));
@@ -120,11 +124,17 @@ function renderArr() {
   }
 }
 
-function addTrack(type) {
+function pickPercKit() {
+  const close = modal('Add percussion', el('div', { class: 'kitpick' },
+    el('p', { class: 'hint' }, 'Pick a set. Each one becomes a new drum track with its own rows. You can swap any row later.'),
+    Object.entries(PERC_KITS).map(([name, list]) => el('button', { class: 'kitcard', onclick: () => { close(); addTrack('perc', name); } },
+      el('b', {}, name), el('small', {}, list.map(dname).join(', '))))));
+}
+function addTrack(type, kit) {
   snapshot();
   const t = newBeatTrack(type === 'perc' ? 'drums' : type, type === 'synth' ? { preset: 'piano', rev: 0.2 } : {});
   if (type === 'synth') t.name = 'Instrument';
-  if (type === 'perc') { t.name = 'Percussion'; t.rows = PERC.map(s => ({ sound: s, steps: Array(64).fill(0) })); }
+  if (type === 'perc') { t.name = kit + ' percussion'; t.rows = (PERC_KITS[kit] || PERC.slice(0, 8)).map(s => ({ sound: s, steps: Array(64).fill(0) })); t.rev = 0.15; }
   B().tracks.push(t); B().sel = t.id; save(); applyMix(); renderBeatTracks(); renderBeatEditor();
 }
 function renderBeatTracks() {
@@ -213,6 +223,7 @@ function drumEditor(t, box) {
         helpBtn('kits')),
       el('button', { onclick: () => { snapshot(); data.forEach(r => r.fill(0)); save(); renderBeatEditor(); } }, 'Clear')),
     el('div', { class: 'ed-body' }, grid),
+    drumPads(t),
     SOUNDS.length ? null : el('p', { class: 'hint pad12' }, 'Tip: upload your own drum sounds in My sounds, then pick them in each row menu.'),
   ].filter(Boolean));
 }
@@ -311,7 +322,7 @@ function synthEditor(t, box) {
       el('button', { onclick: () => { snapshot(); setNotes(t, cur(), []); draw(); save(); } }, 'Clear'),
     ),
     body,
-    vkeyboard(t),
+    playPanel(t),
   );
   body.append(el('div', { class: 'roll' }, keys, el('div', { class: 'gridwrap' }, cv, ED.ph)));
   draw();
@@ -320,14 +331,95 @@ function synthEditor(t, box) {
   requestAnimationFrame(() => { body.scrollTop = (HI - mid) * RH - body.clientHeight / 2; });
 }
 
-// On-screen keyboard (2 octaves from the current octave)
-let octave = 4;
+// ---------- play panel: piano keys, guitar, drum pads ----------
+let octave = 4, playMode = null, gChord = 0, gShift = 0, fretDrag = false;
+window.addEventListener('pointerup', () => { if (!fretDrag) return; fretDrag = false; for (const k of [...strumHeld.keys()]) if (k.startsWith('fret')) releaseStrum(k); });
+const PADKEYS = 'asdfghjkqwertyui';
+const GSTR = [40, 45, 50, 55, 59, 64]; // E A D G B E
+const GKEYS = 'qwerty';
+const modeOf = t => playMode || (isString(t.synth.engine) ? 'guitar' : 'piano');
+function playTabs(t, mode) {
+  const tab = (m, l) => el('button', { class: 'ptab' + (mode === m ? ' on' : ''), onclick: () => { playMode = m; renderBeatEditor(); } }, l);
+  return el('div', { class: 'ptabs' }, el('b', {}, 'Play'), tab('piano', 'Piano keys'), tab('guitar', 'Guitar'),
+    el('span', { class: 'spacer' }), el('button', { class: 'keysbtn', onclick: () => openKeyGuide('beat') }, '⌨ Keys guide'), helpBtn('playPanel'));
+}
+function playPanel(t) {
+  const mode = modeOf(t);
+  return el('div', { class: 'playpanel' }, playTabs(t, mode), mode === 'guitar' ? guitarPanel(t) : vkeyboard(t));
+}
+const flash = node => { if (!node) return; node.classList.remove('hit'); void node.offsetWidth; node.classList.add('hit'); };
+
+// strum a chord of scale degree d: notes go out one string after another
+const strumHeld = new Map(); // id -> notes
+function strum(d, up, id = 'chord', vel = newVel) {
+  gChord = d;
+  const v = voicing(d).map(m => m + gShift), order = up ? [...v].reverse().slice(0, 4) : v, sp = up ? 12 : 16;
+  releaseStrum(id);
+  const notes = [];
+  order.forEach((m, i) => setTimeout(() => { noteOn(m, Math.min(1, vel * (up ? 0.75 : 1) * (1 - i * 0.03))); notes.push(m); flash(document.querySelector(`.gstr[data-s="${v.indexOf(m)}"]`)); }, i * sp));
+  strumHeld.set(id, { notes, at: performance.now(), count: order.length, sp });
+  document.querySelectorAll('.chordpad').forEach((b, i) => b.classList.toggle('on', i === d));
+}
+function releaseStrum(id) {
+  const h = strumHeld.get(id); if (!h) return; strumHeld.delete(id);
+  const wait = Math.max(0, h.count * h.sp - (performance.now() - h.at)) + 5;
+  setTimeout(() => { for (const m of h.notes) noteOff(m); }, wait);
+}
+function pluckString(s, id = 'str' + s) {
+  const m = voicing(gChord)[s] + gShift;
+  noteOn(m, newVel); strumHeld.set(id, { notes: [m], at: performance.now(), count: 0, sp: 0 });
+  flash(document.querySelector(`.gstr[data-s="${s}"]`));
+}
+function guitarPanel(t) {
+  const deg = [0, 1, 2, 3, 4, 5, 6];
+  const pads = el('div', { class: 'chordpads' }, deg.map(d => el('button', { class: 'chordpad' + (d === gChord ? ' on' : ''),
+    onpointerdown: e => { e.preventDefault(); strum(d, e.button === 2 || e.shiftKey, 'pad'); }, onpointerup: () => releaseStrum('pad'), onpointerleave: () => releaseStrum('pad'), oncontextmenu: e => e.preventDefault() },
+    el('kbd', {}, d + 1), el('b', {}, chordName(d)), el('small', {}, ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii'][d]))));
+  // fretboard: high string on top, like guitar tabs. Drag across strings to strum by hand.
+  const board = el('div', { class: 'fretboard' });
+  for (let s = 5; s >= 0; s--) {
+    const row = el('div', { class: 'gstr', 'data-s': s, style: `--th:${1 + (5 - s) * 0.0}px;--w:${3 - s * 0.35}px` },
+      el('kbd', { class: 'skey' }, GKEYS[s].toUpperCase()));
+    for (let f = 0; f <= 12; f++) {
+      const m = GSTR[s] + f + gShift, cell = el('div', { class: 'fret' + (f === 0 ? ' open' : '') + (inScale(m) ? ' insc' : '') + ([3, 5, 7, 9].includes(f) ? ' dot' : '') + (f === 12 ? ' dot2' : ''), title: noteName(m) },
+        el('span', {}, inScale(m) ? NOTE[m % 12] : ''));
+      const hit = () => { const id = 'fret' + s; releaseStrum(id); noteOn(m, newVel); strumHeld.set(id, { notes: [m], at: performance.now(), count: 0, sp: 0 }); flash(row); flash(cell); };
+      cell.addEventListener('pointerdown', e => { e.preventDefault(); fretDrag = true; cell.releasePointerCapture?.(e.pointerId); hit(); });
+      cell.addEventListener('pointerenter', e => { if (fretDrag && e.buttons) hit(); });
+      row.append(cell);
+    }
+    board.append(row);
+  }
+  const ctl = el('div', { class: 'vk-ctl' },
+    el('button', { onclick: () => { gShift = clamp(gShift - 12, -24, 12); renderBeatEditor(); } }, 'Lower'),
+    el('span', {}, gShift ? (gShift > 0 ? '+' : '') + gShift / 12 + ' oct' : 'Normal'),
+    el('button', { onclick: () => { gShift = clamp(gShift + 12, -24, 12); renderBeatEditor(); } }, 'Higher'),
+    el('span', { class: 'hint' }, 'Chords: press 1 to 7 (Shift = up strum). Strings: Q W E R T Y. Or click and drag on the frets.'),
+    isString(t.synth.engine) ? null : el('span', { class: 'hint warn' }, 'Tip: pick a guitar in the Instrument menu for a real guitar sound.'));
+  return el('div', { class: 'guitarwrap' }, ctl, pads, board);
+}
+// drum pads: one big pad per row, with its computer key
+function drumPads(t) {
+  const n = Math.min(t.rows.length, 16);
+  return el('div', { class: 'playpanel' },
+    el('div', { class: 'ptabs' }, el('b', {}, 'Drum pads'), el('span', { class: 'hint' }, 'Play live with the keys shown. Hold Shift for a loud hit.'),
+      el('span', { class: 'spacer' }),
+      el('span', { class: 'withhelp' }, el('button', { class: 'tog rec' + (recNotes ? ' on' : ''), onclick: e => { recNotes = !recNotes; e.target.classList.toggle('on', recNotes); toast(recNotes ? 'Recording on. Press Space to play, then hit the pads.' : 'Recording off.'); } }, 'Rec hits'), helpBtn('recNotes')), el('button', { class: 'keysbtn', onclick: () => openKeyGuide('beat') }, '⌨ Keys guide')),
+    el('div', { class: 'dpads', style: `--n:${Math.min(8, n)}` }, t.rows.slice(0, 16).map((r, i) => el('button', { class: 'dpad', 'data-i': i,
+      onpointerdown: e => { e.preventDefault(); padHit(i, e.shiftKey ? 1 : 0.8); } },
+      el('kbd', {}, PADKEYS[i].toUpperCase()), el('b', {}, r.sample ? soundName(r.sample) : dname(r.sound))))));
+}
+function padHit(i, vel) {
+  noteOn(36 + i, vel); flash(document.querySelector(`.dpad[data-i="${i}"]`));
+}
 function vkeyboard(t) {
   const wrap = el('div', { class: 'vkeys' });
   const base = 12 * (octave + 1);
   const keysEl = el('div', { class: 'vk-inner' });
   for (let m = base; m < base + 25; m++) {
-    const k = el('div', { class: 'vk' + (isBlack(m) ? ' black' : '') + (inScale(m) ? ' insc' : ''), title: noteName(m) }, m % 12 === 0 ? noteName(m) : '');
+    const ki = m - base, key = ki < KEYMAP.length ? KEYMAP[ki].toUpperCase() : '';
+    const k = el('div', { class: 'vk' + (isBlack(m) ? ' black' : '') + (inScale(m) ? ' insc' : ''), title: noteName(m) + (key ? ' (key ' + key + ')' : ''), 'data-m': m },
+      key ? el('kbd', {}, key) : null, m % 12 === 0 ? el('span', {}, noteName(m)) : null);
     k.addEventListener('pointerdown', e => { e.preventDefault(); noteOn(m, 0.85); k.classList.add('down'); k.setPointerCapture(e.pointerId); });
     const up = () => { if (k.classList.contains('down')) { noteOff(m); k.classList.remove('down'); } };
     k.addEventListener('pointerup', up); k.addEventListener('pointercancel', up);
@@ -352,10 +444,12 @@ export function noteOn(midi, vel = 0.8) {
     if (recNotes && T.playing && app.view === 'beat') { const st = patData(t, cur()).steps[t.rows.indexOf(r)]; st[nowStep()] = vel > 0.9 ? 2 : 1; save(); renderBeatEditor(); }
     return;
   }
-  previewNote(t, midi, 0.6, vel);
+  live.get(midi)?.(); live.set(midi, liveNote(t, midi, vel));
   if (recNotes && T.playing && app.view === 'beat') held.set(midi, { step: nowStep(), vel, t, time: performance.now() });
 }
+const live = new Map();
 export function noteOff(midi) {
+  const stopIt = live.get(midi); if (stopIt) { live.delete(midi); stopIt(); }
   const h = held.get(midi); if (!h) return; held.delete(midi);
   const len = Math.max(1, Math.round((performance.now() - h.time) / 1000 / stepDur()));
   const steps = B().bars * 16;
@@ -366,13 +460,30 @@ export function noteOff(midi) {
 
 const KEYMAP = 'awsedftgyhujk';
 const keyDown = new Set();
-export function beatKey(k, up) {
+// computer keys. Drums: pads. Instruments: piano keys or guitar (chords 1-7, strings Q-Y).
+export function beatKey(k, up, e = {}) {
   const t = selBeatTrack(); if (!t) return false;
+  const code = e.code || '', digit = /^Digit[1-7]$/.test(code) ? +code.slice(5) : 0, id = code || k;
+  if (up) { if (!keyDown.has(id)) return false; keyDown.delete(id); }
+  else { if (keyDown.has(id)) return true; keyDown.add(id); }
+  if (t.type === 'drums') {
+    const i = PADKEYS.indexOf(k); if (i < 0 || i >= t.rows.length) return false;
+    if (!up) padHit(i, e.shiftKey ? 1 : 0.8);
+    return true;
+  }
+  const mode = modeOf(t);
+  if (mode === 'guitar') {
+    if (digit) { if (up) releaseStrum('key' + digit); else strum(digit - 1, e.shiftKey, 'key' + digit); return true; }
+    const s = GKEYS.indexOf(k);
+    if (s >= 0) { if (up) releaseStrum('str' + s); else pluckString(s); return true; }
+    if (!up && (k === 'z' || k === 'x')) { gShift = clamp(gShift + (k === 'z' ? -12 : 12), -24, 12); renderBeatEditor(); return true; }
+    return false;
+  }
   if (!up && k === 'z') { octave = clamp(octave - 1, 1, 6); toast('Octave ' + octave); renderBeatEditor(); return true; }
   if (!up && k === 'x') { octave = clamp(octave + 1, 1, 6); toast('Octave ' + octave); renderBeatEditor(); return true; }
   const i = KEYMAP.indexOf(k); if (i < 0) return false;
-  const m = 12 * (octave + 1) + i;
-  if (up) { keyDown.delete(k); noteOff(m); } else if (!keyDown.has(k)) { keyDown.add(k); noteOn(m, newVel); }
+  const m = 12 * (octave + 1) + i, vk = document.querySelector(`.vk[data-m="${m}"]`);
+  if (up) { noteOff(m); vk?.classList.remove('down'); } else { noteOn(m, newVel); vk?.classList.add('down'); }
   return true;
 }
 

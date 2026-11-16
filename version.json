@@ -1,17 +1,32 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "First public version of SHELOOPS.",
-    "Record vocals over your own beats, with takes, punch in and Fix my voice.",
-    "Vocal presets, Auto-Tune, effects and Build my sound.",
-    "Beat maker with patterns, your own sounds and MIDI.",
-    "Mixer, mastering and MP3 export with cover art.",
-    "Cover art, CD and MiniDisc designer with a real 3D studio.",
-    "A see-through CD player that spins your disc while music plays.",
-    "Themes, backgrounds, cursors, fonts and your own logo.",
-    "Install SHELOOPS as an app, and get notified when there is an update."
+    "Export window: save your song, beat, vocals or each track as WAV or MP3 with your own file name.",
+    "Save a song or everything as a .sheloops file and open it on any computer.",
+    "Play the guitar: chord pads and a fretboard you can strum, plus big drum pads.",
+    "Keys guide: press ? to see what every key does.",
+    "Over 70 instruments: orchestra, Japanese, world, folk, mallets and fun ones.",
+    "38 percussion sounds in Latin, Japanese, World, Orchestra and FX kits.",
+    "Guitar loop maker with 16 styles.",
+    "New studio look and a new intro."
   ],
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "date": "2026-11-16",
+      "notes": [
+        "First public version of SHELOOPS.",
+        "Record vocals over your own beats, with takes, punch in and Fix my voice.",
+        "Vocal presets, Auto-Tune, effects and Build my sound.",
+        "Beat maker with patterns, your own sounds and MIDI.",
+        "Mixer, mastering and MP3 export with cover art.",
+        "Cover art, CD and MiniDisc designer with a real 3D studio.",
+        "A see-through CD player that spins your disc while music plays.",
+        "Themes, backgrounds, cursors, fonts and your own logo.",
+        "Install SHELOOPS as an app, and get notified when there is an update."
+      ]
+    }
+  ]
 }

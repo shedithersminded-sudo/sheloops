@@ -6,6 +6,7 @@ import { db, settings, saveSettings, cleanupAudio } from './store.js';
 import { E, ensureCtx, openMic, reopenMic, setInputGain, peakOf, rmsOf, testRecord, playBuffer, testTone, latency, updateMonitor } from './engine.js';
 import { importBeatFile } from './studio.js';
 import { U, check, whatsNew, install } from './update.js';
+import { exportSongFile, exportEverything, openSheloopsFile } from './exporter.js';
 
 const go = v => emit('goto:' + v);
 const ago = ts => { const s = (Date.now() - ts) / 1000; return s < 60 ? 'just now' : s < 3600 ? Math.floor(s / 60) + ' min ago' : s < 86400 ? Math.floor(s / 3600) + ' h ago' : new Date(ts).toLocaleDateString(); };
@@ -52,6 +53,15 @@ function heroLogo() {
   return box;
 }
 // ---------- home ----------
+// a slow scrolling strip like a hi-fi display
+function ticker(P, all) {
+  const KEYS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const bits = P ? [`now loaded: ${P.name}`, `${P.bpm} bpm`, `${KEYS[P.beat.key]} ${P.beat.scale === 'off' ? '' : P.beat.scale}`.trim(), `${P.tracks.length} vocal track${P.tracks.length === 1 ? '' : 's'}`, `${P.beat.tracks.length} beat track${P.beat.tracks.length === 1 ? '' : 's'}`]
+    : ['no song loaded', 'drop a beat to start'];
+  bits.push(`${all.length} song${all.length === 1 ? '' : 's'} in your crate`, 'press ? for keys', 'sheloops studio');
+  const line = bits.join('  ✦  ') + '  ✦  ';
+  return el('div', { class: 'ticker', 'aria-hidden': 'true' }, el('span', { class: 'led' }), el('div', { class: 'ticker-track' }, el('span', {}, line), el('span', {}, line)));
+}
 export async function renderHome() {
   const view = $('#view'); view.innerHTML = '';
   const all = (await db.all('projects')).sort((a, b) => b.updated - a.updated);
@@ -68,6 +78,7 @@ export async function renderHome() {
         P ? el('button', { class: 'hot', onclick: () => go('studio') }, 'Continue in the studio') : null),
       el('div', { class: 'dropzone', id: 'homedrop' }, el('b', {}, 'Drop a beat file here'), el('span', {}, 'Starts a new song with your beat, ready to record.')),
     ),
+    ticker(P, all),
     el('div', { class: 'tiles' },
       tile('Start with my beat', 'Pick an MP3 or WAV and record over it', async () => { const f = await pickFile('audio/*'); if (f) createSong(f); }, true),
       tile('Create new song', 'Starts with a simple built-in beat', () => createSong(null)),
@@ -130,6 +141,7 @@ export async function renderProjects() {
       el('button', { onclick: async () => { const n = await ask('Artist name', 'Artist', p.artist || ''); if (n == null) return; await update(p, x => x.artist = n); } }, 'Artist'),
       el('span', { class: 'withhelp' }, el('button', { onclick: async () => { await setCover(p); renderProjects(); } }, p.cover ? 'Change cover' : 'Set cover'), helpBtn('cover')),
       el('button', { onclick: () => go('art') }, 'Design cover'),
+      el('button', { title: 'Save this song as a .sheloops file', onclick: () => exportSongFile(p) }, 'Export'),
       el('button', { onclick: () => copyProject(p, p.name + ' copy') }, 'Duplicate'),
       el('button', { title: 'Saves a frozen copy you can go back to', onclick: () => copyProject(p, `${p.name} (version ${new Date().toLocaleString()})`) }, 'Save version'),
       el('button', { class: 'danger', onclick: () => deleteProject(p) }, 'Delete'),
@@ -137,7 +149,9 @@ export async function renderProjects() {
   view.append(el('div', { class: 'projects' },
     el('div', { class: 'ptop' }, el('h1', {}, 'My projects'),
       el('button', { class: 'hot', onclick: () => createSong(null) }, 'New song'),
-      el('button', { onclick: async () => { const f = await pickFile('audio/*'); if (f) createSong(f); } }, 'New song from my beat')),
+      el('button', { onclick: async () => { const f = await pickFile('audio/*'); if (f) createSong(f); } }, 'New song from my beat'),
+      el('button', { onclick: () => openSheloopsFile(renderProjects) }, 'Open a .sheloops file'),
+      el('button', { onclick: () => exportEverything() }, 'Export everything'), helpBtn('exportAll')),
     el('p', { class: 'hint' }, 'Everything saves automatically in this browser while you work.'),
     all.length ? el('div', { class: 'pgrid' }, all.map(card)) : el('div', { class: 'empty' }, 'No songs yet. Click New song.')));
 }

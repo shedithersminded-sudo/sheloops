@@ -4,7 +4,7 @@ import { settings, audioCache } from './store.js';
 import { clamp } from './util.js';
 import { PITCH_WORKLET, DENOISE_WORKLET, buildFx } from './fx.js';
 import { SCALES } from './beat.js';
-import { playString, playExtra, EXTRA_ENGINES, playPerc, PERC } from './instruments.js';
+import { playString, playExtra, EXTRA_ENGINES, playPerc, PERC, isString } from './instruments.js';
 
 const WORKLET = `
 class Cap extends AudioWorkletProcessor {
@@ -380,7 +380,7 @@ export function playDrum(c, dest, sound, t, vel) {
 export function playNote(c, dest, syn, midi, t, dur, vel = 0.8, sample = null) {
   const eng = syn.engine || 'synth';
   if (eng === 'piano') return playPiano(c, dest, syn, midi, t, dur, vel);
-  if (eng === 'guitar' || eng.startsWith('gtr-') || ['banjo', 'harp', 'koto', 'sitar'].includes(eng)) return playString(c, dest, syn, midi, t, dur, vel);
+  if (isString(eng)) return playString(c, dest, syn, midi, t, dur, vel);
   if (EXTRA_ENGINES.has(eng)) return playExtra(c, dest, syn, midi, t, dur, vel);
   if (eng === 'sampler') return playSampler(c, dest, syn, midi, t, dur, vel, sample);
   const f = 440 * Math.pow(2, (midi - 69) / 12);
@@ -469,6 +469,14 @@ export async function previewDrum(t, row, vel = 0.9) {
   const c = await ensureCtx(), dest = nodeFor(E.g, t, true).input;
   if (row.sample) playSample(c, dest, audioCache.get(row.sample), c.currentTime + 0.01, vel * (row.vol ?? 1));
   else playDrum(c, dest, row.sound, c.currentTime + 0.01, vel * (row.vol ?? 1));
+}
+// Live note that sounds until you let go. Returns a function that releases it.
+export function liveNote(t, midi, vel = 0.8) {
+  const c = E.ctx; if (!c) { previewNote(t, midi, 0.5, vel); return () => { }; }
+  const g = c.createGain(), now = c.currentTime + 0.005, ring = isString(t.synth.engine) || !t.synth.engine || t.synth.engine === 'piano';
+  g.connect(nodeFor(E.g, t, true).input);
+  playNote(c, g, t.synth, midi, now, 6, vel, audioCache.get(t.sample));
+  return () => { const n = c.currentTime; g.gain.setTargetAtTime(0, n, ring ? 0.25 : Math.max(0.04, (t.synth.release || 0.2) / 3)); setTimeout(() => g.disconnect(), 3000); };
 }
 export async function previewNote(t, midi, dur = 0.3, vel = 0.8) { const c = await ensureCtx(); playNote(c, nodeFor(E.g, t, true).input, t.synth, midi, c.currentTime + 0.01, dur, vel, audioCache.get(t.sample)); }
 

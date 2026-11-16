@@ -13,6 +13,8 @@ import { renderProfile } from './profile.js';
 import { renderAppearance } from './appearance.js';
 import { applyLook, look, logoURL } from './look.js';
 import { playIntro, introOn } from './intro.js';
+import { openExport } from './exporter.js';
+import { openKeyGuide } from './keyguide.js';
 import { renderArt, artKey } from './artui.js';
 import { renderPlayer, playerTick } from './player.js';
 import { nowPlayingTick } from './nowplaying.js';
@@ -40,6 +42,7 @@ function nav() {
     P ? el('div', { class: 'songchip', title: 'Current song', onclick: () => goto('projects') },
       P.cover ? el('img', { src: P.cover, alt: '' }) : el('span', { class: 'blank' }, P.name.slice(0, 2).toUpperCase()),
       el('span', {}, P.name)) : null,
+    el('button', { class: 'navbtn exportbtn', title: 'Export songs, beats, tracks or everything', onclick: openExport }, 'Export'),
     el('span', { class: 'withhelp' },
       el('div', { class: 'modeswitch', role: 'group', title: 'Simple hides the extra buttons. Advanced shows everything.' },
         [[true, 'Simple'], [false, 'Advanced']].map(([v, l]) => el('button', { class: !!settings.simple === v ? 'on' : '', onclick: () => {
@@ -134,6 +137,7 @@ window.addEventListener('keydown', e => {
   if (e.target.matches('input:not([type=range]):not([type=checkbox]), select, textarea')) return;
   if (document.querySelector('.modal-wrap')) return;
   const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
+  if (e.key === '?' && !ctrl) { openKeyGuide(app.view); return; }
   const inSong = app.P && PLAYS.includes(app.view);
   if (!inSong) return;
   if (e.code === 'Space') { e.preventDefault(); T.playing ? stop() : play(); return; }
@@ -149,12 +153,12 @@ window.addEventListener('keydown', e => {
     else if (k === 'delete' || k === 'backspace') { e.preventDefault(); edit.del(); }
     else if (k === 'home') seek(0);
   } else if (app.view === 'beat' && !ctrl && !e.repeat) {
-    if (k === 'r') { goto('studio'); record(); }
-    else beatKey(k);
+    if (beatKey(k, false, e)) e.preventDefault();
+    else if (k === 'r') { goto('studio'); record(); }
   }
 });
 window.addEventListener('keyup', e => {
-  if (app.view === 'beat' && !e.target.matches('input:not([type=range]), select, textarea')) beatKey(e.key.toLowerCase(), true);
+  if (app.view === 'beat' && !e.target.matches('input:not([type=range]), select, textarea')) beatKey(e.key.toLowerCase(), true, e);
 });
 window.addEventListener('beforeunload', () => { flush(); });
 // Stop the browser from opening a file dropped outside a drop zone

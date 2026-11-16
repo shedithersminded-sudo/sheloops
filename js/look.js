@@ -54,6 +54,8 @@ export const look = Object.assign({
   font: 'Fredoka', logo: { has: false, size: 34, shape: 'none', text: true },
 }, JSON.parse(localStorage.getItem(KEY) || '{}'));
 look.layout = { ...DEFAULT_LAYOUT, ...look.layout };
+// 2026-11 new studio look: move the old default font to the new one once
+if ((look.skinV || 0) < 2) { if (!look.font || look.font === 'Fredoka') look.font = 'Comfortaa'; look.skinV = 2; }
 if (look.cursor) delete look.cursor.imgEl;
 for (const k of DEFAULT_LAYOUT.toolbar) if (!look.layout.toolbar.includes(k)) look.layout.toolbar.push(k);
 // never store the loaded cursor picture element (it turns into {} and breaks the next start)
@@ -110,9 +112,9 @@ export async function setBackgroundImage(file) {
 }
 
 // ---------- font ----------
-export const FONTS_UI = [['Fredoka', 'Round and friendly'], ['Baloo 2', 'Bubbly and bold'], ['Nunito', 'Soft and clean'], ['Quicksand', 'Light and airy'], ['Comfortaa', 'Rounded and techy'], ['Space Grotesk', 'Modern and simple'], ['Cascadia Mono', 'Studio code look (original)']];
+export const FONTS_UI = [['Comfortaa', 'SHELOOPS look (default)'], ['Fredoka', 'Round and friendly'], ['Baloo 2', 'Bubbly and bold'], ['Nunito', 'Soft and clean'], ['Quicksand', 'Light and airy'], ['Space Grotesk', 'Modern and simple'], ['Cascadia Mono', 'Studio code look (original)']];
 export function applyFont() {
-  const f = look.font || 'Fredoka', mono = f === 'Cascadia Mono';
+  const f = look.font || 'Comfortaa', mono = f === 'Cascadia Mono';
   document.documentElement.style.setProperty('--font', mono ? '"Cascadia Mono", Consolas, monospace' : `"${f}", "Nunito", system-ui, sans-serif`);
 }
 // ---------- logo (my own art, kept in this browser only) ----------

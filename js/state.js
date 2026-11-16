@@ -42,6 +42,16 @@ export const PRESETS = {
   '808 bass': { wave: 'sine', cutoff: 4000, res: 0, env: 0, attack: 0.002, sustain: 1, release: 0.2, detune: 0, engine: 'bass808' },
   'reese bass': { wave: 'sine', cutoff: 8000, res: 0, env: 0, attack: 0.002, sustain: 1, release: 0.25, detune: 0, engine: 'reese' },
   'theremin': { wave: 'sine', cutoff: 9000, res: 0, env: 0, attack: 0.002, sustain: 1, release: 0.3, detune: 0, engine: 'theremin' },
+  ...Object.fromEntries([
+    ['ukulele', 'ukulele', 4500], ['mandolin', 'mandolin', 7000], ['shamisen', 'shamisen', 7000], ['biwa', 'biwa', 4000], ['sanshin', 'sanshin', 4000],
+    ['harpsichord', 'harpsichord', 9000], ['hammered dulcimer', 'dulcimer', 7000], ['laser harp', 'laser-harp', 9000],
+    ['violin', 'violin'], ['cello', 'cello'], ['string section', 'strings'], ['kokyu', 'kokyu'], ['erhu', 'erhu'],
+    ['saxophone', 'sax'], ['clarinet', 'clarinet'], ['oboe', 'oboe'], ['trumpet', 'trumpet'], ['trombone', 'trombone'],
+    ['accordion', 'accordion'], ['harmonica', 'harmonica'], ['melodica', 'melodica'], ['sho', 'sho'],
+    ['shakuhachi', 'shakuhachi'], ['shinobue', 'shinobue'], ['ryuteki', 'ryuteki'], ['ocarina', 'ocarina'], ['didgeridoo', 'didgeridoo'], ['jaw harp', 'jaw-harp'],
+    ['stylophone', 'stylophone'], ['glass harmonica', 'glass-harmonica'],
+    ['handpan', 'handpan'], ['celesta', 'celesta'], ['xylophone', 'xylophone'], ['tubular bells', 'tubular-bells'], ['gamelan', 'gamelan'],
+  ].map(([name, engine, cutoff = 12000]) => [name, { wave: 'sine', cutoff, res: 0, env: 0, attack: 0.002, sustain: 1, release: 0.3, detune: 0, engine }])),
   'my sound': { wave: 'sine', cutoff: 20000, res: 0, env: 0, attack: 0.003, sustain: 1, release: 0.15, detune: 0, engine: 'sampler', root: 60 },
 };
 // x = hit, X = loud hit. One bar, repeated. Chords: [step, length, semitones from the key root]. Bass follows chord roots with a rhythm.

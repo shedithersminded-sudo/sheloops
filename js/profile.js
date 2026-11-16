@@ -78,6 +78,11 @@ export async function renderProfile() {
 }
 
 async function exportProfile() {
+  download(new Blob([JSON.stringify(await studioData(), null, 1)], { type: 'application/json' }), 'my-sheloops-studio.json');
+  toast('Studio file saved to your downloads.');
+}
+// settings, presets, kits and look as one object (also used by Export > Everything)
+export async function studioData() {
   const { inputId, outputId, lastProject, ...rest } = settings;
   const { imgEl, ...cur } = look.cursor;
   let bgImage = null;
@@ -86,9 +91,27 @@ async function exportProfile() {
   let logoImage = null;
   const lg = await db.get('audio', 'look-logo').catch(() => null);
   if (lg && lg.img && lg.img.size < 8e6) logoImage = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(lg.img); });
-  const data = { app: 'SHELOOPS', kind: 'studio', v: 2, logoImage, saved: new Date().toISOString(), settings: rest, presets: mine, favs: [...favs], kits: JSON.parse(localStorage.getItem('loopden.kits') || '[]'), look: { ...look, cursor: cur }, bgImage };
-  download(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }), 'my-sheloops-studio.json');
-  toast('Studio file saved to your downloads.');
+  return { app: 'SHELOOPS', kind: 'studio', v: 2, logoImage, saved: new Date().toISOString(), settings: rest, presets: mine, favs: [...favs], kits: JSON.parse(localStorage.getItem('loopden.kits') || '[]'), look: { ...look, cursor: cur }, bgImage };
+}
+// returns how many new presets were added
+export async function applyStudioData(d) {
+  if (!d || !Array.isArray(d.presets)) throw new Error('not a studio file');
+  let added = 0;
+  for (const p of d.presets) if (!mine.find(x => x.id === p.id)) { mine.push(p); added++; }
+  for (const id of d.favs || []) favs.add(id);
+  saveMine();
+  const kits = JSON.parse(localStorage.getItem('loopden.kits') || '[]');
+  for (const k of d.kits || []) if (!kits.find(x => x.name === k.name)) kits.push(k);
+  localStorage.setItem('loopden.kits', JSON.stringify(kits));
+  Object.assign(settings, d.settings || {}); saveSettings();
+  if (d.look) {
+    Object.assign(look, d.look); look.cursor.imgEl = null;
+    if (d.logoImage) { const blob = await (await fetch(d.logoImage)).blob(); await db.put('audio', 'look-logo', { img: blob, name: 'logo' }); }
+    if (d.bgImage) { const blob = await (await fetch(d.bgImage)).blob(); await db.put('audio', 'look-bg', { img: blob, name: 'background' }); }
+    saveLook(); await applyLook();
+  }
+  document.body.classList.toggle('simple', settings.simple);
+  return added;
 }
 function importProfile() {
   const inp = el('input', { type: 'file', accept: '.json,application/json' });
@@ -97,21 +120,7 @@ function importProfile() {
     try {
       const d = JSON.parse(await f.text());
       if (d.kind !== 'studio' || !Array.isArray(d.presets)) throw 0;
-      let added = 0;
-      for (const p of d.presets) if (!mine.find(x => x.id === p.id)) { mine.push(p); added++; }
-      for (const id of d.favs || []) favs.add(id);
-      saveMine();
-      const kits = JSON.parse(localStorage.getItem('loopden.kits') || '[]');
-      for (const k of d.kits || []) if (!kits.find(x => x.name === k.name)) kits.push(k);
-      localStorage.setItem('loopden.kits', JSON.stringify(kits));
-      Object.assign(settings, d.settings || {}); saveSettings();
-      if (d.look) {
-        Object.assign(look, d.look); look.cursor.imgEl = null;
-        if (d.logoImage) { const blob = await (await fetch(d.logoImage)).blob(); await db.put('audio', 'look-logo', { img: blob, name: 'logo' }); }
-        if (d.bgImage) { const blob = await (await fetch(d.bgImage)).blob(); await db.put('audio', 'look-bg', { img: blob, name: 'background' }); }
-        saveLook(); await applyLook();
-      }
-      document.body.classList.toggle('simple', settings.simple);
+      const added = await applyStudioData(d);
       toast(`Loaded. ${added} new preset${added === 1 ? '' : 's'}.`); renderProfile();
     } catch { toast('That is not a SHELOOPS studio file.'); }
   };

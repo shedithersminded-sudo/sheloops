@@ -168,5 +168,13 @@ Not tested: printing on real paper.
 - `js/intro.js` studio intro (about 3.5 s, click/key skips, reduced-motion aware). `#intro-cover` in index.html stops the app flashing first. Toggle + Play it now in Appearance > My logo. Setting: `look.intro.on`
 - Simple mode now really differs: Simple/Advanced switch, Mixer + Player go into More, hides Count in, Punch, Monitor, Automation, range strip, Effects and Build my sound tabs, MIDI, Rec notes, kits (plus the old `.adv` items)
 
+## 1.1.0 (2026-11-17): export, play modes, more sounds, new look
+- `js/exporter.js` Export window (top bar button + Projects): whole song, beat only, vocals only, each track (WAV or MP3, user names the file), song project file and Everything backup (`.sheloops` = JSON with audio as data URLs), Open a .sheloops file (`importData`, never replaces: existing ids come in as copies). `profile.js` now exports `studioData` / `applyStudioData`
+- Instruments: recipe tables in `instruments.js` (`HELD` bowed/reeds/brass/breath/drones, `STRUCK` modal, more `GUITARS` strings). 71 presets, grouped in beat.js GROUPS (Orchestra, Japanese, World, Fun and electronic...). Percussion: 38 sounds, `PERC_KITS` (Latin, Japanese, World, Orchestra, FX) picked from + Percussion
+- Play panel under the piano roll: Piano keys (key labels on keys) or Guitar (7 chord pads from the key, 6-string fretboard, drag to strum). Drums get big pads with keys and Rec hits. `liveNote` in engine.js holds a note until key up. Keys: piano A-K + Z/X, guitar 1-7 (Shift up strum) + Q-Y strings, pads A-K and Q-I
+- `js/keyguide.js` Keys guide (press ? anywhere, or the button): keyboard picture per mode plus lists
+- New look ("skin" block at the end of style.css): Monoton neon name, Righteous headings, Comfortaa body (look.skinV 2 migrates Fredoka users once), sharp corners with corner brackets, numbered tiles with scan sweep, scanline overlay, Home ticker (`ticker()` in pages.js)
+- Intro rewritten: SHELOOPS written around a turning ring (SVG textPath), inner counter ring, neon flicker name, dither dots
+
 ## Next: upload to GitHub
 Stage 8 (AI helper, tour, desktop app) was skipped by the user on 2026-11-16 ("dont need that really"). Next step is the public GitHub upload: code only, no personal files, .gitignore and a README that says all songs, sounds and art stay in each person's own browser.

@@ -4,6 +4,14 @@ import { helpBtn } from './help.js';
 import { app, save, snapshot, stepDur, PRESETS, newBeatTrack, patData, setNotes } from './state.js';
 import { applyMix, playNote, encodeWav } from './engine.js';
 import { importSounds } from './library.js';
+import { isString } from './instruments.js';
+const NOTE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+// chord name for scale degree d in the beat's key, like "Am" or "F#dim"
+export function chordName(d) {
+  const sc = scaleOf(), k = app.P.beat.key, tone = i => sc[(d + i) % 7] + 12 * Math.floor((d + i) / 7);
+  const third = tone(2) - tone(0), fifth = tone(4) - tone(0);
+  return NOTE[(k + sc[d]) % 12] + (fifth === 6 ? 'dim' : third === 3 ? 'm' : '');
+}
 
 // One char per 16th step, repeated every bar.
 // D down strum, U up strum, T top 3 strings stab, x muted scratch, P palm-muted chug,
@@ -33,10 +41,10 @@ export const PROGS = {
   'i iv (two chords)': [0, 3, 0, 3], 'One chord vamp': [0, 0, 0, 0],
 };
 const MAJ = [0, 2, 4, 5, 7, 9, 11], MIN = [0, 2, 3, 5, 7, 8, 10];
-const scaleOf = () => /minor|blues|dorian/.test(app.P.beat.scale) ? (app.P.beat.scale === 'dorian' ? [0, 2, 3, 5, 7, 9, 10] : MIN) : MAJ;
+export const scaleOf = () => /minor|blues|dorian/.test(app.P.beat.scale) ? (app.P.beat.scale === 'dorian' ? [0, 2, 3, 5, 7, 9, 10] : MIN) : MAJ;
 
 // 6 strings low to high for chord degree d
-function voicing(d, power) {
+export function voicing(d, power) {
   const sc = scaleOf(), key = app.P.beat.key;
   const tone = k => sc[(d + k) % 7] + 12 * Math.floor((d + k) / 7);
   let root = 40 + ((key + sc[d % 7]) % 12); // E2..D#3
@@ -83,7 +91,7 @@ async function renderLoop(t, pid) {
 let last = { style: 'Pop strum', prog: 'I V vi IV', sound: '', target: '' };
 export function openGuitarMaker(cur, onDone) {
   const b = app.P.beat, synths = () => b.tracks.filter(t => t.type === 'synth');
-  const guitarSounds = Object.keys(PRESETS).filter(k => PRESETS[k].engine && (PRESETS[k].engine === 'guitar' || PRESETS[k].engine.startsWith('gtr-') || ['banjo', 'harp', 'koto', 'sitar'].includes(PRESETS[k].engine)));
+  const guitarSounds = Object.keys(PRESETS).filter(k => k !== 'guitar' && isString(PRESETS[k].engine));
   let style = last.style, prog = last.prog, sound = last.sound || STYLES[style].sound, target = last.target, humanize = true;
   if (!synths().some(t => t.id === target)) target = (synths().find(t => /guitar/i.test(t.name)) || {}).id || 'new';
   const chips = el('div', { class: 'chips' });
