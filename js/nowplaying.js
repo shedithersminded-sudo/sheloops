@@ -66,7 +66,8 @@ function place() {
   cv.width = Math.round(w * devicePixelRatio); cv.height = Math.round(h * devicePixelRatio); cv.style.width = w + 'px'; cv.style.height = h + 'px';
   box.style.width = w + 'px';
   const x = p.x == null ? innerWidth - w - 24 : p.x;
-  box.style.left = clamp(x, 0, Math.max(0, innerWidth - w)) + 'px'; box.style.top = clamp(p.y, 0, Math.max(0, innerHeight - h)) + 'px';
+  const y = p.x == null && viz ? innerHeight - h - 70 : p.y; // the mini visualizer starts in the bottom corner, out of the way
+  box.style.left = clamp(x, 0, Math.max(0, innerWidth - w)) + 'px'; box.style.top = clamp(y, 0, Math.max(0, innerHeight - h)) + 'px';
   box.title = p.collapsed ? 'Click to open the CD player, drag to move' : '';
 }
 function hitButton(x, y) {
@@ -81,7 +82,11 @@ function hitButton(x, y) {
 function toggleMenu() {
   if (menu) { menu.remove(); menu = null; lidOpen = false; return; }
   const p = P(), set = (k, v) => { p[k] = v; saveLook(); if (k === 'size') place(); if (k === 'disc') refreshDisc(); };
-  menu = el('div', { class: 'np-menu panel' },
+  const dock = (cx, cy) => { const w = box.offsetWidth, h = box.offsetHeight; p.x = cx ? innerWidth - w - 16 : 16; p.y = cy ? innerHeight - h - 70 : 70; saveLook(); place(); };
+  menu = el('div', { class: 'np-menu panel' + (p.menuMin ? ' min' : '') }, el('div', { class: 'np-mbody' },
+    el('div', { class: 'np-dock' }, el('span', { class: 'hint' }, 'Move player to:'),
+      [['↖', 0, 0, 'Top left'], ['↗', 1, 0, 'Top right'], ['↙', 0, 1, 'Bottom left'], ['↘', 1, 1, 'Bottom right']].map(([a, x, y, t]) => el('button', { class: 'sq', title: t, onclick: () => dock(x, y) }, a)),
+      el('button', { title: 'Shrink the player to a small disc', onclick: () => setCollapsed(!p.collapsed) }, p.collapsed ? 'Open player' : 'Minimize player')),
     el('b', {}, 'Player and visualizer'),
     el('div', { class: 'np-views' }, [['cd', 'CD player'], ['viz', 'Visualizer only']].map(([v, l]) => el('button', { class: 'chip' + (p.view === v ? ' on' : ''), onclick: () => { set('view', v); place(); toggleMenu(); toggleMenu(); } }, l))),
     el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: p.view === 'viz' || p.vizOn, disabled: p.view === 'viz', onchange: e => set('vizOn', e.target.checked) }), 'Music visualizer'),
@@ -102,14 +107,36 @@ function toggleMenu() {
     el('label', { class: 'num' }, 'Disc', select([['song', 'My song\'s cover design']], p.disc, v => set('disc', v), { id: 'np-disc' })),
     el('button', { onclick: () => { p.x = null; p.y = 20; saveLook(); place(); } }, 'Reset position'),
     el('button', { onclick: () => setCollapsed(true) }, 'Close to small disc'),
-    el('button', { onclick: toggleMenu }, 'Close'));
+    el('button', { onclick: toggleMenu }, 'Close')));
+  // title bar: drag to move, minimize, close
+  const bar = el('div', { class: 'np-mbar', title: 'Drag to move' }, el('span', { class: 'grip' }, '⠿'), el('b', {}, 'Player settings'), el('span', { class: 'spacer' }),
+    el('button', { class: 'sq', title: p.menuMin ? 'Open' : 'Minimize', onclick: e => { e.stopPropagation(); p.menuMin = !p.menuMin; saveLook(); menu.classList.toggle('min', p.menuMin); fitMenu(); e.target.textContent = p.menuMin ? '▢' : '–'; } }, p.menuMin ? '▢' : '–'),
+    el('button', { class: 'sq', title: 'Close', onclick: e => { e.stopPropagation(); toggleMenu(); } }, '×'));
+  menu.prepend(bar);
+  bar.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
+    const r0 = menu.getBoundingClientRect(), ox = e.clientX - r0.left, oy = e.clientY - r0.top; bar.setPointerCapture(e.pointerId);
+    bar.onpointermove = ev => { p.menuX = clamp(ev.clientX - ox, 0, innerWidth - 120); p.menuY = clamp(ev.clientY - oy, 0, innerHeight - 40); menu.style.left = p.menuX + 'px'; menu.style.top = p.menuY + 'px'; };
+    bar.onpointerup = () => { bar.onpointermove = null; saveLook(); };
+  });
   document.body.append(menu);
   const r = box.getBoundingClientRect();
   // open beside the player, on whichever side has room
   const left = r.left - 262 >= 8 ? r.left - 262 : (r.right + 12 + 250 <= innerWidth ? r.right + 12 : clamp(r.left, 8, innerWidth - 260));
-  menu.style.left = left + 'px'; menu.style.top = clamp(r.top, 8, Math.max(8, innerHeight - 440)) + 'px';
+  if (p.menuX != null) { menu.style.left = clamp(p.menuX, 0, innerWidth - 120) + 'px'; menu.style.top = clamp(p.menuY, 0, innerHeight - 40) + 'px'; }
+  else { menu.style.left = left + 'px'; menu.style.top = clamp(r.top, 8, Math.max(8, innerHeight - 440)) + 'px'; }
+  fitMenu();
   listDesigns().then(ds => { const s = menu && menu.querySelector('#np-disc'); if (!s) return; for (const d of ds.filter(x => !x.template)) s.append(el('option', { value: d.id, selected: p.disc === d.id }, d.name)); });
 }
+
+// keep the whole settings window on screen
+function fitMenu() {
+  if (!menu) return;
+  const r = menu.getBoundingClientRect();
+  if (r.bottom > innerHeight - 8) menu.style.top = Math.max(8, innerHeight - 8 - r.height) + 'px';
+  if (r.right > innerWidth - 8) menu.style.left = Math.max(8, innerWidth - 8 - r.width) + 'px';
+}
+addEventListener('resize', fitMenu);
 
 // ---------- visualizer ----------
 let fbuf = null, tbuf = null, smooth = new Float32Array(128), peaks = new Float32Array(128);

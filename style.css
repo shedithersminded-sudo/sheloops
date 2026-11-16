@@ -1061,6 +1061,17 @@ html:not(.tglow) .glowdemo { text-shadow: none; }
 .recipe { font: 400 14px var(--label); letter-spacing: .08em; padding: 4px 10px; border-color: color-mix(in srgb, var(--led) 50%, var(--line)); background: linear-gradient(180deg, color-mix(in srgb, var(--led) 14%, var(--btn)), var(--btn)); }
 .recipe::before { content: '◆ '; color: var(--led); }
 .np-views { display: flex; gap: 4px; flex-wrap: wrap; }
-.np-menu { max-height: calc(100vh - 16px); overflow-y: auto; }
+.np-menu { max-height: calc(100vh - 16px); overflow: hidden; }
 .np-menu > b { font: 400 15px var(--label); letter-spacing: .1em; color: var(--led); }
 #nowplaying.vizonly { filter: drop-shadow(0 12px 26px rgba(0,0,0,.5)); }
+/* player settings window: solid, draggable, minimizable */
+.np-menu { padding: 0; gap: 0; background: var(--panel); backdrop-filter: blur(10px); border: 1px solid color-mix(in srgb, var(--led) 40%, var(--line)); box-shadow: 0 20px 50px #000c, 0 0 24px -10px var(--glow); }
+.np-menu .np-mbody { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; overflow-y: auto; max-height: calc(100vh - 80px); }
+.np-menu.min .np-mbody { display: none; }
+.np-mbar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; cursor: grab; touch-action: none; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--led) 10%, var(--panel)); }
+.np-mbar:active { cursor: grabbing; }
+.np-mbar b { font: 400 15px var(--label); letter-spacing: .1em; color: var(--led); }
+.np-mbar .grip { color: var(--dim); }
+.np-dock { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.np-menu { display: flex; flex-direction: column; max-height: calc(100vh - 16px); }
+.np-menu .np-mbody { flex: 1 1 auto; min-height: 0; max-height: none; overscroll-behavior: contain; }
