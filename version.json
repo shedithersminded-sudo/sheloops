@@ -1,12 +1,21 @@
 {
-  "version": "1.3.1",
+  "version": "1.3.2",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Player settings window: drag it by its title bar, minimize it, close it. It always fits on screen and scrolls inside.",
-    "Move the player to any corner in one click, or minimize it to a small disc. The mini visualizer starts in the bottom corner."
+    "New effect: Stutter repeat. Grabs a tiny slice and repeats it, for chopped glitchy vocals and drums.",
+    "New Breakcore mood in Voice FX with 16 presets: Frozen Heart, Anime Chop, Stutter Repeat, Digital Angel, Cassette Memory, Distant Signal, Pump, Glitch Angel, Whisper Haze, Crystal, Sad Robot, Hyper Bright and more.",
+    "Reverb room size now goes up to 10 seconds for frozen, endless spaces."
   ],
   "history": [
+    {
+      "version": "1.3.1",
+      "date": "2026-11-16",
+      "notes": [
+        "Player settings window: drag it by its title bar, minimize it, close it. It always fits on screen and scrolls inside.",
+        "Move the player to any corner in one click, or minimize it to a small disc. The mini visualizer starts in the bottom corner."
+      ]
+    },
     {
       "version": "1.3.0",
       "date": "2026-11-16",

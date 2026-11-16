@@ -33,11 +33,12 @@ export const FX = {
   tremolo: { name: 'Tremolo / chop', group: 'Motion', params: [p('rate', 'Speed', 0.5, 16, 0.1, 5, v => (+v).toFixed(1) + ' Hz'), p('depth', 'Depth', 0, 1, 0.01, 0.6, pc), p('shape', 'Choppy', 0, 1, 0.01, 0, pc)] },
   vibrato: { name: 'Vibrato', group: 'Motion', params: [p('rate', 'Speed', 0.5, 12, 0.1, 5, v => (+v).toFixed(1) + ' Hz'), p('depth', 'Depth', 0, 1, 0.01, 0.4, pc)] },
   delay:   { name: 'Echo', group: 'Space', params: [p('time', 'Time', 0.03, 1.5, 0.01, 0.33, v => (+v).toFixed(2) + 's'), p('feedback', 'Repeats', 0, 0.92, 0.01, 0.4, pc), p('tone', 'Tone', 500, 12000, 50, 4000, hz), p('mix', 'Mix', 0, 1, 0.01, 0.35, pc)] },
-  room:    { name: 'Reverb room', group: 'Space', params: [p('size', 'Size', 0.2, 6, 0.1, 1.8, v => (+v).toFixed(1) + 's'), p('tone', 'Tone', 1000, 16000, 100, 8000, hz), p('mix', 'Mix', 0, 1, 0.01, 0.3, pc)] },
+  repeat:  { name: 'Stutter repeat', group: 'Motion', params: [p('slice', 'Slice', 0.03, 0.5, 0.005, 0.09, v => Math.round(v * 1000) + 'ms'), p('count', 'Repeats', 2, 8, 1, 4, v => v + 'x'), p('mix', 'Mix', 0, 1, 0.01, 0.8, pc)] },
+  room:    { name: 'Reverb room', group: 'Space', params: [p('size', 'Size', 0.2, 10, 0.1, 1.8, v => (+v).toFixed(1) + 's'), p('tone', 'Tone', 1000, 16000, 100, 8000, hz), p('mix', 'Mix', 0, 1, 0.01, 0.3, pc)] },
 };
-export const FX_ORDER = ['denoise', 'tune', 'pitch', 'harmony', 'eq', 'comp', 'deess', 'sat', 'dist', 'bitcrush', 'ring', 'autowah', 'tremolo', 'vibrato', 'chorus', 'doubler', 'flanger', 'phaser', 'delay', 'room', 'widen', 'limiter'];
+export const FX_ORDER = ['denoise', 'tune', 'pitch', 'harmony', 'eq', 'comp', 'deess', 'sat', 'dist', 'bitcrush', 'ring', 'autowah', 'tremolo', 'vibrato', 'repeat', 'chorus', 'doubler', 'flanger', 'phaser', 'delay', 'room', 'widen', 'limiter'];
 // effects that make sense on instruments in the beat maker
-export const BEAT_FX = ['eq', 'comp', 'sat', 'dist', 'bitcrush', 'autowah', 'tremolo', 'vibrato', 'chorus', 'flanger', 'phaser', 'delay', 'room', 'widen', 'pitch', 'ring', 'limiter'];
+export const BEAT_FX = ['eq', 'comp', 'sat', 'dist', 'bitcrush', 'autowah', 'tremolo', 'vibrato', 'repeat', 'chorus', 'flanger', 'phaser', 'delay', 'room', 'widen', 'pitch', 'ring', 'limiter'];
 
 export function newFx(type, params = {}) {
   const def = {}; for (const q of FX[type].params) def[q.k] = q.def;
@@ -188,6 +189,22 @@ const BUILD = {
     const d = c.createDelay(0.05); d.delayTime.value = 0.008;
     const l = lfo(c, 5, 0.002, d.delayTime);
     return { in: d, out: d, set(p, _, i) { sp(c, l.o.frequency, p.rate, i); sp(c, l.g.gain, p.depth * 0.004, i); }, stop() { l.o.stop(); } };
+  },
+  // grabs a short slice and repeats it, then grabs the next one (beat-repeat stutter)
+  repeat(c) {
+    const input = c.createGain(), out = c.createGain(), dry = c.createGain(), wet = c.createGain(), gate = c.createGain(), d = c.createDelay(1), fb = c.createGain();
+    const o = c.createOscillator(), sh = c.createWaveShaper(), fbMod = c.createGain(), dryMod = c.createGain(), wetMod = c.createGain();
+    o.type = 'sawtooth'; o.connect(sh); gate.gain.value = 0;
+    sh.connect(gate.gain); sh.connect(fbMod); fbMod.connect(fb.gain); sh.connect(dryMod); dryMod.connect(dry.gain); sh.connect(wetMod); wetMod.connect(wet.gain);
+    input.connect(gate); gate.connect(d); d.connect(fb); fb.connect(d); d.connect(wet); wet.connect(out); input.connect(dry); dry.connect(out); o.start();
+    let last = -1;
+    return { in: input, out, set(p, _, i) {
+      if (p.count !== last) { const n = 1024, a = new Float32Array(n); for (let k = 0; k < n; k++) a[k] = (k / (n - 1)) < 1 / p.count ? 1 : 0; sh.curve = a; last = p.count; }
+      sp(c, d.delayTime, p.slice, i); sp(c, o.frequency, 1 / (p.slice * p.count), i);
+      sp(c, fb.gain, 0.97, i); sp(c, fbMod.gain, -0.97, i);           // keep repeating, but clear while grabbing a new slice
+      sp(c, dry.gain, 1 - p.mix, i); sp(c, dryMod.gain, p.mix, i);    // you hear the live voice while it grabs
+      sp(c, wet.gain, p.mix, i); sp(c, wetMod.gain, -p.mix, i);
+    }, stop() { o.stop(); } };
   },
   delay(c) {
     const w = wetDry(c), d = c.createDelay(2), fb = c.createGain(), tone = c.createBiquadFilter(); tone.type = 'lowpass';

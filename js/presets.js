@@ -127,13 +127,25 @@ export const BUILTIN = [
   P('Voice FX', 'Nightcore', 'Sped up, bright and sweet.', 0.2, 0.1, () => [F('pitch', { semis: 4 }), eq({ lowcut: 200, presence: 2, air: 5 }), comp(-20, 4, 5)]),
   P('Voice FX', 'Breakcore Chop', 'Glitchy stutter chop with crunch.', 0, 0, () => [F('tremolo', { rate: 12.6, depth: 1, shape: 1 }), F('bitcrush', { bits: 7, tone: 7000, mix: 0.4 }), F('delay', { time: 0.16, feedback: 0.35, tone: 4000, mix: 0.2 })]),
   P('Voice FX', 'Dark Blue', 'Low, sad and drowned in reverb.', 0.3, 0, () => [F('pitch', { semis: -3 }), eq({ lowcut: 150, air: -4, hicut: 7000 }), F('room', { size: 4.5, tone: 4000, mix: 0.5 }), F('vibrato', { rate: 0.8, depth: 0.25 })]),
+  P('Voice FX', 'Frozen Heart', 'Icy shimmer that hangs in the air, breakcore style.', 0.3, 0.15, () => [F('harmony', { v1: 12, v2: 7, mix: 0.3 }), eq({ lowcut: 220, mud: -3, air: 6 }), F('chorus', { rate: 0.3, depth: 0.5, mix: 0.35 }), F('room', { size: 8, tone: 12000, mix: 0.55 })]),
+  P('Voice FX', 'Anime Chop', 'Pitched up and chopped like a sampled anime vocal.', 0.2, 0.1, () => [F('pitch', { semis: 5 }), eq({ lowcut: 250, presence: 3, air: 4 }), F('repeat', { slice: 0.08, count: 3, mix: 0.6 })]),
+  P('Voice FX', 'Stutter Repeat', 'Grabs a tiny slice and repeats it, like a glitched sample.', 0.1, 0, () => [F('repeat', { slice: 0.06, count: 6, mix: 0.85 })]),
+  P('Voice FX', 'Digital Angel', 'Hard tuned, an octave of shine, and huge space.', 0.3, 0.2, () => [tune(1), F('harmony', { v1: 12, v2: 0, mix: 0.4 }), F('bitcrush', { bits: 9, tone: 9000, mix: 0.25 }), F('room', { size: 6, tone: 11000, mix: 0.45 })]),
+  P('Voice FX', 'Cassette Memory', 'Warbly, faded, like an old tape you found.', 0.2, 0, () => [eq({ lowcut: 220, air: -4, hicut: 6000 }), sat(0.5), F('vibrato', { rate: 0.6, depth: 0.35 }), F('room', { size: 2.5, tone: 5000, mix: 0.3 })]),
+  P('Voice FX', 'Distant Signal', 'A voice far away through a broken radio.', 0, 0, () => [eq({ lowcut: 500, presence: 4, hicut: 4000 }), F('bitcrush', { bits: 8, tone: 4000, mix: 0.3 }), F('delay', { time: 0.45, feedback: 0.55, tone: 2200, mix: 0.3 }), F('room', { size: 5, tone: 3500, mix: 0.4 })]),
+  P('Voice FX', 'Pump', 'Breathes in and out with the beat, like sidechain.', 0, 0, () => [F('tremolo', { rate: 2.9, depth: 0.8, shape: 0.2 })]),
+  P('Voice FX', 'Glitch Angel', 'Sweet high voice that keeps breaking apart.', 0.25, 0.1, () => [F('pitch', { semis: 7, mix: 0.6 }), F('repeat', { slice: 0.045, count: 5, mix: 0.6 }), F('bitcrush', { bits: 7, tone: 8000, mix: 0.3 }), F('room', { size: 4, tone: 10000, mix: 0.35 })]),
+  P('Voice FX', 'Whisper Haze', 'Soft breathy whisper lost in fog.', 0.4, 0.1, () => [eq({ lowcut: 450, mud: -5, air: 8 }), comp(-28, 6, 6), F('chorus', { rate: 0.4, depth: 0.6, mix: 0.4 }), F('room', { size: 5, tone: 9000, mix: 0.5 })]),
+  P('Voice FX', 'Crystal', 'Glassy high octave with bright echoes.', 0.3, 0.2, () => [F('pitch', { semis: 12, mix: 0.4 }), eq({ lowcut: 300, air: 8 }), F('delay', { time: 0.3, feedback: 0.45, tone: 10000, mix: 0.25 }), F('room', { size: 4, tone: 13000, mix: 0.35 })]),
+  P('Voice FX', 'Sad Robot', 'Tuned, a bit lower, cold and lonely.', 0.3, 0.1, () => [tune(1), F('pitch', { semis: -2 }), eq({ air: -3, hicut: 8000 }), F('room', { size: 4, tone: 5000, mix: 0.4 })]),
+  P('Voice FX', 'Hyper Bright', 'Sped up, squeezed and sparkly.', 0.15, 0.1, () => [F('pitch', { semis: 4 }), comp(-26, 6, 2), sat(0.3), eq({ lowcut: 200, presence: 2, air: 5 }), F('limiter', { ceiling: -1 })]),
 ];
 export const CATS = ['Vocal', 'Enhance', 'Voice FX'];
 
 // Moods: quick filters inside Enhance and Voice FX
 export const MOODS = {
   Enhance: ['Clear', 'Warm', 'Loud', 'Space'],
-  'Voice FX': ['Fun', 'Scary', 'Robot', 'Retro', 'Places', 'Dreamy'],
+  'Voice FX': ['Breakcore', 'Fun', 'Scary', 'Robot', 'Retro', 'Places', 'Dreamy'],
 };
 const MOOD_OF = {
   Clarity: 'Clear', Brightness: 'Clear', Presence: 'Clear', Sparkle: 'Clear', Silky: 'Clear', 'Noise Cleanup': 'Clear', 'Crisp Words': 'Clear', 'Breathy Air': 'Clear', 'De-harsh': 'Clear', Smooth: 'Clear',
@@ -145,7 +157,7 @@ const MOOD_OF = {
   'Robotic Voice': 'Robot', 'Alien Voice': 'Robot', 'Futuristic Voice': 'Robot', '8-Bit': 'Robot', 'Space Station': 'Robot', 'Robot Choir': 'Robot', Hologram: 'Robot', Glitch: 'Robot', 'Arcade Boss': 'Robot',
   'Telephone Voice': 'Retro', 'Radio Voice FX': 'Retro', 'Vintage Voice': 'Retro', Megaphone: 'Retro', 'Walkie-Talkie': 'Retro', Intercom: 'Retro', 'Drive-Thru': 'Retro', 'Distorted Voice': 'Retro',
   'Echo Voice': 'Places', 'Dub Echo': 'Places', 'Sound System': 'Places', 'Jungle Chop': 'Fun', 'Pitched Sample': 'Retro', Cave: 'Places', Underwater: 'Places', Announcer: 'Places', Tunnel: 'Places', Whisper: 'Places',
-  'Dreamy Voice': 'Dreamy', Ethereal: 'Dreamy', 'Dark Blue': 'Dreamy', Nightcore: 'Fun', 'Breakcore Chop': 'Robot', 'Choir of Me': 'Dreamy', Vaporwave: 'Dreamy',
+  'Dreamy Voice': 'Dreamy', 'Frozen Heart': 'Breakcore', 'Anime Chop': 'Breakcore', 'Stutter Repeat': 'Breakcore', 'Digital Angel': 'Breakcore', 'Cassette Memory': 'Breakcore', 'Distant Signal': 'Breakcore', Pump: 'Breakcore', 'Glitch Angel': 'Breakcore', 'Whisper Haze': 'Breakcore', Crystal: 'Breakcore', 'Sad Robot': 'Breakcore', 'Hyper Bright': 'Breakcore', 'Breakcore Chop': 'Breakcore', Ethereal: 'Breakcore', 'Dark Blue': 'Breakcore', Nightcore: 'Breakcore',  'Choir of Me': 'Dreamy', Vaporwave: 'Dreamy',
 };
 export const moodOf = p => MOOD_OF[p.name] || '';
 
