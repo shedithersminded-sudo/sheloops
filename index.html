@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SHELOOPS</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e0e10">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="vendor/fonts/fonts.css">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.min.js" } }</script>
+<script type="module" src="js/main.js"></script>
+</head>
+<body>
+<div id="intro-cover"></div>
+<script>try { var L = JSON.parse(localStorage.getItem('loopden.look') || '{}'); if (L.intro && L.intro.on === false) document.getElementById('intro-cover').remove(); } catch (e) { }</script>
+<header id="nav" class="topnav"></header>
+<main id="view"></main>
+<footer id="foot" class="panel master" hidden></footer>
+<div id="toast"></div>
+</body>
+</html>

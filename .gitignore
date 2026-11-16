@@ -1,0 +1,24 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+
+# Never commit songs, recordings, exports or personal art
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.ogg
+*.webm
+*.mp4
+*.zip
+*.sheloops
+exports/
+backups/
+my-art/
