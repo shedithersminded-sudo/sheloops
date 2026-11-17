@@ -44,6 +44,24 @@ export const BUILTIN = [
 
   P('Vocal', 'Ragga MC', 'Jungle and dancehall MC: bright, punchy, with a dub echo.', 0.12, 0.3, () => [eq({ lowcut: 140, mud: -3, presence: 5, air: 3 }), comp(-26, 6, 7, { attack: 0.003 }), deess(0.5), sat(0.35), F('delay', { time: 0.35, feedback: 0.45, tone: 2500, mix: 0.22 })]),
 
+  P('Vocal', 'Boom Bap Vocals', 'Classic 90s rap: punchy, a bit gritty, dry.', 0.08, 0.06, () => [eq({ lowcut: 110, body: 1.5, mud: -2, presence: 4, hicut: 12000 }), comp(-24, 5, 6), sat(0.4), deess(0.5)]),
+  P('Vocal', 'Emo Rap', 'Tuned, soft and sad, with a long echo.', 0.35, 0.3, () => [tune(0.8), eq({ lowcut: 110, mud: -3, presence: 2, air: 4 }), comp(-20, 4, 5), deess(0.5), F('chorus', { depth: 0.25, mix: 0.15 })]),
+  P('Vocal', 'Rage Vocals', 'Hard tune, distorted and loud.', 0.15, 0.15, () => [tune(1), eq({ lowcut: 130, presence: 5, air: 3 }), comp(-26, 7, 7), F('dist', { drive: 0.35, tone: 4500, mix: 0.25 }), F('limiter', { ceiling: -1, drive: 2 })]),
+  P('Vocal', 'Plugg Vocals', 'Bright tuned vocal with a soft slap echo.', 0.2, 0.2, () => [tune(0.9), eq({ lowcut: 120, mud: -2, presence: 3, air: 5 }), comp(-22, 4, 5), deess(0.55), F('delay', { time: 0.16, feedback: 0.2, tone: 6000, mix: 0.18 })]),
+  P('Vocal', 'Phonk Vocals', 'Dark, lo-fi, cowbell-era Memphis vibe.', 0.2, 0.15, () => [F('pitch', { semis: -2 }), eq({ lowcut: 150, body: 2, air: -3, hicut: 8000 }), comp(-24, 5, 6), sat(0.5), F('tape', { drive: 0.4, wow: 0.3, tone: 7000, mix: 1 })]),
+  P('Vocal', 'Neo-Soul Vocals', 'Warm, smooth and close, a touch of tape.', 0.25, 0.08, () => [eq({ lowcut: 75, body: 2, mud: -1.5, presence: 1.5, air: 2 }), comp(-16, 2.5, 3), deess(0.45), F('tape', { drive: 0.3, wow: 0.15, tone: 11000, mix: 1 })]),
+  P('Vocal', 'Alt R&B', 'Airy, wide and dreamy with shimmer.', 0.3, 0.2, () => [tune(0.5), eq({ lowcut: 110, mud: -3, presence: 2, air: 6 }), comp(-20, 3.5, 4), deess(0.55), F('shimmer', { size: 4, pitch: 12, mix: 0.18 })]),
+  P('Vocal', 'Bedroom Pop', 'Soft, close and a little lo-fi.', 0.25, 0.1, () => [eq({ lowcut: 120, mud: -2, air: 2, hicut: 13000 }), comp(-18, 3, 3), F('tape', { drive: 0.25, wow: 0.25, tone: 9000, mix: 1 }), F('doubler', { width: 0.4, mix: 0.2 })]),
+  P('Vocal', 'Hyperpop Vocals', 'Pitched up, hard tuned, bright and crunchy.', 0.2, 0.15, () => [tune(1), F('pitch', { semis: 3 }), eq({ lowcut: 200, presence: 4, air: 6 }), comp(-26, 6, 6), F('bitcrush', { bits: 9, tone: 9000, mix: 0.2 }), F('exciter', { mix: 0.3 })]),
+  P('Vocal', 'K-Pop Vocals', 'Polished, bright and tight with doubles.', 0.22, 0.12, () => [tune(0.6), eq({ lowcut: 110, mud: -3, presence: 3, air: 5 }), comp(-22, 4, 6), deess(0.6), F('exciter', { mix: 0.25 }), F('doubler', { width: 0.6, mix: 0.2 })]),
+  P('Vocal', 'Reggaeton Vocals', 'Tuned, upfront and bright with a short echo.', 0.15, 0.2, () => [tune(0.75), eq({ lowcut: 110, mud: -2, presence: 4, air: 3 }), comp(-22, 5, 6), deess(0.5), F('delay', { time: 0.18, feedback: 0.25, tone: 5000, mix: 0.18 })]),
+  P('Vocal', 'Dancehall Vocals', 'Punchy and loud with a dub echo.', 0.12, 0.3, () => [eq({ lowcut: 130, presence: 5, air: 2 }), comp(-25, 6, 7), sat(0.35), F('delay', { time: 0.3, feedback: 0.45, tone: 2500, mix: 0.2 })]),
+  P('Vocal', 'Amapiano Vocals', 'Smooth, roomy and laid back.', 0.3, 0.15, () => [eq({ lowcut: 95, mud: -2, presence: 1.5, air: 3 }), comp(-18, 3, 4), deess(0.45), F('room', { size: 2.5, tone: 7000, mix: 0.2 })]),
+  P('Vocal', 'UK Garage Vocals', 'Silky, chopped and shiny.', 0.2, 0.15, () => [tune(0.5), eq({ lowcut: 120, mud: -2, presence: 2.5, air: 5 }), comp(-20, 4, 5), F('gate', { rate: 8, pattern: 3, depth: 0.5 }), F('delay', { time: 0.2, feedback: 0.25, tone: 6000, mix: 0.15 })]),
+  P('Vocal', 'House Diva', 'Big soulful lead for house music.', 0.35, 0.18, () => [eq({ lowcut: 100, body: 1, mud: -2, presence: 3, air: 4 }), comp(-20, 4, 5), deess(0.5), F('room', { size: 3.5, tone: 8000, mix: 0.25 })]),
+  P('Vocal', 'Jazz Vocals', 'Natural, warm and live, like a small club.', 0.25, 0, () => [eq({ lowcut: 70, body: 1.5, mud: -1, presence: 1, air: 1 }), comp(-14, 2, 2), F('room', { size: 1.4, tone: 6000, mix: 0.2 })]),
+  P('Vocal', 'Breakcore Vocals', 'Pitched, crunchy and drowned in shimmer.', 0.3, 0.15, () => [F('pitch', { semis: 4 }), eq({ lowcut: 250, air: 5 }), F('bitcrush', { bits: 9, tone: 8000, mix: 0.25 }), F('shimmer', { size: 6, pitch: 12, mix: 0.3 })]),
+
   P('Enhance', 'Clarity', 'Removes mud so words are easier to hear.', 0.12, 0, () => [eq({ lowcut: 90, mud: -4, presence: 4 }), deess(0.4)]),
   P('Enhance', 'Warmth', 'Fuller and softer, takes the edge off.', 0.15, 0, () => [eq({ lowcut: 70, body: 3, air: -1 }), sat(0.35)]),
   P('Enhance', 'Brightness', 'More sparkle on top.', 0.12, 0, () => [eq({ lowcut: 90, presence: 2, air: 6 }), deess(0.5)]),
@@ -77,6 +95,16 @@ export const BUILTIN = [
   P('Enhance', 'De-harsh', 'Tames sharp, painful frequencies.', 0, 0, () => [eq({ presence: -3, air: -1 }), deess(0.6)]),
   P('Enhance', 'Lush Chorus', 'Wide, thick and dreamy.', 0, 0, () => [F('chorus', { rate: 0.6, depth: 0.45, mix: 0.3 }), F('widen', { amount: 0.4 })]),
 
+  P('Enhance', 'Expensive', 'That glossy, high-end studio finish.', 0, 0, () => [eq({ lowcut: 100, mud: -2, presence: 1.5, air: 4 }), F('exciter', { freq: 5000, drive: 0.4, mix: 0.25 }), comp(-18, 3, 3)]),
+  P('Enhance', 'Tube Warmth', 'Rich, round analog warmth.', 0, 0, () => [F('tape', { drive: 0.45, wow: 0, tone: 12000, mix: 1 }), eq({ body: 1.5 })]),
+  P('Enhance', 'Vocal Glue', 'Holds the vocal steady in the beat.', 0, 0, () => [comp(-20, 3, 3, { attack: 0.01, release: 0.2 }), F('limiter', { ceiling: -1 })]),
+  P('Enhance', 'Wide Hook', 'Makes the hook wide and big.', 0, 0, () => [F('doubler', { width: 0.9, mix: 0.35 }), F('widen', { amount: 0.5 }), F('exciter', { mix: 0.2 })]),
+  P('Enhance', 'Radio Ready', 'Loud, bright and even, ready to play anywhere.', 0, 0, () => [eq({ lowcut: 110, mud: -2, presence: 3, air: 3 }), comp(-24, 5, 6), F('exciter', { mix: 0.2 }), F('limiter', { ceiling: -1, drive: 3 })]),
+  P('Enhance', 'De-box', 'Removes a boxy, closet sound.', 0, 0, () => [eq({ mud: -5, presence: 1 })]),
+  P('Enhance', 'Body Boost', 'More weight and chest.', 0, 0, () => [eq({ lowcut: 60, body: 4, mud: -1 })]),
+  P('Enhance', 'Shimmer Air', 'An angelic glow above the voice.', 0, 0, () => [F('shimmer', { size: 5, pitch: 12, mix: 0.2 })]),
+  P('Enhance', 'Tape Polish', 'Gentle tape saturation and roll-off.', 0, 0, () => [F('tape', { drive: 0.3, wow: 0.1, tone: 10000, mix: 1 })]),
+  P('Enhance', 'Slow Pan', 'Moves gently left and right.', 0, 0, () => [F('autopan', { rate: 0.2, depth: 0.5 })]),
   P('Voice FX', 'Deep Voice', 'Lowers your voice.', 0.12, 0, () => [F('pitch', { semis: -4 }), eq({ body: 3 })]),
   P('Voice FX', 'High-Pitched Voice', 'Raises your voice.', 0.12, 0, () => [F('pitch', { semis: 5 })]),
   P('Voice FX', 'Robotic Voice', 'Flat robotic tone.', 0.1, 0.1, () => [tune(1), F('ring', { freq: 70, mix: 0.5 })]),
@@ -151,13 +179,31 @@ export const BUILTIN = [
   P('Voice FX', 'Telephone House', 'Thin high passed vocal, a classic house trick.', 0.15, 0.15, () => [F('filter', { mode: 1, cutoff: 900, res: 2 }), eq({ presence: 4, hicut: 6000 }), F('delay', { time: 0.24, feedback: 0.35, tone: 3500, mix: 0.2 })]),
   P('Enhance', 'Tape Dust', 'A light layer of vinyl crackle and hiss.', 0, 0, () => [F('dust', { crackle: 0.3, hiss: 0.15, tone: 6000 })]),
   P('Enhance', 'Lowpass Glow', 'Rounds off the top for a soft, warm glow.', 0, 0, () => [F('filter', { mode: 0, cutoff: 6000, res: 1 }), sat(0.25)]),
+  P('Voice FX', 'Talkbox', 'Funky robotic talkbox with a wah.', 0.1, 0.1, () => [tune(1), F('autowah', { rate: 1.2, freq: 800, depth: 0.6, q: 6, mix: 0.7 }), F('ring', { freq: 90, mix: 0.2 })]),
+  P('Voice FX', 'Robot Duet', 'You plus a robot an octave down.', 0.15, 0.1, () => [tune(1), F('harmony', { v1: -12, v2: 0, mix: 0.5 }), F('ring', { freq: 70, mix: 0.25 })]),
+  P('Voice FX', 'Trance Gate', 'Chopped in a rhythm pattern.', 0.2, 0.15, () => [F('gate', { rate: 8, pattern: 2, depth: 1 }), F('delay', { time: 0.25, feedback: 0.3, tone: 5000, mix: 0.2 })]),
+  P('Voice FX', 'Angel Choir', 'Shimmering choir of you, floating up.', 0.3, 0.1, () => [F('harmony', { v1: 7, v2: 12, mix: 0.35 }), F('shimmer', { size: 7, pitch: 12, mix: 0.45 })]),
+  P('Voice FX', 'Ping Pong Echo', 'Echoes bounce left and right.', 0, 0.4, () => [F('autopan', { rate: 2, depth: 1 }), F('delay', { time: 0.3, feedback: 0.5, tone: 4000, mix: 0.35 })]),
+  P('Voice FX', 'Old Tape', 'A warped cassette from 1985.', 0.1, 0, () => [eq({ lowcut: 200, hicut: 7000 }), F('tape', { drive: 0.6, wow: 0.8, tone: 6000, mix: 1 }), F('dust', { crackle: 0.2, hiss: 0.4, tone: 5000 })]),
+  P('Voice FX', 'Glitch Rain', 'Tiny broken pieces falling everywhere.', 0.2, 0.2, () => [F('repeat', { slice: 0.04, count: 6, mix: 0.6 }), F('bitcrush', { bits: 6, tone: 8000, mix: 0.4 }), F('autopan', { rate: 3, depth: 0.8 })]),
+  P('Voice FX', 'Space Radio', 'A transmission drifting through space.', 0.2, 0.2, () => [eq({ lowcut: 400, presence: 4, hicut: 5000 }), F('phaser', { rate: 0.2, depth: 0.8, feedback: 0.5, mix: 0.5 }), F('shimmer', { size: 6, pitch: 7, mix: 0.3 })]),
+  P('Voice FX', 'Stadium Echo', 'Your voice bouncing around an arena.', 0, 0, () => [F('delay', { time: 0.45, feedback: 0.45, tone: 3000, mix: 0.3 }), F('room', { size: 6, tone: 5000, mix: 0.4 })]),
+  P('Voice FX', 'Deep Formant', 'Lower and bigger, like a giant whisper.', 0.2, 0, () => [F('pitch', { semis: -5 }), eq({ body: 4, mud: -2, air: 2 })]),
+  P('Voice FX', 'Frozen Gate', 'Icy shimmer chopped on the beat.', 0.2, 0.1, () => [F('shimmer', { size: 6, pitch: 12, mix: 0.4 }), F('gate', { rate: 6, pattern: 4, depth: 0.9 })]),
+  P('Voice FX', 'Swirl', 'Your voice circling around your head.', 0.2, 0.1, () => [F('autopan', { rate: 0.6, depth: 1 }), F('flanger', { rate: 0.15, depth: 0.5, feedback: 0.4, mix: 0.3 })]),
+  P('Voice FX', 'Soul Healer', 'Warm, wide and glowing, like the vocals in healing house.', 0.3, 0.15, () => [eq({ lowcut: 150, mud: -2, air: 4 }), F('tape', { drive: 0.25, wow: 0.15, tone: 10000, mix: 1 }), F('chorus', { rate: 0.4, depth: 0.4, mix: 0.25 }), F('shimmer', { size: 6, pitch: 12, mix: 0.3 })]),
+  P('Voice FX', 'Distant Memory', 'A faded voice from far away, filtered and dreamy.', 0.3, 0.2, () => [F('filter', { mode: 0, cutoff: 2500, res: 1.5 }), F('tape', { drive: 0.3, wow: 0.4, tone: 7000, mix: 1 }), F('room', { size: 6, tone: 5000, mix: 0.45 })]),
+  P('Voice FX', 'Euphoric Chop', 'Pitched-up vocal chops that float over the beat.', 0.25, 0.2, () => [F('pitch', { semis: 5 }), F('repeat', { slice: 0.11, count: 3, mix: 0.55 }), F('shimmer', { size: 5, pitch: 12, mix: 0.3 })]),
+  P('Voice FX', 'Vocal Pad', 'Turns your voice into a soft, endless pad.', 0.4, 0.1, () => [F('harmony', { v1: 7, v2: 12, mix: 0.4 }), F('chorus', { rate: 0.3, depth: 0.6, mix: 0.4 }), F('shimmer', { size: 9, pitch: 12, mix: 0.6 })]),
+  P('Voice FX', 'Heavenly Echo', 'Bright echoes that rise into the sky.', 0.3, 0.3, () => [eq({ lowcut: 250, air: 6 }), F('delay', { time: 0.375, feedback: 0.55, tone: 8000, mix: 0.3 }), F('shimmer', { size: 7, pitch: 12, mix: 0.35 })]),
+  P('Voice FX', 'Sunrise', 'Warm and hopeful with a gentle wobble.', 0.25, 0.15, () => [F('tape', { drive: 0.35, wow: 0.3, tone: 9000, mix: 1 }), eq({ body: 1.5, air: 3 }), F('room', { size: 3, tone: 8000, mix: 0.3 })]),
 ];
 export const CATS = ['Vocal', 'Enhance', 'Voice FX'];
 
 // Moods: quick filters inside Enhance and Voice FX
 export const MOODS = {
   Enhance: ['Clear', 'Warm', 'Loud', 'Space'],
-  'Voice FX': ['Breakcore', 'House', 'Fun', 'Scary', 'Robot', 'Retro', 'Places', 'Dreamy'],
+  'Voice FX': ['Healing', 'Breakcore', 'House', 'Fun', 'Scary', 'Robot', 'Retro', 'Places', 'Dreamy'],
 };
 const MOOD_OF = {
   Clarity: 'Clear', Brightness: 'Clear', Presence: 'Clear', Sparkle: 'Clear', Silky: 'Clear', 'Noise Cleanup': 'Clear', 'Crisp Words': 'Clear', 'Breathy Air': 'Clear', 'De-harsh': 'Clear', Smooth: 'Clear',
@@ -169,9 +215,20 @@ const MOOD_OF = {
   'Robotic Voice': 'Robot', 'Alien Voice': 'Robot', 'Futuristic Voice': 'Robot', '8-Bit': 'Robot', 'Space Station': 'Robot', 'Robot Choir': 'Robot', Hologram: 'Robot', Glitch: 'Robot', 'Arcade Boss': 'Robot',
   'Telephone Voice': 'Retro', 'Radio Voice FX': 'Retro', 'Vintage Voice': 'Retro', Megaphone: 'Retro', 'Walkie-Talkie': 'Retro', Intercom: 'Retro', 'Drive-Thru': 'Retro', 'Distorted Voice': 'Retro',
   'Echo Voice': 'Places', 'Dub Echo': 'Places', 'Sound System': 'Places', 'Jungle Chop': 'Fun', 'Pitched Sample': 'Retro', Cave: 'Places', Underwater: 'Places', Announcer: 'Places', Tunnel: 'Places', Whisper: 'Places',
-  'Dreamy Voice': 'Dreamy', 'Muffled Diva': 'House', Warehouse: 'House', 'Filter Sweep Vocal': 'House', 'Old Soul Sample': 'House', 'Dusty Sample': 'House', Underground: 'House', 'Rave Call': 'House', 'Late Night Radio': 'House', 'Fighting Demons': 'House', 'Telephone House': 'House', 'Tape Dust': 'Warm', 'Lowpass Glow': 'Warm', 'Frozen Heart': 'Breakcore', 'Anime Chop': 'Breakcore', 'Stutter Repeat': 'Breakcore', 'Digital Angel': 'Breakcore', 'Cassette Memory': 'Breakcore', 'Distant Signal': 'Breakcore', Pump: 'Breakcore', 'Glitch Angel': 'Breakcore', 'Whisper Haze': 'Breakcore', Crystal: 'Breakcore', 'Sad Robot': 'Breakcore', 'Hyper Bright': 'Breakcore', 'Breakcore Chop': 'Breakcore', Ethereal: 'Breakcore', 'Dark Blue': 'Breakcore', Nightcore: 'Breakcore',  'Choir of Me': 'Dreamy', Vaporwave: 'Dreamy',
+  'Dreamy Voice': 'Dreamy', 'Soul Healer': 'Healing', 'Distant Memory': 'Healing', 'Euphoric Chop': 'Healing', 'Vocal Pad': 'Healing', 'Heavenly Echo': 'Healing', Sunrise: 'Healing', Talkbox: 'Robot', 'Robot Duet': 'Robot', 'Trance Gate': 'Fun', 'Angel Choir': 'Dreamy', 'Ping Pong Echo': 'Places', 'Old Tape': 'Retro', 'Glitch Rain': 'Breakcore', 'Space Radio': 'Robot', 'Stadium Echo': 'Places', 'Deep Formant': 'Scary', 'Frozen Gate': 'Breakcore', Swirl: 'Dreamy', Expensive: 'Clear', 'Tube Warmth': 'Warm', 'Vocal Glue': 'Loud', 'Wide Hook': 'Space', 'Radio Ready': 'Loud', 'De-box': 'Clear', 'Body Boost': 'Warm', 'Shimmer Air': 'Space', 'Tape Polish': 'Warm', 'Slow Pan': 'Space', 'Muffled Diva': 'House', Warehouse: 'House', 'Filter Sweep Vocal': 'House', 'Old Soul Sample': 'House', 'Dusty Sample': 'House', Underground: 'House', 'Rave Call': 'House', 'Late Night Radio': 'House', 'Fighting Demons': 'House', 'Telephone House': 'House', 'Tape Dust': 'Warm', 'Lowpass Glow': 'Warm', 'Frozen Heart': 'Breakcore', 'Anime Chop': 'Breakcore', 'Stutter Repeat': 'Breakcore', 'Digital Angel': 'Breakcore', 'Cassette Memory': 'Breakcore', 'Distant Signal': 'Breakcore', Pump: 'Breakcore', 'Glitch Angel': 'Breakcore', 'Whisper Haze': 'Breakcore', Crystal: 'Breakcore', 'Sad Robot': 'Breakcore', 'Hyper Bright': 'Breakcore', 'Breakcore Chop': 'Breakcore', Ethereal: 'Breakcore', 'Dark Blue': 'Breakcore', Nightcore: 'Breakcore',  'Choir of Me': 'Dreamy', Vaporwave: 'Dreamy',
 };
 export const moodOf = p => MOOD_OF[p.name] || '';
+// Vocal styles grouped so they are easy to find
+const GROUP_OF = {
+  'Rap and hip-hop': ['Hip-Hop Vocals', 'Rap Vocals', 'Trap Vocals', 'Melodic Rap', 'Drill Vocals', 'Boom Bap Vocals', 'Emo Rap', 'Rage Vocals', 'Plugg Vocals', 'Phonk Vocals', 'Ad-libs'],
+  'R&B and soul': ['R&B Vocals', 'Soul Vocals', 'Gospel Vocals', 'Neo-Soul Vocals', 'Alt R&B', 'Soft Vocals', 'Deep Vocals', 'Airy Vocals'],
+  'Pop': ['Pop Vocals', 'Bedroom Pop', 'Hyperpop Vocals', 'K-Pop Vocals', 'Auto-Tuned Vocals', 'Light Auto-Tune', 'Heavy Auto-Tune', 'Harmonies', 'Background Vocals'],
+  'Club and world': ['Afrobeats Vocals', 'Reggaeton Vocals', 'Dancehall Vocals', 'Amapiano Vocals', 'UK Garage Vocals', 'House Diva', 'Ragga MC', 'Breakcore Vocals'],
+  'Rock, indie and live': ['Rock Vocals', 'Country Vocals', 'Indie Vocals', 'Jazz Vocals', 'Big Hall', 'Lo-fi Vocals'],
+  'Clean and speech': ['Clean Natural', 'Professional Studio', 'Radio Voice', 'Podcast Voice'],
+};
+const GROUP_MAP = Object.fromEntries(Object.entries(GROUP_OF).flatMap(([g, names]) => names.map(n => [n, g])));
+export const groupOf = p => p.cat === 'Vocal' ? GROUP_MAP[p.name] || 'More styles' : '';
 
 // ---------- Build My Sound ----------
 export const VIBES = {

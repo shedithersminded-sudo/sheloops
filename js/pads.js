@@ -10,6 +10,7 @@ import { SOUNDS, loadSounds, soundBuffer } from './library.js';
 import { db, saveAudio } from './store.js';
 import { FX, FX_ORDER, newFx, buildFx } from './fx.js';
 import { fxCard } from './fxui.js';
+import { makeMovable, resetBtn } from './movable.js';
 
 const KEY = 'loopden.pads';
 const KEYS = '1234qwerasdfzxcv';
@@ -431,21 +432,23 @@ export function renderPads() {
   root = el('div', { class: 'padpage' });
   const grid = el('div', { class: 'mpadgrid' }, bank().map(padEl));
   root.append(
-    el('div', { class: 'machine-head' },
+    el('div', { class: 'machine-head', 'data-panel': 'screen', 'data-title': 'Screen and meter' },
       el('div', { class: 'lcd' }, el('div', { class: 'lcd-time' }, 'STOP'), el('div', { class: 'lcd-hit' }, 'TAP A PAD')),
       el('div', { class: 'leds' }, Array.from({ length: 16 }, () => el('i')))),
     el('div', { class: 'ptop' }, el('h1', {}, 'Pad machine'), helpBtn('pads'), el('span', { class: 'spacer' }),
       el('div', { class: 'banks' }, el('span', { class: 'hint' }, 'Bank'), 'ABCDEFGH'.split('').map(b => el('button', { class: 'bankbtn' + (PADS.bank === b ? ' on' : ''), title: BANK_NAMES[b], onclick: () => { PADS.bank = b; savePads(); if (L.playing) stopLoop(); renderPads(); } }, b))),
+      resetBtn('pads', renderPads),
       el('button', { class: 'hot', onclick: () => { PADS.skinOpen = !PADS.skinOpen; savePads(); renderSkin(); } }, '🎨 Customize machine'),
       el('button', { onclick: () => { if (!confirm('Reset all pads in every bank to the starting sounds? Your recordings stay in My sounds.')) return; PADS.banks = defaultBanks(); savePads(); renderPads(); } }, 'Reset pads')),
-    el('div', { class: 'explain' }, 'Tap the pads with your mouse, your fingers on a touch screen, or the keys shown on each pad. Press near the top of a pad for a louder hit, or hold Shift. Record a loop, then save it to My sounds or send it to the beat maker.'),
+    el('div', { class: 'explain', 'data-panel': 'guide', 'data-title': 'How to use' }, 'Tap the pads with your mouse, your fingers on a touch screen, or the keys shown on each pad. Press near the top of a pad for a louder hit, or hold Shift. Record a loop, then save it to My sounds or send it to the beat maker.'),
     el('div', { class: 'skinbox' }),
-    el('div', { class: 'padmain' },
+    el('div', { class: 'padmain', 'data-panel': 'pads', 'data-title': 'Pads, loops and editor' },
       el('div', { class: 'padleft' }, grid, el('div', { class: 'ploop panel' }, el('div', { class: 'ploopbar' }), el('div', { class: 'takebar', hidden: true }), el('div', { class: 'slots' }), el('canvas', { class: 'ploopcv' }),
         el('div', { class: 'explain' }, el('b', {}, 'How loops work: '), 'Press Play loop to hear the beat with a click. Press Record pads and tap: your taps are added each time the loop comes around. Safe record keeps your old loop and lets you choose afterwards. Press + for a new empty loop, or Copy to try ideas on a copy. Click any loop to switch, even while it plays. Record voice loop waits for the start of the loop, then records you for exactly one loop, so it always stays in time. Add effects to the voice pad to change your voice.'),
         el('div', { class: 'fxtop' }, el('button', { class: 'hot', onclick: loopToSounds }, 'Save loop to My sounds'), el('button', { onclick: loopToBeat }, 'Send to beat maker'), el('button', { onclick: loopToWav }, 'Download WAV'), helpBtn('padSend')))),
       el('div', { class: 'ped panel' })));
   view.append(root);
+  makeMovable(root, 'pads');
   renderBar(); renderSlots(); renderEditor(); requestAnimationFrame(drawLoop); meterLoop(); applySkin(); renderSkin();
   if (!SOUNDS.length) loadSounds().then(() => renderEditor());
 }
@@ -479,3 +482,6 @@ export async function padLoadFile(file) {
   PADS.sel = i; savePads();
   return { pad: i + 1, bank: PADS.bank };
 }
+
+// used by "What I hear": start or stop the pad loop from anywhere
+export async function padLoopToggle() { if (L.playing) stopLoop(); else await startLoop(false); }

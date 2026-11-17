@@ -31,6 +31,7 @@ const GROUPS = [
   ['Mallets and bells', ['marimba', 'xylophone', 'vibraphone', 'bells', 'tubular bells', 'music box', 'glass harmonica']],
   ['Fun and electronic', ['theremin', 'stylophone', 'laser harp']],
   ['House and rave', ['house organ', 'house piano', 'rave stab', 'hoover', 'acid bass']],
+  ['Dreamy and euphoric', ['dream pad', 'supersaw', 'glass keys', 'warm pluck']],
   ['Bass', ['bass', 'sub', '808 bass', 'reese bass']],
 ];
 function instrSelect(value, on) {

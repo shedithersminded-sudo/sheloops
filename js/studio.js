@@ -1,4 +1,5 @@
 // Recording studio: song timeline, tracks, clips, takes.
+import { makeMovable } from './movable.js';
 import { $, el, uid, clamp, pct, panFmt, fmtTime, toast, knob, toggle, download, safeName, confirmBox, modal, cssVar } from './util.js';
 import { helpBtn } from './help.js';
 import { app, barDur, songEnd, selTrack, save, snapshot, undo, redo, emit, newVocalTrack } from './state.js';
@@ -191,8 +192,18 @@ export function renderStudio() {
   );
   scroller = el('div', { class: 'tl-scroll' });
   const insp = el('div', { class: 'panel inspector', id: 'inspector' });
-  root.append(tb, eb, scroller, insp);
+  // every section can be dragged by its grip and folded away (saved per user)
+  const wrap = (id, title, node) => el('div', { class: 'stpanel', 'data-panel': id, 'data-title': title }, node);
+  root.append(wrap('tb', 'Transport', tb), wrap('eb', 'Edit tools', eb), wrap('tl', 'Timeline', scroller), wrap('in', 'Track panel', insp));
   view.append(root);
+  makeMovable(root, 'studio', { onChange: order => {
+    const right = look.layout.inspPos === 'right', fold = id => root.querySelector(`[data-panel="${id}"]`)?.classList.contains('folded');
+    const list = right ? order.filter(x => x !== 'in') : order;
+    root.style.gridTemplateAreas = list.map(id => right && id === 'tl' ? '"tl in"' : right ? `"${id} ${id}"` : `"${id}"`).join(' ');
+    root.style.gridTemplateRows = list.map(id => id === 'tl' && !fold('tl') ? 'minmax(0, 1fr)' : 'auto').join(' ');
+    root.style.gridTemplateColumns = right ? 'minmax(0, 1fr) var(--insp-size)' : 'minmax(0, 1fr)';
+    for (const id of order) { const w = root.querySelector(`[data-panel="${id}"]`); if (w) w.style.gridArea = id; }
+  } });
 
   // drag and drop beat files
   root.addEventListener('dragover', e => {

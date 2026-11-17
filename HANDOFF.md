@@ -204,3 +204,12 @@ Stage 8 (AI helper, tour, desktop app) was skipped by the user on 2026-11-16 ("d
 - pads.js: PADS.slots[bank] = [{id,name,hits}], PADS.slot[bank]; Safe record copies the slot and shows a take bar; Play all in order (PADS.chain); recordVoiceLoop() uses engine captureMic(from,to) for in-time voice loops; PADS.skin looks.
 - nowplaying.js VIZ_STYLES (10) + hover picker (.np-quick).
 - js/dj.js: deck AudioWorklet 'sheloops-deck' (variable/negative rate for scratching, loops), channel EQ/filter/fx, crossfader, TRANSITIONS, light stage canvas, crate, mix recorder (cap worklet), DJ settings in localStorage loopden.dj.
+
+## 2.0.0 movable layout, What I hear, preset library, DJ visuals, themes
+- js/movable.js makeMovable(container, page, {onChange}): children with data-panel/data-title get a grip, fold and saved order (localStorage loopden.panels). Studio wraps its 4 sections in .stpanel and rebuilds grid areas from the order.
+- js/hear.js: What I hear panel (nav button, Shift+H): track/beat mutes, click, pad loop (pads.padLoopToggle), DJ decks (dj.djToggle).
+- fxui.js presetsTab: sidebar (presets.groupOf for Vocal styles, moodOf for Enhance and Voice FX), search, movable steps/stack/library.
+- fx.js new: exciter, shimmer, tape, gate, autopan. presets.js 172 presets.
+- js/djvisuals.js drawVisuals(cv, V, A): 8 looks, layer2 + blend, palettes, CSS 3D camera. dj.js DJ.V settings, visual desk. djlights.js kept only for its SCENES palettes.
+- js/tour.js: quick tour banners prepended to #view by a MutationObserver.
+- look.js: 24 themes, look.uifx + applyUiFx (html classes fxg-*, fxm-*, fxp-*, fxflash).

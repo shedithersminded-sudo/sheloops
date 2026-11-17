@@ -35,12 +35,17 @@ export const FX = {
   delay:   { name: 'Echo', group: 'Space', params: [p('time', 'Time', 0.03, 1.5, 0.01, 0.33, v => (+v).toFixed(2) + 's'), p('feedback', 'Repeats', 0, 0.92, 0.01, 0.4, pc), p('tone', 'Tone', 500, 12000, 50, 4000, hz), p('mix', 'Mix', 0, 1, 0.01, 0.35, pc)] },
   filter:  { name: 'Filter sweep', group: 'Tone', params: [p('mode', 'Type', 0, 2, 1, 0, v => ['Low pass', 'High pass', 'Band pass'][v]), p('cutoff', 'Cutoff', 60, 18000, 10, 2500, hz), p('res', 'Resonance', 0.5, 20, 0.1, 2, v => (+v).toFixed(1)), p('rate', 'Sweep speed', 0, 2, 0.01, 0, v => v ? (+v).toFixed(2) + ' Hz' : 'off'), p('depth', 'Sweep amount', 0, 1, 0.01, 0.6, pc)] },
   dust:    { name: 'Vinyl dust', group: 'Color', params: [p('crackle', 'Crackle', 0, 1, 0.01, 0.4, pc), p('hiss', 'Hiss', 0, 1, 0.01, 0.25, pc), p('tone', 'Tone', 1000, 12000, 100, 5000, hz)] },
+  exciter: { name: 'Exciter', group: 'Color', params: [p('freq', 'From', 1500, 9000, 50, 3500, hz), p('drive', 'Shine', 0, 1, 0.01, 0.5, pc), p('mix', 'Amount', 0, 1, 0.01, 0.3, pc)] },
+  shimmer: { name: 'Shimmer reverb', group: 'Space', params: [p('size', 'Size', 1, 10, 0.1, 5, v => (+v).toFixed(1) + 's'), p('pitch', 'Shimmer', 0, 12, 1, 12, st), p('mix', 'Mix', 0, 1, 0.01, 0.35, pc)] },
+  tape:    { name: 'Tape machine', group: 'Color', params: [p('drive', 'Saturate', 0, 1, 0.01, 0.4, pc), p('wow', 'Wow', 0, 1, 0.01, 0.3, pc), p('tone', 'Tone', 2000, 16000, 100, 9000, hz), p('mix', 'Mix', 0, 1, 0.01, 1, pc)] },
+  gate:    { name: 'Trance gate', group: 'Motion', params: [p('rate', 'Steps per second', 1, 16, 0.5, 6, v => (+v).toFixed(1)), p('pattern', 'Pattern', 0, 5, 1, 0, v => ['Straight', 'Offbeat', 'Triplet', 'Skip', 'Stutter', 'Half'][v]), p('depth', 'Depth', 0, 1, 0.01, 1, pc)] },
+  autopan: { name: 'Auto-pan', group: 'Motion', params: [p('rate', 'Speed', 0.05, 8, 0.05, 0.5, v => (+v).toFixed(2) + ' Hz'), p('depth', 'Width', 0, 1, 0.01, 0.8, pc)] },
   repeat:  { name: 'Stutter repeat', group: 'Motion', params: [p('slice', 'Slice', 0.03, 0.5, 0.005, 0.09, v => Math.round(v * 1000) + 'ms'), p('count', 'Repeats', 2, 8, 1, 4, v => v + 'x'), p('mix', 'Mix', 0, 1, 0.01, 0.8, pc)] },
   room:    { name: 'Reverb room', group: 'Space', params: [p('size', 'Size', 0.2, 10, 0.1, 1.8, v => (+v).toFixed(1) + 's'), p('tone', 'Tone', 1000, 16000, 100, 8000, hz), p('mix', 'Mix', 0, 1, 0.01, 0.3, pc)] },
 };
-export const FX_ORDER = ['denoise', 'tune', 'pitch', 'harmony', 'eq', 'filter', 'comp', 'deess', 'sat', 'dist', 'bitcrush', 'ring', 'autowah', 'tremolo', 'vibrato', 'repeat', 'chorus', 'doubler', 'flanger', 'phaser', 'delay', 'room', 'widen', 'dust', 'limiter'];
+export const FX_ORDER = ['denoise', 'tune', 'pitch', 'harmony', 'eq', 'filter', 'comp', 'deess', 'sat', 'exciter', 'tape', 'dist', 'bitcrush', 'ring', 'autowah', 'tremolo', 'vibrato', 'repeat', 'chorus', 'doubler', 'flanger', 'phaser', 'gate', 'autopan', 'delay', 'room', 'shimmer', 'widen', 'dust', 'limiter'];
 // effects that make sense on instruments in the beat maker
-export const BEAT_FX = ['eq', 'filter', 'dust', 'comp', 'sat', 'dist', 'bitcrush', 'autowah', 'tremolo', 'vibrato', 'repeat', 'chorus', 'flanger', 'phaser', 'delay', 'room', 'widen', 'pitch', 'ring', 'limiter'];
+export const BEAT_FX = ['eq', 'filter', 'dust', 'tape', 'exciter', 'gate', 'autopan', 'shimmer', 'comp', 'sat', 'dist', 'bitcrush', 'autowah', 'tremolo', 'vibrato', 'repeat', 'chorus', 'flanger', 'phaser', 'delay', 'room', 'widen', 'pitch', 'ring', 'limiter'];
 
 export function newFx(type, params = {}) {
   const def = {}; for (const q of FX[type].params) def[q.k] = q.def;
@@ -209,6 +214,35 @@ const BUILD = {
     cr.buffer = b; hs.buffer = hb; cr.loop = hs.loop = true; tone.type = 'lowpass';
     input.connect(out); cr.connect(cg); hs.connect(hg); cg.connect(tone); hg.connect(tone); tone.connect(out); cr.start(); hs.start();
     return { in: input, out, set(p, _, i) { sp(c, cg.gain, p.crackle * 0.5, i); sp(c, hg.gain, p.hiss * 0.025, i); sp(c, tone.frequency, p.tone, i); }, stop() { cr.stop(); hs.stop(); } };
+  },
+  exciter(c) {
+    const w = wetDry(c), hp = c.createBiquadFilter(), sh = c.createWaveShaper(), hp2 = c.createBiquadFilter(); hp.type = hp2.type = 'highpass'; sh.oversample = '4x';
+    w.input.connect(hp); hp.connect(sh); sh.connect(hp2); hp2.connect(w.wet); let last = -1;
+    return { in: w.input, out: w.out, set(p, _, i) { sp(c, hp.frequency, p.freq, i); sp(c, hp2.frequency, p.freq, i); if (p.drive !== last) { sh.curve = tanhCurve(1 + p.drive * 10); last = p.drive; } sp(c, w.dry.gain, 1, i); sp(c, w.wet.gain, p.mix, i); } };
+  },
+  shimmer(c) {
+    const w = wetDry(c), ps = new AudioWorkletNode(c, 'pitch', { outputChannelCount: [2] }), cv = c.createConvolver(), fb = c.createGain(), lp = c.createBiquadFilter();
+    ps.parameters.get('mode').value = 1; lp.type = 'lowpass'; lp.frequency.value = 9000; fb.gain.value = 0.35;
+    w.input.connect(cv); cv.connect(lp); lp.connect(w.wet); lp.connect(ps); ps.connect(fb); fb.connect(cv); let last = -1;
+    return { in: w.input, out: w.out, set(p, _, i) {
+      if (p.size !== last) { const len = Math.floor(c.sampleRate * p.size), b = c.createBuffer(2, len, c.sampleRate); for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let k = 0; k < len; k++) d[k] = (Math.random() * 2 - 1) * Math.pow(1 - k / len, 2) * 0.6; } cv.buffer = b; last = p.size; }
+      ps.parameters.get('semis').value = p.pitch; sp(c, w.dry.gain, 1, i); sp(c, w.wet.gain, p.mix, i); } };
+  },
+  tape(c) {
+    const w = wetDry(c), sh = c.createWaveShaper(), lp = c.createBiquadFilter(), d = c.createDelay(0.05); lp.type = 'lowpass'; d.delayTime.value = 0.006; sh.oversample = '2x';
+    const l = lfo(c, 0.6, 0, d.delayTime); w.input.connect(sh); sh.connect(lp); lp.connect(d); d.connect(w.wet); let last = -1;
+    return { in: w.input, out: w.out, set(p, _, i) { if (p.drive !== last) { sh.curve = tanhCurve(1 + p.drive * 5); last = p.drive; } sp(c, lp.frequency, p.tone, i); sp(c, l.g.gain, p.wow * 0.0025, i); w.mix(p.mix, i); }, stop() { l.o.stop(); } };
+  },
+  gate(c) {
+    // a step pattern that opens and closes the sound, like a trance gate
+    const input = c.createGain(), amp = c.createGain(); input.connect(amp); amp.gain.value = 1; let timer = null, k = 0, P = null;
+    const PATS = [[1, 1, 1, 1, 1, 1, 1, 1], [0, 1, 0, 1, 0, 1, 0, 1], [1, 1, 0, 1, 1, 0, 1, 1], [1, 0, 1, 1, 0, 1, 1, 0], [1, 1, 1, 1, 0, 1, 0, 1], [1, 1, 1, 1, 0, 0, 0, 0]];
+    const tick = () => { if (!P) return; const on = PATS[P.pattern][k++ % 8]; amp.gain.cancelScheduledValues(c.currentTime); amp.gain.setTargetAtTime(on ? 1 : 1 - P.depth, c.currentTime, 0.004); };
+    return { in: input, out: amp, set(p) { const re = !P || P.rate !== p.rate; P = p; if (c instanceof OfflineAudioContext) { amp.gain.value = 1 - p.depth * 0.3; return; } if (re) { clearInterval(timer); timer = setInterval(tick, 1000 / p.rate); } }, stop() { clearInterval(timer); } };
+  },
+  autopan(c) {
+    const pan = c.createStereoPanner(), l = lfo(c, 0.5, 0.8, pan.pan);
+    return { in: pan, out: pan, set(p, _, i) { sp(c, l.o.frequency, p.rate, i); sp(c, l.g.gain, p.depth, i); }, stop() { l.o.stop(); } };
   },
   // grabs a short slice and repeats it, then grabs the next one (beat-repeat stutter)
   repeat(c) {

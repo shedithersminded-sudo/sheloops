@@ -9,19 +9,21 @@ import { db, saveAudio } from './store.js';
 import { newFx, buildFx } from './fx.js';
 import { encodeMp3 } from './mp3.js';
 import { PERC_NAMES } from './instruments.js';
-import { drawRig, SCENES, PATTERNS, LASERS, WALLS } from './djlights.js';
+import { drawVisuals, PALETTES, LOOKS } from './djvisuals.js';
+import { makeMovable, resetBtn } from './movable.js';
 
 // ---------- saved settings ----------
 const KEY = 'loopden.dj';
 const LIGHT_DEF = { scene: 'Neon club', pattern: 'sweep', speed: 1, heads: 8, spread: 1, width: 1, intensity: 0.85, haze: 0.6, bloom: 0.8, laser: 'fan', laserColor: 'scene', wall: 'spectrum', wallLevel: 0.8, floor: true, grain: true, colorBeats: 4, beatPulse: true, flicker: false, auto: false, c1: '#ff2bd6', c2: '#00e5ff', strobeRate: 8 };
 const DEF = {
   deckStyle: 'vinyl', material: 'matte', led: '#ff2bd6', record: 'black', recA: '#1a1a1f', recB: '#1a1a1f', labelA: '#d81b60', labelB: '#1e88e5', imgA: null, imgB: null, tonearm: true, strobeDots: true,
-  L: LIGHT_DEF, curve: 'smooth', range: 8, transStyle: 'blend', transBeats: 8, colorType: 'filter',
+  L: LIGHT_DEF, V: null, curve: 'smooth', range: 8, transStyle: 'blend', transBeats: 8, colorType: 'filter',
   beatFx: { type: 'echo', div: 0.5, level: 0.5, assign: 'master', on: false },
   sampler: ['airhorn', 'siren', 'rewind', 'f_impact', 'f_rev', 'laser', 'vinyl', 'f_up'], samplerVol: 0.8,
   keys: { playA: 'q', playB: 'p', cueA: 'w', cueB: 'o', syncA: 'e', syncB: 'i', xfLeft: 'z', xfRight: 'm', trans: 't', strobe: 'b', blinder: 'n', blackout: 'v', fx: 'f', rec: 'r' },
 };
-export const DJ = (() => { const s = JSON.parse(localStorage.getItem(KEY) || '{}'); return { ...DEF, ...s, L: { ...LIGHT_DEF, ...(s.L || {}) }, beatFx: { ...DEF.beatFx, ...(s.beatFx || {}) }, keys: { ...DEF.keys, ...(s.keys || {}) }, sampler: s.sampler || DEF.sampler }; })();
+const VIS_DEF = { look: 'liquid', layer2: 'orbs', layer2Amt: 0.6, blend: 'screen', palette: 'Neon club', c1: '#ff2bd6', c2: '#00e5ff', c3: '#ffd84a', colorBeats: 8, speed: 1, react: 1, count: 0.5, size: 1, symmetry: 6, spin: 0.2, trails: 0.6, glow: 0.7, grain: true, res: 0.6, tilt: 0, sway: 0, roll: 0, turn: 0, zoom: 1, kickZoom: true, saturation: 1.2, contrast: 1.05, auto: false };
+export const DJ = (() => { const s = JSON.parse(localStorage.getItem(KEY) || '{}'); return { ...DEF, ...s, V: { ...VIS_DEF, ...(s.V || {}) }, L: { ...LIGHT_DEF, ...(s.L || {}) }, beatFx: { ...DEF.beatFx, ...(s.beatFx || {}) }, keys: { ...DEF.keys, ...(s.keys || {}) }, sampler: s.sampler || DEF.sampler }; })();
 const saveDJ = () => { try { localStorage.setItem(KEY, JSON.stringify(DJ)); } catch { toast('That picture is too big to save. Try a smaller one.'); } };
 
 // ---------- deck player worklet: any speed, even backwards (scratching) ----------
@@ -308,7 +310,7 @@ async function addFiles(files, deck) {
 async function loadItem(item, deck) { const b = await bufFor(item); if (b) load(deck, b, item.name); }
 
 // ---------- drawing ----------
-let root = null, raf = 0, last = performance.now(), held = { strobe: false, blinder: false, blackout: false, fog: 0 };
+let root = null, raf = 0, last = performance.now(), held = { flash: false, invert: false, warp: false, freeze: false };
 const labelCache = {};
 function labelImg(id) { const u = DJ['img' + id]; if (!u) return null; if (!labelCache[id] || labelCache[id].src !== u) { const im = new Image(); im.src = u; labelCache[id] = im; } return labelCache[id].complete ? labelCache[id] : null; }
 const HOTC = ['#ff3b5c', '#ffb020', '#2bd97a', '#2bb3ff'];
@@ -393,24 +395,19 @@ function drawWave(id) {
 }
 const fbuf = new Uint8Array(1024), wbuf = new Uint8Array(2048);
 let autoNext = 0;
-function lightState() {
+function audioState() {
   // follow the deck you hear most
   const w = (D.xf + 1) / 2, main = (D.B.playing && (w > 0.5 || !D.A.playing)) ? 'B' : 'A', d = D[main];
-  const bpm = d.playing && d.bpm ? d.bpm * (1 + d.tempo / 100) : 120, beat = d.playing && d.buf ? secOf(d) * d.bpm / 60 : performance.now() / 1000 * 2;
+  const beat = d.playing && d.buf ? secOf(d) * d.bpm / 60 : performance.now() / 1000 * 2;
   if (G) { G.an.getByteFrequencyData(fbuf); G.an.getByteTimeDomainData(wbuf); }
   const avg = (a, b) => { let s = 0; for (let i = a; i < b; i++) s += fbuf[i]; return s / (b - a) / 255; };
-  const L = DJ.L, ph = performance.now();
-  if (L.auto && beat > autoNext) { autoNext = Math.floor(beat / 16 + 1) * 16; L.pattern = PATTERNS[Math.floor(Math.random() * (PATTERNS.length - 1))][0]; if (Math.random() < 0.35) L.laser = LASERS[1 + Math.floor(Math.random() * (LASERS.length - 1))][0]; if (Math.random() < 0.3) L.wall = WALLS[1 + Math.floor(Math.random() * (WALLS.length - 1))][0]; }
-  const strobeOn = held.strobe && Math.floor(ph / (1000 / L.strobeRate / 2)) % 2 === 0;
-  return { t: ph / 1000, beat, bpm, bass: avg(1, 6), mids: avg(10, 60), highs: avg(100, 300), spec: fbuf, wave: wbuf, strobeOn, blinder: held.blinder, blackout: held.blackout };
+  const V = DJ.V;
+  if (V.auto && beat > autoNext) { autoNext = Math.floor(beat / 16 + 1) * 16; const pick = () => LOOKS[Math.floor(Math.random() * LOOKS.length)][0]; V.look = pick(); V.layer2 = Math.random() < 0.6 ? pick() : 'none'; }
+  return { t: performance.now() / 1000, beat, bass: avg(1, 6), mids: avg(10, 60), highs: avg(100, 300), spec: fbuf, wave: wbuf, flash: held.flash && Math.floor(performance.now() / 70) % 2 === 0, invert: held.invert, warp: held.warp, freeze: held.freeze };
 }
 function drawStage() {
   const cv = root.querySelector('.stage'); if (!cv) return;
-  const A = lightState(), led = getComputedStyle(document.documentElement).getPropertyValue('--led').trim() || '#ff2bd6';
-  const S = { ...DJ.L, accent: led, accent2: DJ.led, haze: clamp(DJ.L.haze + held.fog, 0, 1) };
-  drawRig(cv, S, A);
-  root.style.setProperty('--bass', A.bass.toFixed(3));
-  held.fog = Math.max(0, held.fog - 0.004);
+  const A = audioState(); drawVisuals(cv, DJ.V, A); root.style.setProperty('--bass', A.bass.toFixed(3));
 }
 function drawXf() { const x = root && root.querySelector('.xfader input'); if (x && document.activeElement !== x) x.value = D.xf; }
 function frame() {
@@ -536,34 +533,35 @@ function recUI() {
     el('div', { class: 'fxtop' }, el('button', { class: 'hw recbtn' + (D.rec ? ' on' : ''), onclick: toggleRec }, D.rec ? '■ STOP' : '● REC'), el('span', { class: 'rectime' }, D.rec ? 'REC 0:00' : lastMix ? `Last mix ${Math.round(lastMix.duration)}s` : 'Not recording')),
     lastMix ? el('div', { class: 'fxtop' }, el('button', { class: 'hot', onclick: () => saveMix('sounds') }, 'Save to My sounds'), el('button', { onclick: () => saveMix('wav') }, 'Download WAV'), el('button', { onclick: () => saveMix('mp3') }, 'Download MP3')) : null);
 }
-// the light desk: everything about the light show
+// the visual desk: everything about the visuals
 function lightDesk() {
-  const L = DJ.L, set = (k, v, re = true) => { L[k] = v; saveDJ(); if (re) renderDesk(); };
-  const chips = (k, opts) => el('div', { class: 'fxlib' }, ...opts.map(([v, l]) => el('button', { class: 'csel' + (L[k] === v ? ' on' : ''), onclick: () => set(k, v) }, l)));
-  const scenes = [...Object.keys(SCENES), 'Rainbow', 'Theme', 'Custom'];
-  const sw = s => s === 'Rainbow' ? 'linear-gradient(90deg,#f33,#ff3,#3f3,#3ff,#33f,#f3f)' : s === 'Theme' ? 'linear-gradient(90deg,var(--led),' + DJ.led + ')' : s === 'Custom' ? `linear-gradient(90deg,${L.c1},${L.c2})` : `linear-gradient(90deg,${SCENES[s].join(',')})`;
-  const holdBtn = (k, label, title) => el('button', { class: 'hw live ' + k, title, onpointerdown: () => { held[k] = true; }, onpointerup: () => { held[k] = false; }, onpointerleave: () => { held[k] = false; } }, label);
-  return el('div', { class: 'lightdesk panel' },
-    el('div', { class: 'fxtop' }, el('b', {}, 'Light desk'), helpBtn('djLights'), el('span', { class: 'spacer' }),
-      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: L.auto, onchange: e => set('auto', e.target.checked) }), 'Auto show (changes with the music every 16 beats)')),
+  const V = DJ.V, set = (k, v, re = true) => { V[k] = v; saveDJ(); if (re) renderDesk(); };
+  const knobs = (...list) => el('div', { class: 'knobrow' }, ...list.map(([k, label, min, max, step, fmt]) => dial(label, min, max, step, V[k], v => set(k, v, false), fmt || (v => Math.round(v * 100) + ''), null, 'dial sm')));
+  const sw = name => name === 'Custom' ? `linear-gradient(90deg,${V.c1},${V.c2},${V.c3})` : `linear-gradient(90deg,${PALETTES[name].join(',')})`;
+  const hold = (k, label, title) => el('button', { class: 'hw live ' + k, title, onpointerdown: () => { held[k] = true; }, onpointerup: () => { held[k] = false; }, onpointerleave: () => { held[k] = false; } }, label);
+  const lookBtn = (key, cur, onPick, none) => el('div', { class: 'looks' }, ...(none ? [el('button', { class: 'lookbtn' + (cur === 'none' ? ' on' : ''), onclick: () => onPick('none') }, el('b', {}, 'None'), el('small', {}, 'Only one layer'))] : []),
+    ...LOOKS.map(([k, n, w]) => el('button', { class: 'lookbtn' + (cur === k ? ' on' : ''), title: w, onclick: () => onPick(k) }, el('b', {}, n), el('small', {}, w))));
+  return el('div', { class: 'lightdesk panel', 'data-panel': 'desk', 'data-title': 'Visual desk' },
+    el('div', { class: 'fxtop' }, el('b', {}, 'Visual desk'), helpBtn('djLights'), el('span', { class: 'spacer' }),
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: V.auto, onchange: e => set('auto', e.target.checked) }), 'Auto VJ (new looks every 16 beats)')),
+    el('div', { class: 'explain', style: 'display:block' }, 'Pick a main look, add a second look on top if you like, choose colors, then shape how it moves. Everything reacts to the music you play. Hold the Live buttons for moments like drops. Drag any knob up or down.'),
     el('div', { class: 'deskgrid' },
-      sect('Scene', 'djLights', el('div', { class: 'scenes' }, ...scenes.map(s => el('button', { class: 'scene' + (L.scene === s ? ' on' : ''), onclick: () => set('scene', s) }, el('i', { style: `background:${sw(s)}` }), s))),
-        L.scene === 'Custom' ? el('div', { class: 'knobrow' }, el('label', { class: 'num' }, 'Color 1', el('input', { type: 'color', value: L.c1, oninput: e => set('c1', e.target.value, false) })), el('label', { class: 'num' }, 'Color 2', el('input', { type: 'color', value: L.c2, oninput: e => set('c2', e.target.value, false) }))) : null,
-        el('div', { class: 'bfxrow' }, el('small', {}, 'COLOR CHANGE'), ...[[1, '1 beat'], [4, '1 bar'], [8, '2 bars'], [16, '4 bars'], [9999, 'Never']].map(([v, l]) => el('button', { class: 'csel' + (L.colorBeats === v ? ' on' : ''), onclick: () => set('colorBeats', v) }, l)))),
-      sect('Moving heads', null, chips('pattern', PATTERNS),
-        el('div', { class: 'bfxrow' }, el('small', {}, 'SPEED'), ...[[0.25, '¼'], [0.5, '½'], [1, '1x'], [2, '2x'], [4, '4x']].map(([v, l]) => el('button', { class: 'csel' + (L.speed === v ? ' on' : ''), onclick: () => set('speed', v) }, l))),
-        el('div', { class: 'knobrow' }, dial('Fixtures', 2, 14, 1, L.heads, v => set('heads', v, false), v => v + '', null, 'dial sm'), dial('Spread', 0.2, 2, 0.01, L.spread, v => set('spread', v, false), v => Math.round(v * 100) + '', null, 'dial sm'), dial('Beam width', 0.3, 3, 0.01, L.width, v => set('width', v, false), v => Math.round(v * 100) + '', null, 'dial sm'), dial('Intensity', 0, 1, 0.01, L.intensity, v => set('intensity', v, false), v => Math.round(v * 100) + '', null, 'dial sm'))),
-      sect('Atmosphere', null,
-        el('div', { class: 'knobrow' }, dial('Haze', 0, 1, 0.01, L.haze, v => set('haze', v, false), v => Math.round(v * 100) + '', null, 'dial sm'), dial('Bloom', 0, 1.5, 0.01, L.bloom, v => set('bloom', v, false), v => Math.round(v * 100) + '', null, 'dial sm')),
-        el('div', { class: 'fxlib' }, ...[['floor', 'Floor reflection'], ['grain', 'Film grain'], ['beatPulse', 'Pulse on the kick'], ['flicker', 'Flicker']].map(([k, l]) => el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!L[k], onchange: e => set(k, e.target.checked, false) }), l)))),
-      sect('Lasers', null, chips('laser', LASERS), el('div', { class: 'fxlib' }, el('button', { class: 'csel' + (L.laserColor === 'scene' ? ' on' : ''), onclick: () => set('laserColor', 'scene') }, 'Scene color'), el('input', { type: 'color', value: L.laserColor === 'scene' ? '#39ff14' : L.laserColor, oninput: e => set('laserColor', e.target.value, false) }))),
-      sect('LED wall (visualizer)', null, chips('wall', WALLS), dial('Brightness', 0.1, 1, 0.01, L.wallLevel, v => set('wallLevel', v, false), v => Math.round(v * 100) + '', null, 'dial sm')),
-      sect('Live', null,
-        el('div', { class: 'livebtns' }, holdBtn('strobe', 'STROBE', 'Hold for strobe'), holdBtn('blinder', 'BLINDER', 'Hold: blinding white lights on the crowd'), holdBtn('blackout', 'BLACKOUT', 'Hold: all lights off, for a drop'),
-          el('button', { class: 'hw live fog', title: 'A burst of smoke', onclick: () => { held.fog = 0.4; } }, 'FOG')),
-        el('div', { class: 'bfxrow' }, el('small', {}, 'STROBE RATE'), ...[[4, '1/4'], [8, '1/8'], [16, '1/16']].map(([v, l]) => el('button', { class: 'csel' + (L.strobeRate === v ? ' on' : ''), onclick: () => set('strobeRate', v) }, l))))));
+      sect('Main look', null, lookBtn('look', V.look, k => set('look', k))),
+      sect('Second layer', null, lookBtn('layer2', V.layer2, k => set('layer2', k), true),
+        el('div', { class: 'bfxrow' }, el('small', {}, 'BLEND'), ...[['screen', 'Glow'], ['lighter', 'Add'], ['difference', 'Trippy'], ['overlay', 'Overlay'], ['multiply', 'Shadow']].map(([v, l]) => el('button', { class: 'csel' + (V.blend === v ? ' on' : ''), onclick: () => set('blend', v) }, l))),
+        knobs(['layer2Amt', 'Amount', 0, 1, 0.01])),
+      sect('Colors', null, el('div', { class: 'scenes' }, ...[...Object.keys(PALETTES), 'Custom'].map(n => el('button', { class: 'scene' + (V.palette === n ? ' on' : ''), onclick: () => set('palette', n) }, el('i', { style: `background:${sw(n)}` }), n))),
+        V.palette === 'Custom' ? el('div', { class: 'knobrow' }, ...['c1', 'c2', 'c3'].map((k, i) => el('label', { class: 'num' }, 'Color ' + (i + 1), el('input', { type: 'color', value: V[k], oninput: e => set(k, e.target.value, false) })))) : null,
+        el('div', { class: 'bfxrow' }, el('small', {}, 'COLORS MOVE'), ...[[1, 'Every beat'], [4, 'Every bar'], [8, '2 bars'], [16, '4 bars'], [99999, 'Never']].map(([v, l]) => el('button', { class: 'csel' + (V.colorBeats === v ? ' on' : ''), onclick: () => set('colorBeats', v) }, l)))),
+      sect('Motion', null, knobs(['speed', 'Speed', 0.1, 3, 0.01, v => v.toFixed(1) + 'x'], ['react', 'React', 0, 3, 0.01, v => v.toFixed(1) + 'x'], ['count', 'Amount', 0, 1, 0.01], ['size', 'Size', 0.3, 2.5, 0.01], ['symmetry', 'Symmetry', 3, 16, 1, v => v + ''], ['spin', 'Spin', 0, 1, 0.01])),
+      sect('Camera angle', null, knobs(['tilt', 'Tilt', -60, 60, 1, v => v + '°'], ['sway', 'Sway', 0, 30, 1, v => v + '°'], ['roll', 'Roll', -180, 180, 1, v => v + '°'], ['turn', 'Turn', -20, 20, 0.5, v => v + '°/s'], ['zoom', 'Zoom', 0.6, 2.5, 0.01, v => v.toFixed(2) + 'x']),
+        el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: V.kickZoom, onchange: e => set('kickZoom', e.target.checked, false) }), 'Zoom on the kick')),
+      sect('Feel', null, knobs(['trails', 'Trails', 0, 1, 0.01], ['glow', 'Glow', 0, 1.5, 0.01], ['saturation', 'Color', 0.3, 2.5, 0.01, v => v.toFixed(1)], ['contrast', 'Contrast', 0.6, 1.8, 0.01, v => v.toFixed(2)], ['res', 'Detail', 0.3, 1, 0.05, v => Math.round(v * 100) + '%']),
+        el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: V.grain, onchange: e => set('grain', e.target.checked, false) }), 'Film grain')),
+      sect('Live', null, el('div', { class: 'livebtns' }, hold('flash', 'FLASH', 'Hold: flashes on the beat'), hold('warp', 'WARP', 'Hold: punches the picture in'), hold('invert', 'INVERT', 'Hold: flips all the colors'), hold('freeze', 'FREEZE', 'Hold: freezes the picture')),
+        el('small', { class: 'hint' }, `Keys: ${DJ.keys.strobe.toUpperCase()} flash, ${DJ.keys.blinder.toUpperCase()} warp, ${DJ.keys.blackout.toUpperCase()} freeze (change them in Customize).`))));
 }
-function renderDesk() { const old = root && root.querySelector('.lightdesk'); if (old) old.replaceWith(lightDesk()); }
+function renderDesk() { const old = root && root.querySelector('.lightdesk'); if (old) { old.replaceWith(lightDesk()); makeMovable(root, 'dj'); } }
 function customUI() {
   const set = (k, v, re = true) => { DJ[k] = v; saveDJ(); if (re) render(); };
   const color = (k, label) => el('label', { class: 'num' }, label, el('input', { type: 'color', value: DJ[k], oninput: e => set(k, e.target.value, false) }));
@@ -584,24 +582,25 @@ function customUI() {
         el('button', { onclick: () => pickImg('B') }, DJ.imgB ? 'Change art B' : 'Art on deck B'), DJ.imgB ? el('button', { class: 'sq', onclick: () => set('imgB', null) }, '×') : null),
         el('small', { class: 'hint' }, 'Shows on the label, or across the whole record with Picture disc. On CDJs it glows in the middle screen.')),
       sect('Keys (click one, then press a key)', null, el('div', { class: 'fxlib' },
-        ...[['playA', 'Play A'], ['cueA', 'Cue A'], ['syncA', 'Sync A'], ['playB', 'Play B'], ['cueB', 'Cue B'], ['syncB', 'Sync B'], ['xfLeft', 'Fader left'], ['xfRight', 'Fader right'], ['trans', 'Transition'], ['fx', 'Beat FX on/off'], ['strobe', 'Strobe (hold)'], ['blinder', 'Blinder (hold)'], ['blackout', 'Blackout (hold)'], ['rec', 'Record mix']].map(([a, l]) => keyBtn(a, l)))),
+        ...[['playA', 'Play A'], ['cueA', 'Cue A'], ['syncA', 'Sync A'], ['playB', 'Play B'], ['cueB', 'Cue B'], ['syncB', 'Sync B'], ['xfLeft', 'Fader left'], ['xfRight', 'Fader right'], ['trans', 'Transition'], ['fx', 'Beat FX on/off'], ['strobe', 'Flash (hold)'], ['blinder', 'Warp (hold)'], ['blackout', 'Freeze (hold)'], ['rec', 'Record mix']].map(([a, l]) => keyBtn(a, l)))),
       sect('Reset', null, el('button', { onclick: () => { const keep = { imgA: DJ.imgA, imgB: DJ.imgB }; Object.assign(DJ, JSON.parse(JSON.stringify(DEF)), keep); saveDJ(); render(); } }, 'Reset the whole booth look'))));
 }
 export function renderDJ() {
   const view = $('#view'); view.innerHTML = '';
   root = el('div', { class: `djpage mat-${DJ.material} deck-${DJ.deckStyle}`, style: `--djled:${DJ.led}` });
-  const stage = el('div', { class: 'stagewrap' }, el('canvas', { class: 'stage' }),
-    el('div', { class: 'stagectl' }, el('span', { class: 'stagetitle' }, 'LIVE'), el('span', { class: 'spacer' }),
+  const stage = el('div', { class: 'stagewrap', 'data-panel': 'visuals', 'data-title': 'Visuals' }, el('canvas', { class: 'stage' }),
+    el('div', { class: 'stagectl' }, el('span', { class: 'stagetitle' }, 'LIVE VISUALS'), el('span', { class: 'spacer' }),
       el('button', { class: 'hw sm', title: 'Full screen light show', onclick: () => { const w = root.querySelector('.stagewrap'); (document.fullscreenElement ? document.exitFullscreen() : w.requestFullscreen()).catch(() => { }); } }, '⛶ FULL SCREEN')));
   root.append(
-    el('div', { class: 'ptop' }, el('h1', {}, 'DJ booth'), helpBtn('dj'), el('span', { class: 'spacer' }), el('span', { class: 'hint' }, `Keys: ${DJ.keys.playA.toUpperCase()} play A, ${DJ.keys.playB.toUpperCase()} play B, ${DJ.keys.trans.toUpperCase()} transition, 1 to 8 sampler. Change them in Customize.`)),
-    el('div', { class: 'explain djsteps' }, el('b', {}, 'Start mixing: '), '1. Drag a track onto deck A and another onto deck B. 2. Press ▶ on A. 3. Press SYNC on B so both run at the same speed. 4. Click a transition, or slide the crossfader yourself. Shape each channel with Hi, Mid and Low, the Color FX knob, and Beat FX. Drag the record to scratch. Run the lights from the Light desk.'),
+    el('div', { class: 'ptop' }, el('h1', {}, 'DJ booth'), helpBtn('dj'), el('span', { class: 'spacer' }), resetBtn('dj', () => render()), el('span', { class: 'hint' }, `Keys: ${DJ.keys.playA.toUpperCase()} play A, ${DJ.keys.playB.toUpperCase()} play B, ${DJ.keys.trans.toUpperCase()} transition, 1 to 8 sampler. Change them in Customize.`)),
+    el('div', { class: 'explain djsteps', 'data-panel': 'guide', 'data-title': 'How to start' }, el('b', {}, 'Start mixing: '), '1. Drag a track onto deck A and another onto deck B. 2. Press ▶ on A. 3. Press SYNC on B so both run at the same speed. 4. Click a transition, or slide the crossfader yourself. Shape each channel with Hi, Mid and Low, the Color FX knob, and Beat FX. Drag the record to scratch. Shape the visuals in the Visual desk. Drag any section by its ⠿ grip to move it.'),
     stage,
-    el('div', { class: 'booth' }, deckUI('A'), mixerUI(), deckUI('B')),
-    el('div', { class: 'djrow2' }, transUI(), samplerUI()),
+    el('div', { class: 'booth', 'data-panel': 'booth', 'data-title': 'Decks and mixer' }, deckUI('A'), mixerUI(), deckUI('B')),
+    el('div', { class: 'djrow2', 'data-panel': 'fx', 'data-title': 'Transitions and sampler' }, transUI(), samplerUI()),
     lightDesk(),
-    el('div', { class: 'djbottom' }, crateUI(), el('div', { class: 'djright' }, recUI(), customUI())));
+    el('div', { class: 'djbottom', 'data-panel': 'crate', 'data-title': 'Crate, recording and look' }, crateUI(), el('div', { class: 'djright' }, recUI(), customUI())));
   view.append(root);
+  makeMovable(root, 'dj');
   if (!raf) raf = requestAnimationFrame(frame);
   if (!SOUNDS.length) loadSounds().then(() => app.view === 'dj' && render());
   ctx().catch(() => { });
@@ -618,9 +617,12 @@ addEventListener('keydown', e => {
   ({ playA: () => play('A'), playB: () => play('B'), cueA: () => cue('A'), cueB: () => cue('B'), syncA: () => doSync('A'), syncB: () => doSync('B'),
     xfLeft: () => { D.xf = clamp(D.xf - 0.1, -1, 1); applyXf(); }, xfRight: () => { D.xf = clamp(D.xf + 0.1, -1, 1); applyXf(); }, trans: () => transition(),
     fx: () => { DJ.beatFx.on = !DJ.beatFx.on; applyBeatFx(); applyXf(); renderMixer(); },
-    strobe: () => held.strobe = true, blinder: () => held.blinder = true, blackout: () => held.blackout = true, rec: () => toggleRec() })[act]();
+    strobe: () => held.flash = true, blinder: () => held.warp = true, blackout: () => held.freeze = true, rec: () => toggleRec() })[act]();
 });
-addEventListener('keyup', e => { if (app.view !== 'dj') return; const k = e.key.toLowerCase(), K = DJ.keys; if (k === K.strobe) held.strobe = false; if (k === K.blinder) held.blinder = false; if (k === K.blackout) held.blackout = false; });
+addEventListener('keyup', e => { if (app.view !== 'dj') return; const k = e.key.toLowerCase(), K = DJ.keys; if (k === K.strobe) held.flash = false; if (k === K.blinder) held.warp = false; if (k === K.blackout) held.freeze = false; });
 
 // used by "drop anywhere": open the booth and put a file on a deck
 export async function djLoadFile(file, deck) { await addFiles([file], deck); }
+
+// used by "What I hear": pause or play a deck from anywhere
+export function djToggle(id) { play(id); }

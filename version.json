@@ -1,13 +1,27 @@
 {
-  "version": "1.9.0",
+  "version": "2.0.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Drop anywhere: drag audio files onto any page and a dock slides up. Let go on Studio (rap or sing over it), DJ deck A or B, a pad, or My sounds.",
-    "New + Audio button at the top: pick audio from your device or paste a direct link to an MP3 or WAV, then choose where it goes.",
-    "Dropping audio on empty space now opens the chooser instead of playing the file in the browser."
+    "Move everything: hover any big section and drag its grip to put it where you want, or fold it away. Works in the Studio, the vocal presets, the Pad machine and the DJ booth. Reset layout puts it back.",
+    "What I hear: a switchboard in the top bar (or Shift + H) to turn any part on or off while you work: your beat file, vocals, the beat maker and each instrument, the click, the pad loop and the DJ decks.",
+    "Vocal presets organized: a sidebar with Vocal styles (rap, R&B, pop, club and world, rock and live, speech), Enhance and Voice FX by mood, favorites, your folders, and search.",
+    "172 presets now: 46 vocal styles, 42 Enhance and 84 Voice FX, including a new Healing mood. 5 new effects: Exciter, Shimmer reverb, Tape machine, Trance gate and Auto-pan.",
+    "DJ visuals: the lights are replaced by liquid metal, light orbs, flow fields, silk ribbons, kaleidoscope, plasma, aurora and a warp tunnel. Two layers, palettes, 3D camera angles, trails and glow, Live Flash, Warp, Invert and Freeze, and Auto VJ.",
+    "Healing house: dream pad, supersaw, glass keys and warm pluck instruments, Healing House, Ambient Breaks and Euphoric Trance starters, and Healing wash, Soft focus and Euphoric gate quick sounds.",
+    "Make it yours: 24 themes, make your own palette from 3 colors, and Style effects for glow, motion, pulsing and flashing, with one-click combos.",
+    "Quick tour banners on each page: hover a step and the button it talks about lights up."
   ],
   "history": [
+    {
+      "version": "1.9.0",
+      "date": "2026-11-16",
+      "notes": [
+        "Drop anywhere: drag audio files onto any page and a dock slides up. Let go on Studio (rap or sing over it), DJ deck A or B, a pad, or My sounds.",
+        "New + Audio button at the top: pick audio from your device or paste a direct link to an MP3 or WAV, then choose where it goes.",
+        "Dropping audio on empty space now opens the chooser instead of playing the file in the browser."
+      ]
+    },
     {
       "version": "1.8.1",
       "date": "2026-11-16",

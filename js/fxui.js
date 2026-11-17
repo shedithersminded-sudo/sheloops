@@ -1,10 +1,11 @@
 // Inspector tabs for effects, presets and Build My Sound.
 import { el, clamp, toast, knob, select, ask, confirmBox } from './util.js';
+import { makeMovable, resetBtn } from './movable.js';
 import { helpBtn, HELP } from './help.js';
 import { app, save, snapshot } from './state.js';
 import { settings, saveSettings } from './store.js';
 import { FX, FX_ORDER, BEAT_FX, NOTE, TUNE_SCALES, newFx } from './fx.js';
-import { BUILTIN, CATS, MOODS, moodOf, VIBES, buildSound, mine, favs, saveMine, addMine, folders, presetFx, findPreset } from './presets.js';
+import { BUILTIN, CATS, MOODS, moodOf, groupOf, VIBES, buildSound, mine, favs, saveMine, addMine, folders, presetFx, findPreset } from './presets.js';
 import { T, play, applyMix } from './engine.js';
 
 let preview = null;
@@ -183,49 +184,64 @@ function steps(t) {
     st('2', 'Enhance', 'Polish it', 'Add Enhance to make it clearer, warmer or louder.'),
     st('3', 'Voice FX', 'Get creative', 'Add Voice FX for robot, deep, echo and more.'));
 }
+let query = '';
+// one card for a preset
+function preCard(t, p) {
+  const isMine = p.id.startsWith('m:'), active = isOn(t, p), fx = p.chain ? p.chain() : p.fx;
+  return el('div', { class: 'precard' + (preview && preview.trackId === t.id && preview.name === p.name ? ' prev' : '') + (active ? ' on' : ''), title: 'Inside: ' + fx.map(f => FX[f.type].name).join(', ') },
+    el('div', { class: 'prehead' }, active ? eqBars() : null, el('b', {}, p.name), moodOf(p) ? el('span', { class: 'moodtag', 'data-m': moodOf(p) }, moodOf(p)) : groupOf(p) ? el('span', { class: 'moodtag grp' }, groupOf(p)) : null,
+      el('button', { class: 'star' + (favs.has(p.id) ? ' on' : ''), title: 'Favorite', onclick: () => { favs.has(p.id) ? favs.delete(p.id) : favs.add(p.id); saveMine(); rerender(); } }, favs.has(p.id) ? '★' : '☆')),
+    el('small', {}, isMine ? `${p.folder} · ${p.fx.length} effects` : p.desc),
+    el('div', { class: 'inside' }, fx.map(f => el('span', { title: (HELP['fx_' + f.type] || {}).what || '' }, FX[f.type].name))),
+    el('div', { class: 'prebtns' },
+      active ? null : el('button', { onclick: () => startPreview(t, layered(t, p)) }, 'Preview'),
+      el('button', { class: active ? 'danger' : 'hot', onclick: () => applyPreset(t, layered(t, p)) }, active ? 'Take off' : ((p.cat || 'Mine') === 'Vocal' ? 'Use' : 'Add')),
+      isMine ? [
+        el('button', { onclick: async () => { const n = await ask('Rename preset', 'Name', p.name); if (n) { p.name = n; saveMine(); rerender(); } } }, 'Rename'),
+        el('button', { onclick: async () => { const n = await ask('Move to folder', 'Folder', p.folder); if (n) { p.folder = n; saveMine(); rerender(); } } }, 'Folder'),
+        el('button', { onclick: () => { addMine(p.name + ' copy', p.folder, p.fx, p.rev, p.dly); rerender(); } }, 'Copy'),
+        el('button', { class: 'danger', onclick: async () => { if (await confirmBox('Delete preset', `Delete "${p.name}"?`, 'Delete')) { mine.splice(mine.indexOf(p), 1); favs.delete(p.id); saveMine(); rerender(); } } }, 'Delete'),
+      ] : null));
+}
 export function presetsTab(t) {
-  const cats = ['Favorites', ...CATS, 'My presets'];
-  const top = el('div', { class: 'fxtop' },
-    cats.map(c => el('button', { class: 'chip' + (presetCat === c ? ' on' : ''), onclick: () => { presetCat = c; mood = ''; rerender(); } }, c === 'Favorites' ? '★ Favorites' : c)),
-    helpBtn('presets'), el('span', { class: 'spacer' }), abButton(t));
-  const stack = stackPanel(t);
+  // which list to show: a category (Vocal, Enhance, Voice FX, Favorites, My presets) and a sub group (style or mood)
+  const pick = (c, m = '') => { presetCat = c; mood = m; query = ''; rerender(); };
+  const vocalGroups = [...new Set(BUILTIN.filter(p => p.cat === 'Vocal').map(groupOf))];
+  const side = el('div', { class: 'preside' },
+    el('button', { class: 'pside fav' + (presetCat === 'Favorites' ? ' on' : ''), onclick: () => pick('Favorites') }, '★ Favorites', el('small', {}, String([...BUILTIN, ...mine].filter(p => favs.has(p.id)).length))),
+    ...[['Vocal', 'Vocal styles', 'The main sound. Pick one.', vocalGroups, groupOf], ['Enhance', 'Enhance', 'Polish it. Stack as many as you like.', MOODS.Enhance, moodOf], ['Voice FX', 'Voice FX', 'Creative sounds. Stack them.', MOODS['Voice FX'], moodOf]].map(([cat, label, hint, subs, fn]) => {
+      const list = BUILTIN.filter(p => p.cat === cat);
+      return el('div', { class: 'pgroup' + (presetCat === cat ? ' open' : '') },
+        el('button', { class: 'pside head' + (presetCat === cat && !mood ? ' on' : ''), onclick: () => pick(cat) }, label, el('small', {}, String(list.length))),
+        el('div', { class: 'phint' }, hint),
+        ...subs.map(m => el('button', { class: 'pside sub' + (presetCat === cat && mood === m ? ' on' : ''), 'data-m': m, onclick: () => pick(cat, m) }, m, el('small', {}, String(list.filter(p => fn(p) === m).length)))));
+    }),
+    el('div', { class: 'pgroup' + (presetCat === 'My presets' ? ' open' : '') },
+      el('button', { class: 'pside head' + (presetCat === 'My presets' && !myFolder ? ' on' : ''), onclick: () => { myFolder = ''; pick('My presets'); } }, 'My presets', el('small', {}, String(mine.length))),
+      ...folders().map(f => el('button', { class: 'pside sub' + (presetCat === 'My presets' && myFolder === f ? ' on' : ''), onclick: () => { myFolder = f; pick('My presets'); } }, f, el('small', {}, String(mine.filter(p => p.folder === f).length))))));
   let list;
-  if (presetCat === 'My presets') list = mine.filter(p => !myFolder || p.folder === myFolder);
+  if (query) { const q = query.toLowerCase(); list = [...BUILTIN, ...mine].filter(p => (p.name + ' ' + (p.desc || '') + ' ' + (p.cat || '') + ' ' + moodOf(p) + ' ' + groupOf(p) + ' ' + (p.chain ? p.chain() : p.fx).map(f => FX[f.type].name).join(' ')).toLowerCase().includes(q)); }
+  else if (presetCat === 'My presets') list = mine.filter(p => !myFolder || p.folder === myFolder);
   else if (presetCat === 'Favorites') list = [...BUILTIN, ...mine].filter(p => favs.has(p.id));
-  else list = BUILTIN.filter(p => p.cat === presetCat);
-  const moods = MOODS[presetCat];
-  const all = list;
-  if (moods && mood) list = list.filter(p => moodOf(p) === mood);
-  const moodRow = moods ? el('div', { class: 'moods' },
-    el('span', { class: 'hint' }, 'Mood:'),
-    ['', ...moods].map(m => el('button', { class: 'mood' + (mood === m ? ' on' : ''), 'data-m': m || 'all', onclick: () => { mood = m; rerender(); } }, m || 'All', el('small', {}, String(m ? all.filter(p => moodOf(p) === m).length : all.length)))),
-    el('span', { class: 'spacer' }),
-    el('button', { class: 'hot surprise', title: 'Adds a random preset from this list', onclick: () => {
-      const pool = list.filter(p => !isOn(t, p)); if (!pool.length) return toast('Everything here is already on.');
-      const p = pool[Math.floor(Math.random() * pool.length)]; applyPreset(t, layered(t, p));
-    } }, 'Surprise me')) : null;
-  const grid = el('div', { class: 'pregrid' });
-  if (presetCat === 'My presets') top.append(el('label', { class: 'num' }, 'Folder', select([['', 'All folders'], ...folders()], myFolder, v => { myFolder = v; rerender(); })));
-  if (!list.length) grid.append(el('p', { class: 'hint' }, presetCat === 'Favorites' ? 'Click the star on a preset to add it here.' : 'No saved presets yet. Set up effects on a track and click Save as my preset.'));
-  for (const p of list) {
-    const isMine = p.id.startsWith('m:'), active = isOn(t, p);
-    const inside = (p.chain ? p.chain() : p.fx).map(f => FX[f.type].name);
-    grid.append(el('div', { class: 'precard' + (preview && preview.trackId === t.id && preview.name === p.name ? ' prev' : '') + (active ? ' on' : ''), title: 'Inside: ' + inside.join(', ') },
-      el('div', { class: 'prehead' }, active ? eqBars() : null, el('b', {}, p.name), moodOf(p) ? el('span', { class: 'moodtag', 'data-m': moodOf(p) }, moodOf(p)) : null,
-        el('button', { class: 'star' + (favs.has(p.id) ? ' on' : ''), title: 'Favorite', onclick: () => { favs.has(p.id) ? favs.delete(p.id) : favs.add(p.id); saveMine(); rerender(); } }, favs.has(p.id) ? '★' : '☆')),
-      el('small', {}, isMine ? `${p.folder} · ${p.fx.length} effects` : p.desc),
-      el('div', { class: 'inside' }, (p.chain ? p.chain() : p.fx).map(f => el('span', { title: (HELP['fx_' + f.type] || {}).what || '' }, FX[f.type].name))),
-      el('div', { class: 'prebtns' },
-        active ? null : el('button', { onclick: () => startPreview(t, layered(t, p)) }, 'Preview'),
-        el('button', { class: active ? 'danger' : 'hot', onclick: () => applyPreset(t, layered(t, p)) }, active ? 'Take off' : ((p.cat || 'Mine') === 'Vocal' ? 'Use' : 'Add')),
-        isMine ? [
-          el('button', { onclick: async () => { const n = await ask('Rename preset', 'Name', p.name); if (n) { p.name = n; saveMine(); rerender(); } } }, 'Rename'),
-          el('button', { onclick: async () => { const n = await ask('Move to folder', 'Folder', p.folder); if (n) { p.folder = n; saveMine(); rerender(); } } }, 'Folder'),
-          el('button', { onclick: () => { addMine(p.name + ' copy', p.folder, p.fx, p.rev, p.dly); rerender(); } }, 'Copy'),
-          el('button', { class: 'danger', onclick: async () => { if (await confirmBox('Delete preset', `Delete "${p.name}"?`, 'Delete')) { mine.splice(mine.indexOf(p), 1); favs.delete(p.id); saveMine(); rerender(); } } }, 'Delete'),
-        ] : null)));
-  }
-  return el('div', { class: 'fxtab' }, top, steps(t), stack, moodRow, grid);
+  else list = BUILTIN.filter(p => p.cat === presetCat && (!mood || (p.cat === 'Vocal' ? groupOf(p) : moodOf(p)) === mood));
+  const search = el('input', { class: 'textin presearch', type: 'search', placeholder: 'Search presets: trap, robot, warm, echo, Auto-Tune...', value: query, oninput: e => { query = e.target.value; const pos = e.target.selectionStart; rerender(); const n = document.querySelector('.presearch'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } } });
+  const title = query ? `Results for "${query}"` : presetCat === 'Favorites' ? 'Your favorites' : presetCat === 'My presets' ? (myFolder || 'All my presets') : `${presetCat === 'Vocal' ? 'Vocal styles' : presetCat}${mood ? ' · ' + mood : ''}`;
+  const grid = el('div', { class: 'pregrid' }, list.map(p => preCard(t, p)));
+  if (!list.length) grid.append(el('p', { class: 'hint' }, query ? 'Nothing found. Try another word.' : presetCat === 'Favorites' ? 'Click the ☆ on any preset to keep it here.' : 'No saved presets yet. Set up effects on a track and click Save as my preset.'));
+  const main = el('div', { class: 'premain' },
+    el('div', { class: 'prebar' }, el('b', { class: 'pretitle' }, title, el('small', {}, `${list.length} preset${list.length === 1 ? '' : 's'}`)), el('span', { class: 'spacer' }),
+      el('button', { class: 'hot surprise', title: 'Adds a random preset from this list', onclick: () => {
+        const pool = list.filter(p => !isOn(t, p)); if (!pool.length) return toast('Everything here is already on.');
+        applyPreset(t, layered(t, pool[Math.floor(Math.random() * pool.length)]));
+      } }, 'Surprise me')),
+    grid);
+  const box = el('div', { class: 'fxtab presetsx' },
+    el('div', { class: 'fxtop pretop' }, search, helpBtn('presets'), el('span', { class: 'spacer' }), abButton(t), resetBtn('presets', rerender)),
+    el('div', { 'data-panel': 'steps', 'data-title': 'How it works' }, steps(t)),
+    el('div', { 'data-panel': 'stack', 'data-title': 'Sound stack' }, stackPanel(t)),
+    el('div', { class: 'prelib', 'data-panel': 'library', 'data-title': 'Preset library' }, side, main));
+  makeMovable(box, 'presets');
+  return box;
 }
 
 // ---------- Build My Sound tab ----------
@@ -264,6 +280,9 @@ export function buildTab(t) {
 
 // ---------- Beat maker effects (per instrument or drum row) ----------
 const BEAT_RECIPES = [
+  { name: 'Healing wash', what: 'Soft tape warmth, a gentle chorus and a shimmering space. Great on pads and keys.', fx: [['tape', { drive: 0.3, wow: 0.25, tone: 9000, mix: 1 }], ['chorus', { rate: 0.4, depth: 0.5, mix: 0.3 }], ['shimmer', { size: 6, pitch: 12, mix: 0.3 }]] },
+  { name: 'Soft focus', what: 'Rounds off the top and adds a warm room, like hearing it through a wall.', fx: [['filter', { mode: 0, cutoff: 3500, res: 1 }], ['room', { size: 2.5, tone: 6000, mix: 0.3 }]] },
+  { name: 'Euphoric gate', what: 'Trance-style rhythmic chop for pads and supersaws.', fx: [['gate', { rate: 8, pattern: 0, depth: 0.8 }], ['delay', { time: 0.33, feedback: 0.35, tone: 6000, mix: 0.2 }]] },
   { name: 'Outsider dust', what: 'Dusty, warm, filtered, like an old house record.', fx: [['sat', { drive: 0.4 }], ['filter', { mode: 0, cutoff: 3500, res: 1 }], ['dust', { crackle: 0.45, hiss: 0.25, tone: 5000 }]] },
   { name: 'House pump', what: 'Ducks with the kick at about 122 BPM, like sidechain.', fx: [['tremolo', { rate: 2.03, depth: 0.7, shape: 0.1 }]] },
   { name: 'Filter sweep', what: 'Slowly opens and closes, the classic house build.', fx: [['filter', { mode: 0, cutoff: 800, res: 6, rate: 0.06, depth: 0.9 }]] },

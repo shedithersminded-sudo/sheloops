@@ -7,7 +7,7 @@ import { E, ensureCtx, openMic, reopenMic, setInputGain, peakOf, rmsOf, testReco
 import { importBeatFile } from './studio.js';
 import { U, check, whatsNew, install } from './update.js';
 import { exportSongFile, exportEverything, openSheloopsFile } from './exporter.js';
-import { look, saveLook, applyLook, allThemes, applyGlow } from './look.js';
+import { look, saveLook, applyLook, allThemes, applyGlow, UIFX_PRESETS, applyUiFx, derive } from './look.js';
 import { STARTERS } from './state.js';
 
 const go = v => emit('goto:' + v);
@@ -33,19 +33,28 @@ function pickFile(accept) {
 // ---------- welcome guide on Home: make it yours, Simple vs Advanced, what you can make ----------
 const GENRES = [['Trap', 'hard 808s'], ['Drill', 'sliding bass'], ['R&B', 'smooth'], ['Hip-Hop', 'boom bap'], ['Afrobeats', 'bouncy'], ['Pop', 'bright'], ['Lo-fi', 'dusty chill'],
   ['Jungle', 'chopped breaks'], ['Drum & Bass', 'fast and deep'], ['Breakcore', 'chaos breaks'], ['Heavenly Breakcore', 'dreamy and fast'], ['Lonely Breakcore', 'sad piano'],
-  ['Outsider House', 'dusty house'], ['Acid House', 'squelchy'], ['Rave Breaks', 'hoovers'], ['Gospel', 'church keys'], ['Soul', 'warm']];
+  ['Outsider House', 'dusty house'], ['Healing House', 'warm and soft'], ['Ambient Breaks', 'dreamy breaks'], ['Euphoric Trance', 'uplifting'], ['Acid House', 'squelchy'], ['Rave Breaks', 'hoovers'], ['Gospel', 'church keys'], ['Soul', 'warm']];
 function welcome() {
   const open = !settings.hideWelcome;
   const step = (n, title, text, ...kids) => el('div', { class: 'wcard' }, el('div', { class: 'wnum' }, n), el('b', {}, title), el('p', {}, text), ...kids);
-  const themes = allThemes().slice(0, 8);
+  const themes = settings.simple ? allThemes().slice(0, 8) : allThemes();
   const d = el('details', { class: 'welcome', open },
     el('summary', {}, el('span', { class: 'wled' }), 'Welcome to your studio', el('small', {}, open ? 'Click to hide this guide' : 'Click to show the guide')),
     el('div', { class: 'wgrid' },
-      step('1', 'Make it yours', 'Every color, the background, the font, the glow, the mouse and the CD player can be changed. Try a theme right now:',
-        el('div', { class: 'wthemes' }, themes.map(t => el('button', { class: 'wtheme' + (t.id === look.theme ? ' on' : ''), title: t.name, style: `--tb:${t.c.bg};--ta:${t.c.led};--tt:${t.c.text}`, onclick: async e => { look.theme = t.id; saveLook(); await applyLook(); e.target.closest('.wthemes').querySelectorAll('.wtheme').forEach(b => b.classList.toggle('on', b === e.currentTarget)); toast(`Theme: ${t.name}. Go to Appearance for more.`); } }, el('i'), el('span', {}, t.name)))),
+      step('1', 'Make it yours', 'Your studio can look and feel any way you want. Here is everything you can change:',
+        el('div', { class: 'wcan' }, ...[['Theme colors', 'look'], ['Your own palette', 'look'], ['Glow, pulse and flash', 'look'], ['Text glow and color', 'look'], ['Fonts', 'look'], ['Background', 'look'], ['Mouse effects', 'look'], ['CD player and visualizer', 'look'], ['Your logo', 'look'], ['Move sections around', 'studio']].map(([l, v]) => el('button', { class: 'wcanchip', onclick: () => go(v) }, l))),
+        el('div', { class: 'wsub' }, '1. Pick a theme'),
+        el('div', { class: 'wthemes' }, themes.map(t => el('button', { class: 'wtheme' + (t.id === look.theme ? ' on' : ''), title: t.name, style: `--tb:${t.c.bg};--ta:${t.c.led};--tt:${t.c.text}`, onclick: async e => { look.theme = t.id; saveLook(); await applyLook(); e.currentTarget.closest('.wthemes').querySelectorAll('.wtheme').forEach(b => b.classList.toggle('on', b === e.currentTarget)); toast(`Theme: ${t.name}.`); } }, el('i'), el('span', {}, t.name)))),
+        settings.simple ? el('small', { class: 'hint' }, `${allThemes().length} themes in all. See them in Appearance, or switch to Advanced to see them here.`) : null,
+        el('div', { class: 'wsub' }, '2. Pick a feel'),
+        el('div', { class: 'wrow' }, ...Object.keys(UIFX_PRESETS).map(n => el('button', { class: 'wfeel' + (Object.entries(UIFX_PRESETS[n]).every(([k, v]) => look.uifx[k] === v) ? ' on' : ''), title: { 'Clean pro': 'No glow, calm motion', 'Calm studio': 'Soft glow that breathes slowly', 'Neon club': 'Bright neon glow, lively', 'Party': 'Max glow, throbbing and flashing' }[n], onclick: e => { Object.assign(look.uifx, UIFX_PRESETS[n]); saveLook(); applyUiFx(); e.currentTarget.parentNode.querySelectorAll('.wfeel').forEach(b => b.classList.toggle('on', b === e.currentTarget)); toast(`Feel: ${n}.`); } }, n))),
+        el('div', { class: 'wsub' }, '3. Make your own colors'),
+        settings.simple ? el('div', { class: 'wrow' }, el('button', { class: 'hot', onclick: () => go('look') }, 'Open Appearance to make my palette'))
+          : (() => { const c = { bg: '#120a1a', a: '#ff5ca8', t: '#fff0f8' }; const inp = (k, l) => el('label', { class: 'num' }, l, el('input', { type: 'color', value: c[k], oninput: e => c[k] = e.target.value }));
+            return el('div', { class: 'wrow wpal' }, inp('bg', 'Background'), inp('a', 'Accent'), inp('t', 'Text'), el('button', { class: 'hot', onclick: async () => { const n = await ask('Name your theme', 'Name', 'My palette'); if (!n) return; const t = { id: 'my-' + Math.random().toString(36).slice(2, 9), name: n, c: derive(c.bg, c.a, c.t), tracks: [c.a] }; look.themes.push(t); look.theme = t.id; saveLook(); await applyLook(); toast(`"${n}" made and turned on. Fine-tune every color in Appearance.`); go('home'); } }, 'Make my theme')); })(),
         el('div', { class: 'wrow' },
           el('button', { class: 'tog' + (look.glow && look.glow.on ? ' on' : ''), onclick: e => { look.glow.on = !look.glow.on; saveLook(); applyGlow(); e.target.classList.toggle('on', look.glow.on); e.target.textContent = look.glow.on ? 'Text glow ON' : 'Text glow OFF'; } }, look.glow && look.glow.on ? 'Text glow ON' : 'Text glow OFF'),
-          el('button', { class: 'hot', onclick: () => go('look') }, 'Open Appearance'))),
+          el('button', { onclick: () => go('look') }, 'Everything else in Appearance'))),
       step('2', 'Simple or Advanced', settings.simple
         ? 'You are in Simple mode: fewer buttons, and every screen explains itself in plain words. Switch to Advanced when you want every knob and tool.'
         : 'You are in Advanced mode: every tool and knob is out. Switch to Simple for fewer buttons and plain-word explanations on every screen.',

@@ -6,6 +6,7 @@ import { settings, saveSettings } from './store.js';
 import { openPlayerSettings } from './nowplaying.js';
 import { playIntro, introOn, setIntro } from './intro.js';
 import { FONTS_UI, applyFont, setLogo, removeLogo, logoURL, applyLogo } from './look.js';
+import { UIFX_PRESETS, applyUiFx } from './look.js';
 import { look, saveLook, applyLook, applyCursor, applyGlow, applyLayout, allThemes, currentTheme, THEME_KEYS, THEMES, derive, BUILT_IN_WORKSPACES, TOOL_NAMES, setBackgroundImage, resetCursor, trackColors, cursorImage } from './look.js';
 
 const redraw = () => renderAppearance();
@@ -18,7 +19,7 @@ export function renderAppearance() {
   view.append(el('div', { class: 'appearance' },
     el('div', { class: 'ptop' }, el('h1', {}, 'My studio appearance'), helpBtn('appearance')),
     el('p', { class: 'hint' }, 'Everything here saves by itself and is included in your studio file (My sound page).'),
-    logoFontPanel(), glowPanel(), themesPanel(), backgroundPanel(), cursorPanel(), playerPanel(), layoutPanel()));
+    themesPanel(), uiFxPanel(), glowPanel(), logoFontPanel(), backgroundPanel(), cursorPanel(), playerPanel(), layoutPanel()));
 }
 
 // ---------- logo + font ----------
@@ -99,6 +100,21 @@ function backgroundPanel() {
       knob('See-through panels', 0, 0.7, 0.01, look.see, async v => { look.see = v; saveLook(); await applyLook(); }, v => Math.round(v * 100) + '%', 'seeThrough')));
 }
 
+// ---------- style effects ----------
+function uiFxPanel() {
+  const f = look.uifx, set = (k, v) => { f[k] = v; saveLook(); applyUiFx(); redraw(); };
+  const opt = (k, v, label, what) => el('button', { class: 'fxopt' + (f[k] === v ? ' on' : ''), onclick: () => set(k, v) }, el('b', {}, label), el('small', {}, what));
+  const same = p => Object.entries(UIFX_PRESETS[p]).every(([k, v]) => f[k] === v);
+  return el('div', { class: 'panel mpanel uifx' },
+    el('div', { class: 'insp-sub' }, 'Style effects', helpBtn('uiFx')),
+    el('p', { class: 'hint' }, 'Choose how the whole app feels: how much it glows, how much it moves, and whether things pulse or flash. Start with a combo, then change single parts.'),
+    el('div', { class: 'fxcombos' }, ...Object.keys(UIFX_PRESETS).map(n => el('button', { class: 'fxcombo' + (same(n) ? ' on' : ''), onclick: () => { Object.assign(f, UIFX_PRESETS[n]); saveLook(); applyUiFx(); redraw(); } }, n))),
+    el('div', { class: 'fxgroups' },
+      el('div', {}, el('small', {}, 'GLOW'), el('div', { class: 'fxopts' }, opt('glow', 'none', 'No glow', 'Flat and clean'), opt('glow', 'soft', 'Soft', 'A gentle halo'), opt('glow', 'neon', 'Neon', 'Bright glowing edges'), opt('glow', 'max', 'Max', 'Everything shines'))),
+      el('div', {}, el('small', {}, 'MOTION'), el('div', { class: 'fxopts' }, opt('motion', 'still', 'Still', 'No animations'), opt('motion', 'calm', 'Calm', 'Slow, gentle moves'), opt('motion', 'lively', 'Lively', 'Full animations'))),
+      el('div', {}, el('small', {}, 'PULSE'), el('div', { class: 'fxopts' }, opt('pulse', 'off', 'Off', 'Panels stay steady'), opt('pulse', 'slow', 'Breathe', 'Panels glow in and out slowly'), opt('pulse', 'fast', 'Throb', 'A faster heartbeat glow'))),
+      el('div', {}, el('small', {}, 'FLASH'), el('div', { class: 'fxopts' }, el('button', { class: 'fxopt' + (!f.flash ? ' on' : ''), onclick: () => set('flash', false) }, el('b', {}, 'Off'), el('small', {}, 'No flashing')), el('button', { class: 'fxopt' + (f.flash ? ' on' : ''), onclick: () => set('flash', true) }, el('b', {}, 'Flashing accents'), el('small', {}, 'Titles and lit buttons flicker like neon signs'))))));
+}
 // ---------- text glow ----------
 function glowPanel() {
   const g = look.glow, set = (k, v, re = true) => { g[k] = v; saveLook(); applyGlow(); if (re) redraw(); };

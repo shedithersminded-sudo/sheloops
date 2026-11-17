@@ -37,6 +37,20 @@ export const THEMES = [
   T('gold', 'Luxury Gold', '#0d0b07', '#d4af37', '#f5ecd2', ['#d4af37', '#f0d878', '#b8860b', '#e6c76b', '#fff1b8', '#c9a227', '#8c6d1f', '#f7e08c']),
   T('rose', 'Rose Gold', '#1a1213', '#e8a598', '#fbe9e5', ['#e8a598', '#f4c2b8', '#d4887a', '#ffd7cf', '#c97b84', '#f6b8a8', '#b76e79', '#fde2dc']),
   T('minimal', 'Minimalist', '#f2f1ee', '#1d1d1f', '#1d1d1f', ['#1d1d1f', '#ff6a1a', '#3a86ff', '#2a9d8f', '#e76f51', '#8338ec', '#6c757d', '#e9c46a']),
+  T('vaporwave', 'Vaporwave', '#1a0b2e', '#ff71ce', '#fdf0ff', ['#ff71ce', '#01cdfe', '#05ffa1', '#b967ff', '#fffb96', '#ff9de2', '#7af7ff', '#c8a2ff']),
+  T('acid', 'Acid Green', '#060a05', '#39ff14', '#eaffdf', ['#39ff14', '#c6ff00', '#00ff9c', '#ffee00', '#7dff3a', '#00e5ff', '#b2ff59', '#64ffda']),
+  T('blood', 'Blood Moon', '#100506', '#ff1744', '#ffe6e9', ['#ff1744', '#ff6d00', '#ff5252', '#ff8a80', '#d50000', '#ffab40', '#ff4081', '#ffd180']),
+  T('ice', 'Ice Queen', '#06111a', '#9be7ff', '#eefaff', ['#9be7ff', '#3fa9ff', '#e3f2fd', '#7c4dff', '#80deea', '#b3e5fc', '#82b1ff', '#a7ffeb']),
+  T('lava', 'Lava Lamp', '#140805', '#ff6d00', '#fff1e6', ['#ff6d00', '#ffab00', '#ff3d00', '#ffd740', '#ff9e80', '#dd2c00', '#ffcc80', '#ff6e40']),
+  T('forest', 'Midnight Forest', '#07120d', '#2bd97a', '#e6fff1', ['#2bd97a', '#a5d6a7', '#00bfa5', '#cddc39', '#69f0ae', '#80cbc4', '#b9f6ca', '#ffd54f']),
+  T('cotton', 'Cotton Candy', '#1a1020', '#ff9de2', '#fff5fc', ['#ff9de2', '#9dd9ff', '#c4a7ff', '#ffd1f2', '#a0f0ff', '#ffb3c7', '#d6b4ff', '#b3fff0']),
+  T('ultraviolet', 'Ultraviolet', '#0b0516', '#b400ff', '#f3e6ff', ['#b400ff', '#7a00ff', '#ff00e6', '#3d00ff', '#e040fb', '#651fff', '#ea80fc', '#8c9eff']),
+  T('ember', 'Ember', '#120a07', '#ffb347', '#fff0de', ['#ffb347', '#ff7043', '#ffd27a', '#ff8a65', '#ffcc80', '#e65100', '#ffe0b2', '#ffab91']),
+  T('deepsea', 'Deep Sea', '#030b17', '#00f5d4', '#e0fffa', ['#00f5d4', '#0077b6', '#00b4d8', '#90e0ef', '#3a0ca3', '#48cae4', '#7209b7', '#caf0f8']),
+  T('mono', 'Monochrome', '#0a0a0b', '#d9d9de', '#f0f0f2', ['#d9d9de', '#9aa0aa', '#c4c8d0', '#7d828c', '#e6e8ec', '#b0b4bc', '#5c6370', '#f5f5f7']),
+  T('paper', 'Paper Studio', '#efe9df', '#d1495b', '#2b2522', ['#d1495b', '#00798c', '#edae49', '#66a182', '#30638e', '#8d5a97', '#e07a5f', '#3d405b']),
+  T('cherry', 'Cherry Blossom', '#160d10', '#ffb7c5', '#fff0f3', ['#ffb7c5', '#ff8fab', '#fb6f92', '#ffc2d1', '#e5989b', '#ffd6e0', '#c9184a', '#f4acb7']),
+  T('arcade', 'Arcade', '#07040f', '#ffe600', '#fffbe0', ['#ffe600', '#ff2bd6', '#00e5ff', '#39ff14', '#ff6d00', '#7c4dff', '#ff1744', '#00ff9c']),
 ];
 export const THEME_KEYS = [['bg', 'Background'], ['panel', 'Panels'], ['nav', 'Menu bar'], ['btn', 'Buttons'], ['led', 'Accent / highlight'], ['ledtext', 'Text on accent'], ['text', 'Text'], ['dim', 'Soft text'], ['line', 'Lines'], ['red', 'Record button'], ['console', 'Mixing console'], ['sel', 'Selected'], ['well', 'Wells and meters'], ['head', 'Track headers'], ['pad', 'Drum pads'], ['lcd', 'Display']];
 
@@ -53,8 +67,10 @@ export const look = Object.assign({
   layout: { ...DEFAULT_LAYOUT }, workspaces: [],
   font: 'Fredoka', logo: { has: false, size: 34, shape: 'none', text: true },
   glow: { on: true, color: '', amount: 0.45, style: 'neon', text: '' },
+  uifx: { glow: 'neon', motion: 'lively', pulse: 'off', flash: false },
 }, JSON.parse(localStorage.getItem(KEY) || '{}'));
 look.glow = { on: true, color: '', amount: 0.45, style: 'neon', text: '', ...(look.glow || {}) };
+look.uifx = { glow: 'neon', motion: 'lively', pulse: 'off', flash: false, ...(look.uifx || {}) };
 look.cursor = { trailLen: 450, spot: false, ...look.cursor };
 look.layout = { ...DEFAULT_LAYOUT, ...look.layout };
 // 2026-11 new studio look: move the old default font to the new one once
@@ -81,6 +97,7 @@ export async function applyLook() {
   resetCssVars();
   applyFont();
   applyGlow();
+  applyUiFx();
   await applyLogo();
   await applyBackground();
   applyCursor();
@@ -124,6 +141,21 @@ export function applyGlow() {
   root.style.setProperty('--tgc', g.color || th.c.led);
   root.style.setProperty('--tga', String(g.amount));
   if (g.text) root.style.setProperty('--text', g.text); else root.style.setProperty('--text', th.c.text);
+}
+// ---------- style effects: how much things glow, move, pulse and flash ----------
+export const UIFX_PRESETS = {
+  'Clean pro': { glow: 'none', motion: 'calm', pulse: 'off', flash: false },
+  'Calm studio': { glow: 'soft', motion: 'calm', pulse: 'slow', flash: false },
+  'Neon club': { glow: 'neon', motion: 'lively', pulse: 'off', flash: false },
+  'Party': { glow: 'max', motion: 'lively', pulse: 'fast', flash: true },
+};
+export function applyUiFx() {
+  const f = look.uifx, r = document.documentElement, amt = { none: 0, soft: 28, neon: 55, max: 85 }[f.glow] ?? 55;
+  r.style.setProperty('--glow', `color-mix(in srgb, var(--led) ${amt}%, transparent)`);
+  for (const k of ['none', 'soft', 'neon', 'max']) r.classList.toggle('fxg-' + k, f.glow === k);
+  for (const k of ['still', 'calm', 'lively']) r.classList.toggle('fxm-' + k, f.motion === k);
+  for (const k of ['off', 'slow', 'fast']) r.classList.toggle('fxp-' + k, f.pulse === k);
+  r.classList.toggle('fxflash', !!f.flash);
 }
 // ---------- font ----------
 export const FONTS_UI = [['Comfortaa', 'SHELOOPS look (default)'], ['Fredoka', 'Round and friendly'], ['Baloo 2', 'Bubbly and bold'], ['Nunito', 'Soft and clean'], ['Quicksand', 'Light and airy'], ['Space Grotesk', 'Modern and simple'], ['Cascadia Mono', 'Studio code look (original)']];
