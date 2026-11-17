@@ -60,7 +60,8 @@ export function scaleMask(key, scaleIdx) {
 // ---------- builders ----------
 // Each returns { in, out, set(params, ctxInfo, instant), stop() }
 function sp(c, param, v, instant) { if (instant) param.value = v; else param.setTargetAtTime(v, c.currentTime, 0.02); }
-const tanhCurve = k => { const n = 1024, a = new Float32Array(n), d = Math.tanh(k); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; a[i] = Math.tanh(k * x) / d; } return a; };
+// saturation curve with unity gain for quiet sounds: room noise stays where it is, only the loud parts get warm and rounded
+const tanhCurve = k => { const n = 2048, a = new Float32Array(n), m = Math.max(1, k * 0.35); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; a[i] = Math.tanh(m * x) / m; } return a; };
 const hardCurve = k => { const n = 1024, a = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; a[i] = Math.max(-1, Math.min(1, Math.atan(k * x) / Math.atan(k) * 1.2)); } return a; };
 function wetDry(c) {
   const input = c.createGain(), out = c.createGain(), dry = c.createGain(), wet = c.createGain();

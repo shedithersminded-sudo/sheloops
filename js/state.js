@@ -126,7 +126,7 @@ export function newBeatTrack(type, o = {}) {
 }
 export function newVocalTrack(name = 'Vocal', useDefault = true) {
   const t = { id: uid(), type: 'vocal', name, color: nextColor(), vol: 0.85, pan: 0, mute: false, solo: false,
-    rev: 0.2, dly: 0.08, gate: false, gateDb: -50, clips: [], takes: [] };
+    rev: 0.2, dly: 0.08, gate: true, gateDb: -58, clips: [], takes: [] };
   // my default vocal chain (set on the My sound page)
   const p = useDefault && settings.defaultVocal && findPreset(settings.defaultVocal);
   if (p) { t.fx = presetFx(p); t.rev = p.rev; t.dly = p.dly; }

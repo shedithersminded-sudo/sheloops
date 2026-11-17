@@ -1,14 +1,24 @@
 {
-  "version": "2.2.0",
+  "version": "2.3.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "New Mic sound panel (🎙 Mic sound in the Studio toolbar, and on the Mic setup page): live level meter, room noise reading, low cut, room noise remover, a gate that sets itself (Measure my room), and a mic EQ with presets like Close to the mic, Laptop or phone mic, and Noisy room.",
-    "Feedback guard: hears the high squeal and cuts exactly that pitch, and turns your monitor down for a moment. On by default.",
-    "Hearing yourself: monitor volume, with effects or dry (safer on speakers), and an I am on speakers mode that turns on echo cancelling.",
-    "Your mic is cleaned before it is recorded, and recordings stay in time even with the noise remover on."
+    "Found the noise: the warm saturation, tape and exciter effects were turning quiet sounds (room hiss, fans, speaker bleed) up by as much as 4 times each. They now leave quiet sounds alone and only color your voice.",
+    "New vocal tracks have a gentle room gate on, so background noise goes quiet between your words.",
+    "What I hear now has 3 tabs. Parts: turn anything on or off. Sound safety: silence the room between words on every vocal, all vocal effects on or off, hear-myself controls, feedback guard, master volume and a Stop all sound button. Find the noise: checks your setup and tells you the most likely cause.",
+    "Checked all 182 presets and every effect: none of them keeps building or ringing on its own."
   ],
   "history": [
+    {
+      "version": "2.2.0",
+      "date": "2026-11-16",
+      "notes": [
+        "New Mic sound panel (🎙 Mic sound in the Studio toolbar, and on the Mic setup page): live level meter, room noise reading, low cut, room noise remover, a gate that sets itself (Measure my room), and a mic EQ with presets like Close to the mic, Laptop or phone mic, and Noisy room.",
+        "Feedback guard: hears the high squeal and cuts exactly that pitch, and turns your monitor down for a moment. On by default.",
+        "Hearing yourself: monitor volume, with effects or dry (safer on speakers), and an I am on speakers mode that turns on echo cancelling.",
+        "Your mic is cleaned before it is recorded, and recordings stay in time even with the noise remover on."
+      ]
+    },
     {
       "version": "2.1.0",
       "date": "2026-11-16",
