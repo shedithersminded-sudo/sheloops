@@ -45,7 +45,7 @@ export function renderGuide(api) {
   view.append(el('div', { class: 'guide' },
     el('div', { class: 'ghead' },
       el('div', {}, el('h1', {}, 'Studio'), el('small', {}, `${P.name} · ${t.name} · ${P.bpm} BPM`)),
-      el('div', { class: 'gmode' }, el('button', { class: 'on' }, 'Guided'), el('button', { onclick: () => { settings.studioMode = 'full'; saveSettings(); api.full(); } }, 'Full studio'), helpBtn('guide'))),
+      el('div', { class: 'gmode' }, el('button', { class: 'on' }, 'Guided'), el('button', { onclick: () => { settings.studioMode = 'full'; saveSettings(); api.full(); } , title: 'Folders on the side, timeline, and a mixer' }, 'Full studio', el('span', { class: 'newbadge' }, 'Folders + mixer')), helpBtn('guide'))),
     stepper,
     el('div', { class: 'gbody', style: `--i:${idx}` }, body),
     el('div', { class: 'gfoot' }, playBtn, time,

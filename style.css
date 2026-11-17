@@ -2093,3 +2093,5 @@ button.bitem { cursor: pointer; }
 @media (max-width: 800px) { .tlrow { flex-direction: column; } .sbrowser { width: auto; flex: 0 0 auto; max-height: 260px; } .sbrowser.shut { height: 30px; } .brail { writing-mode: horizontal-tb; transform: none; } }
 .studio:has(.daw) { height: auto; min-height: 100%; }
 .mxfader input { height: 64px; } .mxch { gap: 3px; padding: 4px; }
+.djpage .stagewrap { grid-template-columns: minmax(0, 1fr); justify-content: stretch; }
+.newbadge { margin-left: 6px; padding: 1px 6px; border-radius: 99px; font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; background: var(--led); color: var(--ledtext, #111); box-shadow: 0 0 8px var(--led); vertical-align: middle; }
