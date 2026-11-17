@@ -1,11 +1,18 @@
 {
-  "version": "2.8.2",
+  "version": "2.8.3",
   "date": "2026-11-17",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Updates now show up right away. No more waiting for an old saved copy to expire."
+    "SHELOOPS now updates itself. When a new version is out, it loads every new file and reloads once."
   ],
   "history": [
+    {
+      "version": "2.8.2",
+      "date": "2026-11-17",
+      "notes": [
+        "Updates now show up right away. No more waiting for an old saved copy to expire."
+      ]
+    },
     {
       "version": "2.8.1",
       "date": "2026-11-17",
@@ -314,5 +321,58 @@
         "Install SHELOOPS as an app, and get notified when there is an update."
       ]
     }
+  ],
+  "files": [
+    "index.html",
+    "style.css",
+    "js/appearance.js",
+    "js/art.js",
+    "js/artcollections.js",
+    "js/artui.js",
+    "js/beat.js",
+    "js/dj.js",
+    "js/djlights.js",
+    "js/djvisuals.js",
+    "js/dropanywhere.js",
+    "js/engine.js",
+    "js/exporter.js",
+    "js/fixvoice.js",
+    "js/fx.js",
+    "js/fxui.js",
+    "js/gif.js",
+    "js/gifenc.js",
+    "js/guitar.js",
+    "js/hear.js",
+    "js/help.js",
+    "js/instruments.js",
+    "js/intro.js",
+    "js/keyguide.js",
+    "js/keys.js",
+    "js/library.js",
+    "js/look.js",
+    "js/main.js",
+    "js/master.js",
+    "js/micui.js",
+    "js/mixer.js",
+    "js/mockup.js",
+    "js/movable.js",
+    "js/mp3.js",
+    "js/nowplaying.js",
+    "js/pads.js",
+    "js/pages.js",
+    "js/plastic.js",
+    "js/player.js",
+    "js/presets.js",
+    "js/profile.js",
+    "js/sampler.js",
+    "js/state.js",
+    "js/store.js",
+    "js/studio.js",
+    "js/studiobrowser.js",
+    "js/studioguide.js",
+    "js/tour.js",
+    "js/update.js",
+    "js/util.js",
+    "js/viewer3d.js"
   ]
 }

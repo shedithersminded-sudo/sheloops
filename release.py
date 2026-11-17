@@ -26,6 +26,7 @@ if tuple(int(x) for x in new.split('.')) <= old:
     sys.exit(f"New version must be higher than {v['version']}")
 v.setdefault('history', []).insert(0, {'version': v['version'], 'date': v['date'], 'notes': v['notes']})
 v['version'], v['date'], v['notes'] = new, datetime.date.today().isoformat(), notes
+v['files'] = ['index.html', 'style.css'] + sorted('js/' + f.name for f in (root / 'js').glob('*.js'))
 vf.write_text(json.dumps(v, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
 
 sw = root / 'sw.js'
