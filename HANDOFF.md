@@ -240,3 +240,13 @@ Stage 8 (AI helper, tour, desktop app) was skipped by the user on 2026-11-16 ("d
 - 44 more presets (6 per vocal group + 8 Voice FX), 12 more synth instruments in 2 new groups.
 - Sample maker: steps, zoom to piece, move piece, BPM detect with beat and bar lengths, one slice per beat, low cut, high cut, crunch, fades, volume, normalize, loop. Tag maker: 12 extra sounds, several at once, repeat play, waveform of the result, tips.
 - Not tested this round: song export render (test browser was hidden, which pauses offline audio). renderSong was not changed.
+
+## 2.7.0 guided studio, mic fixes, readability
+- js/studioguide.js: Guided Studio (default, settings.studioMode 'guide' or 'full'). Steps: mic check (5 s test recording from E.mic.post, play plain or through the track chain), record, sound (presetsTab / fixTab), listen and save. Sticky player bar. Full studio has a Guided switch.
+- Gate worklet: hysteresis, 180 ms hold, closes to 6% instead of silence (no chopped words).
+- Squeal shield gentler (auto barely touches the sound), shieldNow() merges M.sh fine tuning (Trim lows, Trim highs, Wobble, Level cap) in micui shieldKnobs. Fix my squeal no longer turns on the gate and keeps effects.
+- Studio toolbar "I hear" picker; inspector voice path summary (style, effects, clean up, in your ears).
+- applyLook readability guard (text, dim, accent pushed until readable). Themed scrollbars.
+- Tours fold after 2 visits per page. goto('export') opens the export window. Key handlers tolerate non-element targets.
+- Testing rule: suspend E.ctx or zero the master before any browser test, so nothing plays out loud.
+- Verified: all 16 pages open without errors, export renders (test song 15 s, 2.7 MB WAV).

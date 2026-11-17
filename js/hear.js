@@ -3,7 +3,7 @@
 import { el, toast, knob } from './util.js';
 import { app, save, emit, on } from './state.js';
 import { E, applyMix, T, stop, resetNodes, micSettings, applyMicSettings, updateMonitor, clearNotches, openMic } from './engine.js';
-import { SHIELD_INFO, fixButton } from './micui.js';
+import { SHIELD_INFO, fixButton, shieldKnobs } from './micui.js';
 import { actionFor } from './keys.js';
 import { settings, saveSettings } from './store.js';
 
@@ -93,8 +93,9 @@ async function fill() {
           row('Hear myself', settings.monitor ? 'on' : 'off', !!settings.monitor, async () => { settings.monitor = !settings.monitor; saveSettings(); if (settings.monitor) await openMic().catch(() => { }); updateMonitor(); }),
           el('div', { class: 'fxlib' }, el('button', { class: 'chip' + (M.monFx ? ' on' : ''), onclick: async () => { set('monFx', true); await fill(); } }, 'With my effects'), el('button', { class: 'chip' + (!M.monFx ? ' on' : ''), onclick: async () => { set('monFx', false); await fill(); } }, 'Dry voice')),
           el('div', { class: 'fsub' }, 'Squeal shield'),
-          el('div', { class: 'fxlib' }, ...Object.entries(SHIELD_INFO).map(([k, [n]]) => el('button', { class: 'chip' + (M.shield === k ? ' on' : ''), onclick: async () => { set('shield', k); await fill(); } }, n))),
+          el('div', { class: 'fxlib' }, ...Object.entries(SHIELD_INFO).map(([k, [n]]) => el('button', { class: 'chip' + (M.shield === k ? ' on' : ''), onclick: async () => { delete M.sh; set('shield', k); await fill(); } }, n))),
           el('small', { class: 'hint' }, SHIELD_INFO[M.shield || 'auto'][1]),
+          shieldKnobs(M, (k, v) => { if (v === undefined) delete M[k]; else M[k] = v; saveSettings(); applyMicSettings(); }),
           knob('Volume', 0, 1.5, 0.01, M.monVol, v => { M.monVol = v; saveSettings(); updateMonitor(); }, v => Math.round(v * 100) + '%', null, 'dial sm'),
           row('I am on speakers', 'no headphones', !!M.speakers, async () => { M.speakers = !M.speakers; if (M.speakers) { M.shield = 'strong'; M.guard = true; settings.ec = true; } saveSettings(); applyMicSettings(); })),
         stop_(4, 'i-spk', 'Your speakers', 'Everything together, at the master volume. If a sound will not stop, Stop all sound clears it, echoes and all.', pill(!!M.guard, 'feedback guard on', 'feedback guard off'),

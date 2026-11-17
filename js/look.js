@@ -92,7 +92,12 @@ export const BUILT_IN_WORKSPACES = [
 let bgUrl = null;
 export async function applyLook() {
   const th = currentTheme(), root = document.documentElement;
-  for (const [k, v] of Object.entries(th.c)) root.style.setProperty('--' + k, v);
+  // readability guard: text colors that are too close to the background get pushed toward the main text color
+  const lumL = h => { const [r, g, b] = hex(h).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const contrast = (a, b) => { const A = lumL(a), B = lumL(b); return (Math.max(A, B) + 0.05) / (Math.min(A, B) + 0.05); };
+  const safe = { ...th.c };
+  for (const k of ['text', 'dim', 'led']) { if (!/^#[0-9a-f]{3,8}$/i.test(safe[k] || '')) continue; let t = 0; const goal = k === 'led' ? 3 : k === 'dim' ? 4 : 4.5, to = k === 'text' ? (lum(safe.bg) > 0.5 ? '#000000' : '#ffffff') : safe.text; while (contrast(safe[k], safe.panel || safe.bg) < goal && t < 1) { t += 0.1; safe[k] = mix(th.c[k], to, t); } }
+  for (const [k, v] of Object.entries(safe)) root.style.setProperty('--' + k, v);
   const see = look.see || 0;
   if (see > 0) for (const k of ['panel', 'console', 'nav', 'head', 'btn', 'panel2']) root.style.setProperty('--' + k, rgba(th.c[k], 1 - see));
   root.classList.toggle('light', lum(th.c.bg) > 0.5);

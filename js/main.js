@@ -145,6 +145,8 @@ function footer() {
 }
 
 export function goto(v) {
+  if (v === 'export') return openExport(); // export is a window, not a page
+  if (!VIEWS[v]) return;
   if (NEEDS_SONG.includes(v) && !app.P) { createSong(v === 'beat' ? false : null); return; }
   const was = app.view;
   app.view = v;
@@ -189,7 +191,7 @@ function frame() {
 // ---------- keyboard ----------
 window.addEventListener('keydown', e => {
   if (artKey(e)) return;
-  if (e.target.matches('input:not([type=range]):not([type=checkbox]), select, textarea')) return;
+  if (e.target.matches?.('input:not([type=range]):not([type=checkbox]), select, textarea')) return;
   if (document.querySelector('.modal-wrap')) return;
   const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey, act = actionFor(e, app.view);
   if (act === 'guide') { e.preventDefault(); openKeyGuide(app.view); return; }
@@ -213,7 +215,7 @@ window.addEventListener('keydown', e => {
   } else if (app.view === 'beat' && act === 'beatRec' && !e.repeat) { e.preventDefault(); goto('studio'); record(); }
 });
 window.addEventListener('keyup', e => {
-  if (app.view === 'beat' && !e.target.matches('input:not([type=range]), select, textarea')) beatKey(e.key.toLowerCase(), true, e);
+  if (app.view === 'beat' && !e.target.matches?.('input:not([type=range]), select, textarea')) beatKey(e.key.toLowerCase(), true, e);
 });
 window.addEventListener('beforeunload', () => { flush(); });
 // Stop the browser from opening a file dropped outside a drop zone

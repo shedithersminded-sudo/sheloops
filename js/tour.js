@@ -31,15 +31,19 @@ export const TOURS = {
     ['Text glow', 'Turn glow on and pick its color and strength.', '.glowpanel'],
     ['Mouse', 'Custom cursor, trails and click effects.', '.mpanel']]],
 };
+const counted = new Set(); // count each page once per visit to the app
 export function tourBanner(page) {
   const t = TOURS[page]; if (!t) return null;
+  // the full tour shows the first 2 times you open a page, then folds into one small line (click to open again)
+  const seen = settings.tourSeen ||= {};
+  if (!counted.has(page) && !(settings.hideTours || []).includes(page) && !(settings.showTours || []).includes(page)) { counted.add(page); seen[page] = (seen[page] || 0) + 1; if (seen[page] > 2) (settings.hideTours ||= []).push(page); saveSettings(); }
   const hidden = (settings.hideTours || []).includes(page);
   let lit = [];
   const light = sel => { unlight(); lit = [...document.querySelectorAll(sel)].slice(0, 3); lit.forEach(n => n.classList.add('tourlit')); if (lit[0]) lit[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' }); };
   const unlight = () => { lit.forEach(n => n.classList.remove('tourlit')); lit = []; };
   const box = el('div', { class: 'tour' + (hidden ? ' mini' : '') },
     el('div', { class: 'tourhead' }, el('span', { class: 'tourled' }), el('b', {}, t[0]), el('small', {}, hidden ? 'Quick tour (click to open)' : 'Hover a step to see where it is'),
-      el('button', { class: 'sq', title: hidden ? 'Show the tour' : 'Hide the tour', onclick: () => { const h = settings.hideTours ||= []; const i = h.indexOf(page); if (i >= 0) h.splice(i, 1); else h.push(page); saveSettings(); const nb = tourBanner(page); nb.dataset.page = page; box.replaceWith(nb); } }, hidden ? '▸' : '×')),
+      el('button', { class: 'sq', title: hidden ? 'Show the tour' : 'Hide the tour', onclick: () => { const h = settings.hideTours ||= [], sh = settings.showTours ||= []; const i = h.indexOf(page); if (i >= 0) { h.splice(i, 1); if (!sh.includes(page)) sh.push(page); } else { h.push(page); const j = sh.indexOf(page); if (j >= 0) sh.splice(j, 1); } saveSettings(); const nb = tourBanner(page); nb.dataset.page = page; box.replaceWith(nb); } }, hidden ? '▸' : '×')),
     hidden ? null : el('div', { class: 'toursteps' }, ...t[1].map(([title, text, sel], k) => el('button', { class: 'tourstep', style: `--k:${k}`, onpointerenter: () => light(sel), onpointerleave: unlight, onclick: () => { light(sel); setTimeout(unlight, 2400); } },
       el('span', { class: 'tnum' }, k + 1), el('span', { class: 'ttext' }, el('b', {}, title), el('small', {}, text))))));
   return box;

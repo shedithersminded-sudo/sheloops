@@ -2,7 +2,7 @@
 import { el, toast, knob, modal } from './util.js';
 import { helpBtn } from './help.js';
 import { on } from './state.js';
-import { CLICKS, click, ensureCtx } from './engine.js';
+import { CLICKS, click, ensureCtx, shieldNow, SHIELDS } from './engine.js';
 import { E, openMic, reopenMic, setInputGain, micSettings, applyMicSettings, clearNotches, updateMonitor, peakOf, rmsOf, fixSqueal } from './engine.js';
 import { settings, saveSettings } from './store.js';
 
@@ -76,8 +76,21 @@ export function micPanel(rerender) {
 export const SHIELD_INFO = { off: ['Off', 'Nothing added. Only for good headphones.'], auto: ['Auto', 'Light protection you will not notice. Turns itself up to Strong if a squeal keeps coming back.'], strong: ['Strong', 'For speakers or a room that keeps squealing. Trims the sharp highs, keeps your voice moving a tiny bit so a howl cannot build, and keeps the volume in check.'] };
 export function shieldPicker(M, set, rerender) {
   return el('div', { class: 'shieldpick' }, el('div', { class: 'micsect-t' }, 'Squeal shield', helpBtn('shield')),
-    el('div', { class: 'fxlib' }, ...Object.entries(SHIELD_INFO).map(([k, [n]]) => el('button', { class: 'chip' + (M.shield === k ? ' on' : ''), onclick: () => { set('shield', k); rerender(); } }, n))),
-    el('small', { class: 'hint' }, SHIELD_INFO[M.shield || 'auto'][1] + ' Works with your effects on too.'));
+    el('div', { class: 'fxlib' }, ...Object.entries(SHIELD_INFO).map(([k, [n]]) => el('button', { class: 'chip' + (M.shield === k ? ' on' : ''), onclick: () => { delete M.sh; set('shield', k); rerender(); } }, n))),
+    el('small', { class: 'hint' }, SHIELD_INFO[M.shield || 'auto'][1] + ' Works with your effects on too.'),
+    shieldKnobs(M, set));
+}
+// fine tune the shield: every part of it, in plain words
+export function shieldKnobs(M, set) {
+  const S = shieldNow(), put = (k, v) => { M.sh = { ...(M.sh || {}), [k]: v }; set('sh', M.sh); };
+  return el('details', { class: 'shieldtune' }, el('summary', {}, 'Fine tune the shield'),
+    el('div', { class: 'knobrow' },
+      knob('Trim lows', 20, 300, 1, S.hp, v => put('hp', v), v => Math.round(v) + ' Hz', null, 'dial sm'),
+      knob('Trim highs', 3000, 20000, 50, S.lp, v => put('lp', v), v => v >= 19500 ? 'off' : (v / 1000).toFixed(1) + ' kHz', null, 'dial sm'),
+      knob('Anti-howl wobble', 0, 0.0008, 0.00002, S.dep, v => put('dep', v), v => v ? Math.round(v / 0.0008 * 100) + '%' : 'off', null, 'dial sm'),
+      knob('Level cap', -30, 0, 0.5, S.thr, v => put('thr', v), v => v ? v + ' dB' : 'off', null, 'dial sm')),
+    el('small', { class: 'hint' }, 'Trim highs and Level cap stop most squeals. Wobble helps on speakers but can make your voice feel less steady, so keep it low. Picking Off, Auto or Strong resets these.'),
+    el('button', { onclick: () => { delete M.sh; set('sh', undefined); } }, 'Back to ' + (M.shield || 'auto')));
 }
 export function fixButton(rerender) {
   return el('button', { class: 'hot fixsqueal', onclick: async e => { e.currentTarget.disabled = true; const did = await fixSqueal(); toast('Fixed: ' + did.join(', ') + '.'); rerender && rerender(); } }, 'Fix my squeal');

@@ -18,17 +18,19 @@ class Cap extends AudioWorkletProcessor {
 registerProcessor('cap', Cap);
 class Gate extends AudioWorkletProcessor {
   static get parameterDescriptors() { return [{ name: 'threshold', defaultValue: -50 }, { name: 'on', defaultValue: 0 }]; }
-  constructor() { super(); this.env = 0; this.g = 1; }
+  constructor() { super(); this.env = 0; this.g = 1; this.hold = 0; this.open = true; }
   process(ins, outs, p) {
     const i = ins[0], o = outs[0];
     if (!i || !i.length) return true;
-    const on = p.on[0] > 0.5, th = Math.pow(10, p.threshold[0] / 20), n = o[0].length;
+    const on = p.on[0] > 0.5, th = Math.pow(10, p.threshold[0] / 20), n = o[0].length, holdN = sampleRate * 0.18;
     for (let s = 0; s < n; s++) {
       let m = 0;
       for (let c = 0; c < i.length; c++) { const v = Math.abs(i[c][s]); if (v > m) m = v; }
-      this.env = m > this.env ? m : this.env * 0.9997;
-      const target = (!on || this.env > th) ? 1 : 0;
-      this.g += (target - this.g) * (target > this.g ? 0.02 : 0.0008);
+      this.env = m > this.env ? m : this.env * 0.9996;
+      // opens above the line, stays open a moment, and only closes well below it (no fluttering)
+      if (this.env > th) { this.open = true; this.hold = holdN; } else if (this.env < th * 0.5) { if (this.hold > 0) this.hold--; else this.open = false; }
+      const target = (!on || this.open) ? 1 : 0.06;
+      this.g += (target - this.g) * (target > this.g ? 0.012 : 0.0003);
       for (let c = 0; c < o.length; c++) o[c][s] = (i[c] || i[0])[s] * this.g;
     }
     return true;
@@ -669,19 +671,20 @@ export function updateMonitor() {
 // ---------- mic sound settings ----------
 const MIC_DEF = { lowcut: 80, body: 0, mud: 0, presence: 0, air: 0, gate: false, gateDb: -50, denoise: 0, monVol: 0.8, monFx: true, speakers: false, guard: true, shield: 'auto' };
 // Squeal shield levels for what you hear. Off: untouched. Auto: light, you will not notice it. Strong: for speakers or a room that keeps squealing.
-export const SHIELDS = { off: { hp: 20, lp: 20000, dep: 0, thr: 0, cap: 1.5 }, auto: { hp: 90, lp: 12000, dep: 0.00025, thr: -14, cap: 1.2 }, strong: { hp: 170, lp: 6500, dep: 0.0007, thr: -26, cap: 0.7 } };
-const monLevel = () => { const M = micSettings(), S = SHIELDS[M.shield] || SHIELDS.auto; return Math.min(M.monVol, S.cap) * (M.speakers ? 0.5 : 1); };
+export const SHIELDS = { off: { hp: 20, lp: 20000, dep: 0, thr: 0, cap: 1.5 }, auto: { hp: 70, lp: 15000, dep: 0, thr: -8, cap: 1.2 }, strong: { hp: 130, lp: 9500, dep: 0.00012, thr: -16, cap: 0.85 } };
+export const shieldNow = () => { const M = micSettings(); return { ...(SHIELDS[M.shield] || SHIELDS.auto), ...(M.sh || {}) }; };
+const monLevel = () => { const M = micSettings(), S = shieldNow(); return Math.min(M.monVol, S.cap) * (M.speakers ? 0.6 : 1); };
 function applyShield() {
-  const m = E.mic; if (!m) return; const S = SHIELDS[micSettings().shield] || SHIELDS.auto, t = E.ctx.currentTime;
+  const m = E.mic; if (!m) return; const S = shieldNow(), t = E.ctx.currentTime;
   m.shHP.frequency.setTargetAtTime(S.hp, t, 0.02); m.shLP.frequency.setTargetAtTime(S.lp, t, 0.02); m.shDep.gain.setTargetAtTime(S.dep, t, 0.05);
-  m.shLim.threshold.setTargetAtTime(S.thr, t, 0.02); m.shLim.ratio.value = S.thr ? 20 : 1;
+  m.shLim.threshold.setTargetAtTime(S.thr, t, 0.02); m.shLim.ratio.value = S.thr ? 6 : 1; m.shLim.release.value = 0.25;
 }
 // One button that sets everything up the safe way, and says what it did
 export async function fixSqueal() {
-  const M = micSettings(); M.shield = 'strong'; M.guard = true; M.gate = true; M.monVol = Math.min(M.monVol, 0.6); M.lowcut = Math.max(M.lowcut, 120);
+  const M = micSettings(); M.shield = 'strong'; delete M.sh; M.guard = true; M.monVol = Math.min(M.monVol, 0.7); M.lowcut = Math.max(M.lowcut, 100);
   settings.ec = true; settings.nr = true; saveSettings();
   if (E.mic) { await reopenMic().catch(() => { }); } clearNotches(); applyMicSettings();
-  return ['Squeal shield: strong', 'Feedback guard: on', 'Echo cancel and noise suppression: on', 'Room gate: on', 'Hear myself volume: 60% or less', 'Low cut: 120 Hz or more'];
+  return ['Squeal shield: strong (you can fine tune it)', 'Feedback guard: on', 'Echo cancel and noise suppression: on', 'Hear myself volume: 70% or less', 'Low cut: 100 Hz or more', 'Your effects stay on'];
 }
 // always the same object (filled in place) so every panel edits the real settings
 export const micSettings = () => { const m = settings.mic ||= {}; for (const [k, v] of Object.entries(MIC_DEF)) if (m[k] === undefined) m[k] = v; return m; };
