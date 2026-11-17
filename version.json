@@ -1,16 +1,23 @@
 {
-  "version": "2.7.0",
+  "version": "2.7.1",
   "date": "2026-11-17",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "New Guided Studio: check your mic, record, make it sound good, then listen and save, one step at a time",
-    "Test your mic with a 5 second recording, plain or with your vocal style",
-    "Smoother mic gate, no more chopped words",
-    "Squeal shield is gentler and fully adjustable, and Fix my squeal keeps your effects on",
-    "Pick what you hear while recording: nothing, plain voice, or voice + effects",
-    "Easier to read colors, themed scrollbars, and page tips fold away after you have seen them"
+    "Echo and space controls: echo amount, how many repeats, echo speed, room amount and room size, plus one-click Dry, Just a little, Big echo and Endless"
   ],
   "history": [
+    {
+      "version": "2.7.0",
+      "date": "2026-11-17",
+      "notes": [
+        "New Guided Studio: check your mic, record, make it sound good, then listen and save, one step at a time",
+        "Test your mic with a 5 second recording, plain or with your vocal style",
+        "Smoother mic gate, no more chopped words",
+        "Squeal shield is gentler and fully adjustable, and Fix my squeal keeps your effects on",
+        "Pick what you hear while recording: nothing, plain voice, or voice + effects",
+        "Easier to read colors, themed scrollbars, and page tips fold away after you have seen them"
+      ]
+    },
     {
       "version": "2.6.1",
       "date": "2026-11-17",

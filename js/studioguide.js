@@ -3,7 +3,8 @@
 import { $, el, toast, fmtTime } from './util.js';
 import { helpBtn } from './help.js';
 import { app, save, emit, selTrack, newVocalTrack } from './state.js';
-import { E, T, ensureCtx, openMic, play, stop, nodeFor, micSettings, applyMicSettings, recState, recElapsed, currentPos } from './engine.js';
+import { E, T, ensureCtx, openMic, play, stop, nodeFor, micSettings, applyMicSettings, recState, recElapsed, currentPos, applyMix, setReverbSize } from './engine.js';
+import { knob, select } from './util.js';
 import { settings, saveSettings } from './store.js';
 import { micPanel } from './micui.js';
 import { presetsTab, previewBar, setRerender } from './fxui.js';
@@ -25,7 +26,7 @@ const vocal = () => {
 
 export function renderGuide(api) {
   const P = app.P, t = vocal(), step = settings.gStep || 'mic', idx = STEPS.findIndex(s => s[0] === step);
-  setRerender(() => renderGuide(api));
+  setRerender(() => renderGuide(api)); renderAgain = () => renderGuide(api);
   const view = $('#view'); view.innerHTML = '';
   const go = k => { settings.gStep = k; saveSettings(); renderGuide(api); };
   const stepper = el('div', { class: 'gsteps' }, ...STEPS.map(([k, n, w], i) => el('button', { class: 'gstep' + (k === step ? ' on' : '') + (i < idx ? ' done' : ''), onclick: () => go(k) },
@@ -123,9 +124,23 @@ function soundStep(t, api) {
       el('small', {}, 'Pick one vocal style first. Then add Enhance to polish it, and Voice FX for creative sounds. Use Preview to try before you keep it.'),
       el('div', { class: 'fxlib' }, tab('style', 'Vocal styles and effects'), tab('fix', 'Check my voice for problems'))),
     previewBar(t),
+    echoCard(t),
     el('div', { class: 'gcard' }, mode === 'fix' ? fixTab(t, () => api.rerender()) : presetsTab(t)));
 }
 
+// echo and room: how much your voice echoes and how big the room around it is
+export function echoCard(t) {
+  const M = app.P.master, pc = v => Math.round(v * 100) + '%';
+  return el('div', { class: 'gcard gecho' }, el('b', {}, 'Echo and space'), el('small', {}, 'How much your voice echoes, how many times, and how big the room sounds. Changes are heard right away.'),
+    el('div', { class: 'knobrow' },
+      knob('Echo amount', 0, 1, 0.01, t.dly || 0, v => { t.dly = v; applyMix(); save(); }, pc, 'delayFb', 'dial'),
+      knob('Echo repeats', 0, 0.85, 0.01, M.delayFb ?? 0.35, v => { M.delayFb = v; applyMix(); save(); }, v => v < 0.15 ? 'once' : v > 0.7 ? 'lots' : pc(v), 'delayFb', 'dial'),
+      el('label', { class: 'knob' }, el('span', { class: 'lab' }, 'Echo speed'), select([[2, 'Fast (1/8)'], [3, 'Bouncy (3/16)'], [4, 'Normal (1/4)'], [6, 'Slow (3/8)']], M.delayDiv || 4, v => { M.delayDiv = +v; applyMix(); save(); })),
+      knob('Room amount', 0, 1, 0.01, t.rev || 0, v => { t.rev = v; applyMix(); save(); }, pc, 'rev', 'dial'),
+      knob('Room size', 0.5, 6, 0.1, M.revSize || 2.5, v => { M.revSize = v; setReverbSize(v); save(); }, v => v.toFixed(1) + 's', 'revSize', 'dial')),
+    el('div', { class: 'fxlib' }, ...[['Dry', 0, 0.2, 0, 0.1], ['Just a little', 0.12, 0.3, 0.15, 0.3], ['Big echo', 0.35, 0.55, 0.2, 0.4], ['Endless', 0.45, 0.8, 0.3, 0.6]].map(([n, d, fb, r, rs]) => el('button', { class: 'chip', onclick: () => { t.dly = d; M.delayFb = fb; t.rev = r; applyMix(); save(); renderAgain(); } }, n))));
+}
+let renderAgain = () => { };
 // ---------- 4: listen and save ----------
 function saveStep(api) {
   return el('div', { class: 'gsave' },

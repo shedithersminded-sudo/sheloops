@@ -136,9 +136,9 @@ function footer() {
     el('span', { class: 'title' }, 'Master'),
     knob('Volume', 0, 1.2, 0.01, M.vol, v => { M.vol = v; applyMix(); save(); }, pct, 'master'),
     knob('Reverb size', 0.5, 6, 0.1, M.revSize, v => { M.revSize = v; setReverbSize(v); save(); }, v => v.toFixed(1) + 's', 'revSize', 'adv'),
-    el('label', { class: 'knob adv' }, el('span', { class: 'lab' }, el('span', {}, 'Delay time', helpBtn('delayTime'))),
+    el('label', { class: 'knob' }, el('span', { class: 'lab' }, el('span', {}, 'Echo speed', helpBtn('delayTime'))),
       select([[2, '1/8'], [3, '3/16'], [4, '1/4'], [6, '3/8']], M.delayDiv, v => { M.delayDiv = +v; applyMix(); save(); })),
-    knob('Delay repeats', 0, 0.85, 0.01, M.delayFb, v => { M.delayFb = v; applyMix(); save(); }, pct, 'delayFb', 'adv'),
+    knob('Echo repeats', 0, 0.85, 0.01, M.delayFb, v => { M.delayFb = v; applyMix(); save(); }, pct, 'delayFb'),
     el('canvas', { id: 'meter', width: 240, height: 14, title: 'Master level. Keep it out of the red.' }),
     el('span', { class: 'hint keyhint' }, app.view === 'beat' ? `Letters play the selected sound. Z and X change octave. ${keyOf('beatRec')} goes to record.` : `${keyOf('play')} play, ${keyOf('record')} record, ${keyOf('split')} split, ${keyOf('undo')} undo.`, el('button', { class: 'keylink', onclick: () => openKeyGuide(app.view, true) }, 'Change keys')),
   );
