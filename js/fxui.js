@@ -280,6 +280,10 @@ export function buildTab(t) {
 
 // ---------- Beat maker effects (per instrument or drum row) ----------
 const BEAT_RECIPES = [
+  { name: 'Chorus guitar', what: 'Shimmery chorus and a little room, the bedroom indie guitar sound.', fx: [['chorus', { rate: 0.6, depth: 0.55, mix: 0.45 }], ['room', { size: 1.8, tone: 7000, mix: 0.25 }]] },
+  { name: 'Wall of sound', what: 'Heavy, wide and dreamy, for shoegaze and alt metal guitars.', fx: [['dist', { drive: 0.6, tone: 3500, mix: 0.6 }], ['chorus', { rate: 0.3, depth: 0.5, mix: 0.3 }], ['shimmer', { size: 6, pitch: 12, mix: 0.3 }]] },
+  { name: 'Night drive', what: 'Smooth and dark with a long echo, for late night West Coast beats.', fx: [['filter', { mode: 0, cutoff: 4500, res: 1.5 }], ['delay', { time: 0.33, feedback: 0.35, tone: 3500, mix: 0.2 }]] },
+  { name: 'Vintage soul', what: 'Warm tape and a small room, like an old soul record.', fx: [['tape', { drive: 0.45, wow: 0.2, tone: 9000, mix: 1 }], ['room', { size: 1.5, tone: 6000, mix: 0.2 }]] },
   { name: 'Healing wash', what: 'Soft tape warmth, a gentle chorus and a shimmering space. Great on pads and keys.', fx: [['tape', { drive: 0.3, wow: 0.25, tone: 9000, mix: 1 }], ['chorus', { rate: 0.4, depth: 0.5, mix: 0.3 }], ['shimmer', { size: 6, pitch: 12, mix: 0.3 }]] },
   { name: 'Soft focus', what: 'Rounds off the top and adds a warm room, like hearing it through a wall.', fx: [['filter', { mode: 0, cutoff: 3500, res: 1 }], ['room', { size: 2.5, tone: 6000, mix: 0.3 }]] },
   { name: 'Euphoric gate', what: 'Trance-style rhythmic chop for pads and supersaws.', fx: [['gate', { rate: 8, pattern: 0, depth: 0.8 }], ['delay', { time: 0.33, feedback: 0.35, tone: 6000, mix: 0.2 }]] },

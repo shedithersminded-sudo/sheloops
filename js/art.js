@@ -14,6 +14,70 @@ export const FACES = {
 };
 export const DISC = { R: 697, HOLE: 89, HUB: 195, PRINT: 130 };
 export const FONTS = ['Anton', 'Bebas Neue', 'Playfair Display', 'Abril Fatface', 'Cinzel', 'Pacifico', 'Great Vibes', 'Lobster', 'Permanent Marker', 'Monoton', 'Righteous', 'Bungee', 'Press Start 2P', 'Rubik Glitch', 'UnifrakturMaguntia', 'Space Grotesk', 'Arial', 'Georgia', 'Impact', 'Courier New', 'Cascadia Mono'];
+// ---------- sticker looks: die-cut edge, finishes, peeling corner, wear ----------
+export const FINISHES = [['none', 'Plain print'], ['gloss', 'Gloss'], ['holo', 'Hologram'], ['gold', 'Gold foil'], ['silverfoil', 'Silver foil'], ['chrome', 'Chrome'], ['glitter', 'Glitter'], ['matte', 'Matte paper'], ['neon', 'Neon glow']];
+let artTime = null; // fixed time while exporting a GIF, otherwise the clock
+export const setArtTime = v => { artTime = v; };
+const artNow = () => artTime ?? performance.now();
+const HOLO_NAMES = ['limited', 'new', 'sparkle', 'star', 'crown'];
+export const stickerFx = l => l.sfx || (l.type === 'sticker' ? { outline: ['tape', 'barcode'].includes(l.name) ? 0 : 12, outlineColor: '#ffffff', finish: l.name === 'tape' ? 'none' : HOLO_NAMES.includes(l.name) ? 'holo' : 'gloss', shadow: l.name !== 'tape', peel: false, wear: 0 } : null);
+const mkc = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; };
+function seeded(n) { let x = n % 2147483647 || 7; return () => (x = x * 16807 % 2147483647) / 2147483647; }
+// draws a layer through its sticker look. draw(ctx) paints the plain layer centered at 0,0
+function drawStickerFx(g, l, fx, draw) {
+  const W = l.w, H = l.h, o = fx.outline || 0, pad = o + (fx.shadow ? 40 : 6), sc = Math.min(1, 1000 / Math.max(W + 2 * pad, H + 2 * pad));
+  const cw = (W + 2 * pad) * sc, ch = (H + 2 * pad) * sc, t = artNow();
+  const A = mkc(cw, ch), a = A.getContext('2d'); a.scale(sc, sc); a.translate(W / 2 + pad, H / 2 + pad); draw(a);
+  let B = A;
+  if (o > 0) { // die-cut edge: the shape grown outward in the edge color
+    const S = mkc(cw, ch), s2 = S.getContext('2d'); s2.drawImage(A, 0, 0); s2.globalCompositeOperation = 'source-in'; s2.fillStyle = fx.outlineColor || '#fff'; s2.fillRect(0, 0, cw, ch);
+    B = mkc(cw, ch); const b = B.getContext('2d'), r = o * sc;
+    for (let k = 0; k < 24; k++) { const an = k / 24 * Math.PI * 2; b.drawImage(S, Math.cos(an) * r, Math.sin(an) * r); }
+    b.drawImage(S, 0, 0); b.drawImage(A, 0, 0);
+  }
+  const b = B.getContext('2d');
+  if (fx.finish && fx.finish !== 'none') {
+    const C = mkc(cw, ch), c = C.getContext('2d'), R = seeded((l.id || 'x').split('').reduce((q, ch2) => q * 31 + ch2.charCodeAt(0), 7));
+    const sweep = (t / 4000) % 1, ang = (fx.angle ?? 35) * Math.PI / 180;
+    const lin = (stops, off = 0) => { const dx = Math.cos(ang) * cw, dy = Math.sin(ang) * ch, gr = c.createLinearGradient(cw / 2 - dx, ch / 2 - dy, cw / 2 + dx, ch / 2 + dy); stops.forEach(([p, col]) => gr.addColorStop(Math.min(1, Math.max(0, (p + off) % 1)), col)); return gr; };
+    let mode = 'screen';
+    if (fx.finish === 'gloss') { c.fillStyle = lin([[0.30, 'rgba(255,255,255,0)'], [0.42, 'rgba(255,255,255,.55)'], [0.5, 'rgba(255,255,255,0)'], [0.7, 'rgba(255,255,255,.12)'], [0.8, 'rgba(255,255,255,0)']]); c.fillRect(0, 0, cw, ch); }
+    else if (fx.finish === 'holo') {
+      const rb = ['#ff5ec8', '#ffb35e', '#fff35e', '#5effa0', '#5ed8ff', '#8c5eff', '#ff5ec8'];
+      c.fillStyle = lin(rb.map((col, i) => [i / (rb.length - 1) * 0.999, col]), sweep); c.globalAlpha = 0.55; c.fillRect(0, 0, cw, ch); c.globalAlpha = 1;
+      c.globalCompositeOperation = 'lighter'; c.fillStyle = lin([[0, 'rgba(255,255,255,0)'], [0.48, 'rgba(255,255,255,.7)'], [0.52, 'rgba(255,255,255,0)']], sweep * 1.7); c.fillRect(0, 0, cw, ch);
+      for (let i = 0; i < 120; i++) { const x = R() * cw, y = R() * ch, tw = 0.5 + 0.5 * Math.sin(t / 200 + i); c.fillStyle = `rgba(255,255,255,${0.8 * tw})`; const z = (1 + R() * 2) * sc * 3; c.fillRect(x, y, z, z); }
+      mode = 'overlay';
+    } else if (fx.finish === 'gold' || fx.finish === 'silverfoil' || fx.finish === 'chrome') {
+      const pal = fx.finish === 'gold' ? ['#7a5a12', '#f7e08a', '#b8862b', '#fff2c2', '#8a6416'] : fx.finish === 'silverfoil' ? ['#6f747c', '#f4f6fa', '#a3a8b1', '#ffffff', '#7d828a'] : ['#1a1c20', '#e9edf3', '#3a3f47', '#ffffff', '#20232a'];
+      c.fillStyle = lin(pal.map((col, i) => [i / (pal.length - 1) * 0.999, col]), sweep * 0.5); c.fillRect(0, 0, cw, ch); mode = fx.finish === 'chrome' ? 'luminosity' : 'color';
+      // foil keeps the print, it just turns it metal: second pass adds the shine
+      const D = mkc(cw, ch), d2 = D.getContext('2d'); d2.fillStyle = lin([[0.35, 'rgba(255,255,255,0)'], [0.45, 'rgba(255,255,255,.6)'], [0.55, 'rgba(255,255,255,0)']], sweep); d2.fillRect(0, 0, cw, ch); d2.globalCompositeOperation = 'destination-in'; d2.drawImage(B, 0, 0);
+      c.globalCompositeOperation = 'destination-in'; c.drawImage(B, 0, 0); b.save(); b.globalCompositeOperation = mode; b.drawImage(C, 0, 0); b.globalCompositeOperation = 'screen'; b.drawImage(D, 0, 0); b.restore();
+      mode = null;
+    } else if (fx.finish === 'glitter') { for (let i = 0; i < 900; i++) { const x = R() * cw, y = R() * ch, tw = 0.4 + 0.6 * Math.abs(Math.sin(t / 300 + i * 1.7)); c.fillStyle = i % 5 ? `rgba(255,255,255,${0.7 * tw})` : `hsla(${R() * 360},100%,70%,${tw})`; const z = (0.6 + R() * 1.6) * sc * 4; c.fillRect(x, y, z, z); } }
+    else if (fx.finish === 'matte') { c.fillStyle = 'rgba(128,128,128,.18)'; c.fillRect(0, 0, cw, ch); for (let i = 0; i < 1500; i++) { c.fillStyle = `rgba(${R() < 0.5 ? 255 : 0},${R() < 0.5 ? 255 : 0},${R() < 0.5 ? 255 : 0},.05)`; c.fillRect(R() * cw, R() * ch, 2, 2); } mode = 'soft-light'; }
+    else if (fx.finish === 'neon') { c.fillStyle = fx.outlineColor || '#ff5ca8'; c.fillRect(0, 0, cw, ch); mode = null; b.save(); b.shadowColor = fx.outlineColor || '#ff5ca8'; b.shadowBlur = 40 * sc; b.globalCompositeOperation = 'destination-over'; b.drawImage(B, 0, 0); b.restore(); }
+    if (mode) { c.globalCompositeOperation = 'destination-in'; c.drawImage(B, 0, 0); b.save(); b.globalCompositeOperation = mode; b.drawImage(C, 0, 0); b.restore(); }
+  }
+  if (fx.wear > 0) { // scuffs and missing specks, like a sticker that has been through a lot
+    const R = seeded(99 + Math.round(l.x)); b.save(); b.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 260 * fx.wear; i++) { b.globalAlpha = 0.3 + R() * 0.7; const x = R() * cw, y = R() * ch; b.beginPath(); b.arc(x, y, (0.6 + R() * 2.4) * sc * 3, 0, 7); b.fill(); }
+    b.lineWidth = 1.5 * sc; for (let i = 0; i < 30 * fx.wear; i++) { const x = R() * cw, y = R() * ch, a2 = R() * Math.PI; b.globalAlpha = 0.5; b.beginPath(); b.moveTo(x, y); b.lineTo(x + Math.cos(a2) * 60 * sc, y + Math.sin(a2) * 60 * sc); b.stroke(); }
+    b.restore();
+  }
+  if (fx.peel) { // a corner lifting off: cut the corner, then draw the paper curling back
+    const k = Math.min(cw, ch) * 0.22, x1 = (pad + W) * sc + o * sc, y1 = (pad + H) * sc + o * sc;
+    b.save(); b.globalCompositeOperation = 'destination-out'; b.beginPath(); b.moveTo(x1 - k, y1 + 2); b.lineTo(x1 + 2, y1 - k); b.lineTo(x1 + 2, y1 + 2); b.closePath(); b.fill(); b.restore();
+    b.save(); b.shadowColor = 'rgba(0,0,0,.35)'; b.shadowBlur = 14 * sc; b.shadowOffsetX = -4 * sc; b.shadowOffsetY = -4 * sc;
+    const gr = b.createLinearGradient(x1 - k, y1 - k, x1, y1); gr.addColorStop(0, '#d9dce2'); gr.addColorStop(1, '#ffffff');
+    b.fillStyle = gr; b.beginPath(); b.moveTo(x1 - k, y1); b.quadraticCurveTo(x1 - k * 0.9, y1 - k * 0.9, x1, y1 - k); b.lineTo(x1 - k * 0.25, y1 - k * 0.25); b.closePath(); b.fill(); b.restore();
+  }
+  g.save();
+  if (fx.shadow) { g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 22; g.shadowOffsetY = 8; }
+  g.drawImage(B, -W / 2 - pad, -H / 2 - pad, W + 2 * pad, H + 2 * pad);
+  g.restore();
+}
 export const STICKERS = { advisory: 'Parental advisory', explicit: 'E (explicit)', star: 'Star', heart: 'Heart', sparkle: 'Sparkle', crown: 'Crown', flame: 'Flame', note: 'Music note', new: 'NEW badge', limited: 'Limited edition', bonus: 'Bonus tracks', barcode: 'Barcode', cd: 'Compact disc logo', tape: 'Tape strip' };
 
 // ---------- defaults ----------
@@ -29,17 +93,18 @@ export const newFace = (bg = { type: 'color', c1: '#111111', c2: '#333333', angl
 export function newDesign(name = 'New design') {
   return {
     id: uid(), name, created: Date.now(), updated: Date.now(), template: false, unfinished: true,
-    faces: { cover: newFace(), back: newFace(), disc: newFace({ type: 'none', c1: '#ffffff', c2: '#dddddd', angle: 135 }), booklet: newFace(), mdlabel: newFace({ type: 'color', c1: '#111111', c2: '#333333', angle: 135 }) },
+    faces: { cover: newFace(), back: newFace(), disc: newFace({ type: 'none', c1: '#ffffff', c2: '#dddddd', angle: 135 }), booklet: newFace(), mdlabel: newFace({ type: 'color', c1: '#f4f1ea', c2: '#f4f1ea', angle: 135 }) },
     disc: { material: 'silver', color: '#c0c4cc', hub: 'clear', hubColor: '#ffffff', seed: Math.floor(Math.random() * 1e9), cond: { scratches: 0, cracks: 0, chips: 0, wear: 0, dirt: 0, dust: 0, fade: 0, age: 0, shine: 0.2 } },
     caseStyle: { style: 'clear', color: '#ff5ca8' },
     mock: { ...MOCK_DEFAULTS },
   };
 }
-export const MOCK_DEFAULTS = { format: 'cdcase', bg: '#050505', transparent: false, shell: '#ff6f9f', shellAlpha: 0.5, shutter: 'metal', insert: true, glare: 0.6, sparkle: 0.35, shellText: '', mdDisc: 'silver' };
+export const MOCK_DEFAULTS = { format: 'cdcase', bg: '#050505', transparent: false, shell: '#ff6f9f', shellAlpha: 0.5, shutter: 'metal', insert: true, glare: 0.6, sparkle: 0.35, shellText: '', mdDisc: 'silver', paper: 'satin' };
 // Older designs: add anything missing
 export function ensureDesign(d) {
-  d.faces.mdlabel ||= newFace({ type: 'color', c1: '#111111', c2: '#333333', angle: 135 });
-  d.mock = { ...MOCK_DEFAULTS, ...(d.mock || {}) };
+  d.faces.mdlabel ||= newFace({ type: 'color', c1: '#f4f1ea', c2: '#f4f1ea', angle: 135 });
+  { const f = d.faces.mdlabel; if (!f.layers.length && f.bg.c1 === '#111111' && f.bg.c2 === '#333333') f.bg = { type: 'color', c1: '#f4f1ea', c2: '#f4f1ea', angle: 135 }; } // old untouched black label: make it paper
+  d.mock ||= {}; for (const k in MOCK_DEFAULTS) if (!(k in d.mock)) d.mock[k] = MOCK_DEFAULTS[k]; // fill in place: panels keep editing the same object
   return d;
 }
 
@@ -62,7 +127,7 @@ export async function artImage(id) {
   const a = await loadAnim('art:' + id, d.blob); imgCache.set(id, a); return frameOf(a);
 }
 // true when a design uses a moving picture (GIF), so editors and the CD player keep redrawing it
-export const designMoves = (design, face) => Object.entries(design.faces || {}).some(([k, f]) => (!face || k === face) && f.layers.some(l => l.type === 'image' && !l.hidden && isMoving(imgCache.get(l.src))));
+export const designMoves = (design, face) => Object.entries(design.faces || {}).some(([k, f]) => (!face || k === face) && f.layers.some(l => !l.hidden && (l.type === 'image' && isMoving(imgCache.get(l.src)) || ['holo', 'glitter', 'gold', 'silverfoil', 'chrome'].includes((stickerFx(l) || {}).finish))));
 export async function preload(design) {
   ensureDesign(design);
   const ids = new Set();
@@ -188,7 +253,10 @@ function drawImage(g, l, img, editor) {
 export function drawLayer(g, l, editor) {
   if (l.hidden) return;
   g.save(); g.translate(l.x, l.y); g.rotate(l.rot * Math.PI / 180); g.globalAlpha *= l.opacity;
-  if (l.type === 'image') drawImage(g, l, frameOf(imgCache.get(l.src)), editor);
+  const sfx = stickerFx(l);
+  if (l.type === 'image' && sfx && l.src) drawStickerFx(g, l, sfx, c => drawImage(c, l, frameOf(imgCache.get(l.src), artNow()), editor));
+  else if (l.type === 'sticker' && sfx) drawStickerFx(g, l, sfx, c => drawSticker(c, l));
+  else if (l.type === 'image') drawImage(g, l, frameOf(imgCache.get(l.src), artNow()), editor);
   else if (l.type === 'text') drawText(g, l);
   else if (l.type === 'shape') drawShape(g, l);
   else if (l.type === 'sticker') drawSticker(g, l);

@@ -51,7 +51,7 @@ function logoFontPanel() {
 function themesPanel() {
   const cur = currentTheme();
   const card = t => el('button', { class: 'themecard' + (t.id === look.theme ? ' on' : ''), style: `--tb:${t.c.bg};--tp:${t.c.panel};--ta:${t.c.led};--tt:${t.c.text}`, onclick: async () => { look.theme = t.id; saveLook(); await applyLook(); redraw(); } },
-    el('div', { class: 'swatch' }, el('i', { style: `background:${t.c.panel}` }), el('i', { style: `background:${t.c.led}` }), ...(t.tracks || []).slice(0, 5).map(c => el('i', { style: `background:${c}` }))),
+    el('div', { class: 'tswatch', style: `background:linear-gradient(90deg, ${[t.c.led, ...(t.tracks || []).slice(1, 6)].map((c, i, a) => `${c} ${i / a.length * 100}% ${(i + 1) / a.length * 100}%`).join(', ')})` }),
     el('b', {}, t.name), t.builtin ? null : el('small', {}, 'mine'));
   const editor = !cur.builtin ? themeEditor(cur) : el('p', { class: 'hint' }, 'Built-in themes cannot be changed. Click Copy to edit, then change any color.');
   return el('div', { class: 'panel mpanel' },
@@ -151,7 +151,7 @@ function cursorPanel() {
       prev ? el('div', { class: 'curprev' }, el('img', { src: prev.url, alt: '' }), el('span', { class: 'hint' }, 'Move the mouse here to try it')) : null),
     c.on ? [
       el('div', { class: 'insp-sub' }, 'Design'),
-      chips([['dot', 'Dot'], ['ring', 'Ring'], ['cross', 'Crosshair'], ['arrow', 'Arrow'], ['star', 'Star'], ['heart', 'Heart'], ['note', 'Music note'], ['image', 'My picture']], c.design, async v => {
+      chips([['dot', 'Dot'], ['ring', 'Ring'], ['cross', 'Crosshair'], ['target', 'Target'], ['arrow', 'Arrow'], ['pixel', 'Pixel arrow'], ['star', 'Star'], ['sparkle4', 'Sparkle'], ['heart', 'Heart'], ['diamond', 'Diamond'], ['bolt', 'Lightning'], ['flower', 'Flower'], ['note', 'Music note'], ['vinyl', 'Vinyl record'], ['mic', 'Microphone'], ['image', 'My picture']], c.design, async v => {
         if (v === 'image' && !c.image) {
           const f = await pickFile('image/*'); if (!f) return;
           const url = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
@@ -169,10 +169,11 @@ function cursorPanel() {
         knob('Glow', 0, 1, 0.01, c.glow, v => set('glow', v, false), v => Math.round(v * 100) + '%'),
         el('label', { class: 'num' }, 'Animation', select([['none', 'None'], ['pulse', 'Pulse'], ['spin', 'Spinning ring'], ['orbit', 'Orbiting dot'], ['breathe', 'Breathing glow']], c.anim, v => set('anim', v, false)))),
       el('div', { class: 'insp-sub' }, 'Trail (follows the mouse)'),
-      chips([['none', 'None'], ['dots', 'Dots'], ['sparkle', 'Sparkles'], ['line', 'Line'], ['comet', 'Comet'], ['rainbow', 'Rainbow'], ['notes', 'Music notes'], ['bubbles', 'Bubbles']], c.trail, v => set('trail', v)),
+      chips([['none', 'None'], ['dots', 'Dots'], ['sparkle', 'Sparkles'], ['line', 'Line'], ['comet', 'Comet'], ['rainbow', 'Rainbow'], ['notes', 'Music notes'], ['hearts', 'Hearts'], ['stars2', 'Stars'], ['bubbles', 'Bubbles'], ['smoke', 'Smoke'], ['pixels', 'Pixels'], ['fire', 'Fire']], c.trail, v => set('trail', v)),
       c.trail !== 'none' ? knob('Trail length', 150, 1500, 10, c.trailLen || 450, v => set('trailLen', v, false), v => (v / 1000).toFixed(2) + 's') : null,
       el('div', { class: 'insp-sub' }, 'Click effect'),
-      chips([['none', 'None'], ['ripple', 'Ripple'], ['burst', 'Burst'], ['shockwave', 'Shockwave'], ['stars', 'Stars'], ['notes', 'Music notes'], ['confetti', 'Confetti']], c.click, v => set('click', v)),
+      chips([['none', 'None'], ['ripple', 'Ripple'], ['burst', 'Burst'], ['shockwave', 'Shockwave'], ['stars', 'Stars'], ['hearts', 'Hearts'], ['notes', 'Music notes'], ['pixels', 'Pixels'], ['fireworks', 'Fireworks'], ['confetti', 'Confetti']], c.click, v => set('click', v)),
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!c.rainbow, onchange: e => set('rainbow', e.target.checked, false) }), 'Rainbow colors for trails and clicks'),
       el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!c.spot, onchange: e => set('spot', e.target.checked, false) }), 'Spotlight: a soft glow that follows the mouse'),
       el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: c.safe, onchange: e => set('safe', e.target.checked, false) }), 'Use the normal cursor on the timeline, drum grid, piano roll and faders (recommended)', helpBtn('cursorSafe')),
     ] : null);

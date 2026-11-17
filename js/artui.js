@@ -3,10 +3,12 @@ import { $, el, clamp, toast, ask, confirmBox, modal, select, download, safeName
 import { helpBtn } from './help.js';
 import { app, flush, emit } from './state.js';
 import { db } from './store.js';
+import { FINISHES, stickerFx, drawLayer } from './art.js';
+import { FINISH as PFINISH, WEAR as PWEAR, plasticOf, plasticStyle } from './plastic.js';
 import { FACES, DISC, FONTS, STICKERS, MATERIALS, CONDITIONS, COND_KEYS, newDesign, newLayer, listDesigns, saveDesign, deleteDesign, listArt, addArt, artImage, preload, designMoves, renderFace, measureText, faceCanvas, canvasBlob, printSheet } from './art.js';
 import { COLLECTIONS, fromCollection } from './artcollections.js';
 import { PATTERNS, ensureDesign } from './art.js';
-import { renderMockup } from './mockup.js';
+const FORMATS_3D = [['cdcase', 'CD in a jewel case'], ['slim', 'Colored slim case'], ['sleeve', 'Card sleeve'], ['fan', 'Stack of cases'], ['disc', 'Disc only'], ['minidisc', 'MiniDisc'], ['wallet', 'CD book'], ['spindle', 'Spindle stack'], ['pile', 'Pile of discs']];
 import { refreshDisc } from './nowplaying.js';
 
 const S = { d: null, face: 'cover', sel: null, preview: false, undo: [], redo: [], lastTouch: 0, scale: 0.4 };
@@ -38,6 +40,7 @@ async function renderGallery() {
   view.append(el('div', { class: 'artgallery' },
     el('div', { class: 'ptop' }, el('h1', {}, 'My cover art'), helpBtn('coverArt'),
       el('button', { class: 'hot', onclick: async () => { const d = newDesign(app.P ? app.P.name : 'New design'); await saveDesign(d); openDesign(d); } }, 'New blank design'),
+      el('button', { onclick: () => openDesignFile() }, 'Open a design file'),
       el('button', { onclick: uploadPics }, 'Upload pictures')),
     el('h2', { class: 'h2' }, 'Start from a collection'), el('p', { class: 'hint' }, 'Each one is a full CD package (front, back, disc, case) with a frame for your own picture.'), collGrid,
     el('h2', { class: 'h2' }, 'My designs'),
@@ -201,16 +204,43 @@ function addPanel() {
     el('button', { onclick: () => add('text', { text: S.face === 'disc' ? 'TITLE' : (app.P ? app.P.name : 'TITLE'), color: S.face === 'disc' ? '#111111' : '#ffffff' }) }, 'Text'),
     el('button', { onclick: () => add('text', { text: app.P && app.P.artist ? app.P.artist : 'ARTIST', font: 'Space Grotesk', size: 70, color: S.face === 'disc' ? '#111111' : '#ffffff' }) }, 'Artist name'),
     el('div', { class: 'insp-sub' }, 'Shapes'),
-    el('div', { class: 'addgrid' }, [['rect', 'Box'], ['circle', 'Circle'], ['ring', 'Ring'], ['line', 'Line'], ['star', 'Star'], ['heart', 'Heart']].map(([k, n]) => el('button', { onclick: () => add('shape', { shape: k, h: k === 'line' ? 8 : 400, w: k === 'line' ? 900 : 400 }) }, n))),
+    el('div', { class: 'addgrid thumbs' }, [['rect', 'Box'], ['circle', 'Circle'], ['ring', 'Ring'], ['line', 'Line'], ['star', 'Star'], ['heart', 'Heart']].map(([k, n]) => el('button', { class: 'tthumb', title: n, onclick: () => add('shape', { shape: k, h: k === 'line' ? 8 : 400, w: k === 'line' ? 900 : 400 }) }, thumb('s:' + k, newLayer('shape', { shape: k, h: k === 'line' ? 40 : 400, w: 400 })), el('span', {}, n)))),
     el('div', { class: 'insp-sub' }, 'Patterns'),
-    el('div', { class: 'addgrid' }, Object.entries(PATTERNS).map(([k, n]) => el('button', { onclick: () => { const F = FACES[S.face]; add('pattern', { kind: k, w: F.w, h: F.h, circle: S.face === 'disc' }); } }, n))),
+    el('div', { class: 'addgrid thumbs' }, Object.entries(PATTERNS).map(([k, n]) => el('button', { class: 'tthumb', title: n, onclick: () => { const F = FACES[S.face]; add('pattern', { kind: k, w: F.w, h: F.h, circle: S.face === 'disc' }); } }, thumb('p:' + k, newLayer('pattern', { kind: k, w: 600, h: 600, seed: 7 })), el('span', {}, n)))),
     el('div', { class: 'insp-sub' }, 'Stickers'),
-    el('div', { class: 'addgrid' }, Object.entries(STICKERS).map(([k, n]) => el('button', { title: n, onclick: () => add('sticker', { name: k, w: ['advisory', 'limited', 'bonus', 'barcode', 'tape', 'new', 'cd'].includes(k) ? 360 : 220, h: k === 'advisory' ? 210 : k === 'tape' ? 90 : k === 'barcode' ? 170 : 220, color: k === 'barcode' ? '#000' : '#ffd23f' }) }, n))),
+    el('button', { class: 'hot', onclick: async () => { const fs = await pickFiles('image/*', true); for (const f of fs) { try { const id = await addArt(f); const a = await artImage(id); const k = 420 / Math.max(a.width, a.height); add('image', { src: id, w: a.width * k, h: a.height * k, sfx: { outline: 14, outlineColor: '#ffffff', finish: 'holo', shadow: true, peel: false, wear: 0 } }); } catch { toast('Could not read ' + f.name); } } } }, '+ Upload my own sticker'),
+    el('small', { class: 'hint' }, 'PNGs with a see-through background get a perfect die-cut edge. GIFs keep moving.'),
+    el('div', { class: 'addgrid thumbs' }, Object.entries(STICKERS).map(([k, n]) => el('button', { class: 'tthumb', title: n, onclick: () => add('sticker', { name: k, w: ['advisory', 'limited', 'bonus', 'barcode', 'tape', 'new', 'cd'].includes(k) ? 360 : 220, h: k === 'advisory' ? 210 : k === 'tape' ? 90 : k === 'barcode' ? 170 : 220, color: k === 'barcode' ? '#000' : '#ffd23f' }) }, thumb('k:' + k, newLayer('sticker', { name: k, w: ['advisory', 'limited', 'bonus', 'barcode', 'tape', 'new', 'cd'].includes(k) ? 360 : 220, h: k === 'advisory' ? 210 : k === 'tape' ? 90 : k === 'barcode' ? 170 : 220, color: k === 'barcode' ? '#000' : '#ffd23f' })), el('span', {}, n)))),
     el('div', { class: 'insp-sub' }, 'Text blocks'),
     el('button', { onclick: async () => add('tracklist', { items: await songTitles() }) }, 'Track list'),
     el('button', { onclick: () => add('text', { text: `(c) ${new Date().getFullYear()} ${app.P && app.P.artist ? app.P.artist : 'Artist'}. All rights reserved.`, font: 'Space Grotesk', size: 30, w: 1000 }) }, 'Copyright line'),
     el('button', { onclick: () => add('text', { text: 'A short line about this album.', font: 'Playfair Display', size: 40, italic: true, w: 1000 }) }, 'Description'),
     el('button', { onclick: () => add('text', { text: 'LOGO', font: 'Monoton', size: 120 }) }, 'Logo text'));
+}
+function stickerLook(l, set) {
+  const fx = stickerFx(l) || { outline: 14, outlineColor: '#ffffff', finish: 'gloss', shadow: true, peel: false, wear: 0 };
+  const put = (k, v) => { touch(); l.sfx = { ...fx, [k]: v }; changed(); renderSide(); };
+  const range = (label, k, min, max, step, fmt) => { const out = el('span', { class: 'val' }, fmt(fx[k] ?? 0)); const i = el('input', { type: 'range', min, max, step, value: fx[k] ?? 0 }); i.oninput = () => { touch(); l.sfx = { ...fx, [k]: +i.value }; fx[k] = +i.value; out.textContent = fmt(+i.value); changed(); }; return el('label', { class: 'knob' }, el('span', { class: 'lab' }, el('span', {}, label), out), i); };
+  return [
+    el('div', { class: 'insp-sub' }, 'Sticker look', helpBtn('stickerLook')),
+    el('div', { class: 'finishes' }, ...FINISHES.map(([k, n]) => el('button', { class: 'finish f-' + k + (fx.finish === k ? ' on' : ''), onclick: () => put('finish', k) }, el('i'), n))),
+    range('Die-cut edge', 'outline', 0, 60, 1, v => v ? v + 'px' : 'off'),
+    fx.outline || fx.finish === 'neon' ? el('label', { class: 'num' }, fx.finish === 'neon' ? 'Glow color' : 'Edge color', el('input', { type: 'color', value: fx.outlineColor || '#ffffff', oninput: e => { touch(); l.sfx = { ...fx, outlineColor: e.target.value }; fx.outlineColor = e.target.value; changed(); } })) : null,
+    ['holo', 'gloss', 'gold', 'silverfoil', 'chrome'].includes(fx.finish) ? range('Shine angle', 'angle', 0, 180, 1, v => v + '°') : null,
+    range('Worn', 'wear', 0, 1, 0.01, v => v ? Math.round(v * 100) + '%' : 'new'),
+    el('div', { class: 'pbtns' },
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!fx.shadow, onchange: e => put('shadow', e.target.checked) }), 'Shadow'),
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!fx.peel, onchange: e => put('peel', e.target.checked) }), 'Peeling corner')),
+    l.type === 'image' ? el('button', { onclick: () => { touch(); delete l.sfx; l.isSticker = false; changed(); renderSide(); } }, 'Make it a normal picture again') : null];
+}
+// small live previews of shapes, patterns and stickers for the tool panel
+const thumbCache = new Map();
+function thumb(key, layer) {
+  if (thumbCache.has(key)) return thumbCache.get(key).cloneNode(true);
+  const c = document.createElement('canvas'); c.width = c.height = 120; const g = c.getContext('2d');
+  const sc = 92 / Math.max(layer.w, layer.h); g.translate(60, 60); g.scale(sc, sc);
+  try { drawLayer(g, { ...layer, x: 0, y: 0, rot: 0, opacity: 1, hidden: false }); } catch { }
+  const img = el('img', { src: c.toDataURL(), alt: '' }); thumbCache.set(key, img); return img.cloneNode(true);
 }
 function fitPic(id) { const F = FACES[S.face]; return S.face === 'disc' ? { w: 1394, h: 1394, x: 697, y: 697 } : { w: F.w, h: F.h }; }
 async function choosePicture(cb) {
@@ -252,7 +282,8 @@ function renderSide() {
       el('div', { class: 'insp-sub' }, 'Filters and color'),
       num('Brightness', 'filters.bright', 0, 200, 1, l.filters.bright, v => v + '%'), num('Contrast', 'filters.contrast', 0, 200, 1, l.filters.contrast, v => v + '%'), num('Saturation', 'filters.sat', 0, 200, 1, l.filters.sat, v => v + '%'),
       num('Hue', 'filters.hue', -180, 180, 1, l.filters.hue, v => v + '°'), num('Blur', 'filters.blur', 0, 30, 0.5, l.filters.blur, v => v + 'px'), num('Black and white', 'filters.gray', 0, 100, 1, l.filters.gray, v => v + '%'), num('Sepia', 'filters.sepia', 0, 100, 1, l.filters.sepia, v => v + '%'),
-      chk('Shadow', 'shadow.on', l.shadow.on), l.shadow.on ? num('Shadow size', 'shadow.blur', 0, 120, 1, l.shadow.blur) : null];
+      chk('Shadow', 'shadow.on', l.shadow.on), l.shadow.on ? num('Shadow size', 'shadow.blur', 0, 120, 1, l.shadow.blur) : null,
+      ...(l.sfx ? stickerLook(l, set) : [el('button', { class: 'hot', onclick: () => { touch(); l.sfx = { outline: 14, outlineColor: '#ffffff', finish: 'holo', shadow: true, peel: false, wear: 0 }; changed(); renderSide(); } }, 'Turn this picture into a sticker')])];
     if (l.type === 'text') props = [
       el('textarea', { class: 'textin', rows: 2, value: l.text, oninput: e => set('text', e.target.value) }),
       el('label', { class: 'num' }, 'Font', select(FONTS, l.font, async v => { await document.fonts.load(`40px "${v}"`).catch(() => { }); set('font', v); })),
@@ -267,7 +298,7 @@ function renderSide() {
       el('button', { onclick: () => { set('fill', ''); renderSide(); } }, 'No fill'),
       num('Outline', 'strokeW', 0, 60, 1, l.strokeW), l.strokeW ? col('Outline color', 'stroke', l.stroke || '#ffffff') : null,
       l.shape === 'rect' ? num('Round corners', 'radius', 0, 400, 1, l.radius) : null];
-    if (l.type === 'sticker') props = [el('label', { class: 'num' }, 'Sticker', select(Object.entries(STICKERS), l.name, v => set('name', v))), ['advisory', 'explicit', 'barcode'].includes(l.name) ? null : col('Color', 'color', l.color)];
+    if (l.type === 'sticker') props = [el('label', { class: 'num' }, 'Sticker', select(Object.entries(STICKERS), l.name, v => set('name', v))), ['advisory', 'explicit', 'barcode'].includes(l.name) ? null : col('Color', 'color', l.color), ...stickerLook(l, set)];
     if (l.type === 'tracklist') props = [
       el('textarea', { class: 'textin', rows: 6, value: l.items.join('\n'), oninput: e => { set('items', e.target.value.split('\n')); } }),
       el('button', { onclick: async () => { touch(); l.items = await songTitles(); changed(); renderSide(); } }, 'Fill from my songs'),
@@ -354,41 +385,100 @@ function case3d(url, w, h, hinge) {
   const f = (cls, style, ...kids) => el('div', { class: 'cf ' + cls, style }, ...kids);
   return el('div', { class: 'obj case3d', style: `--w:${w}px;--h:${h}px;--t:${T}px` },
     el('div', { class: 'tilt' },
-      f('front', `width:${w}px;height:${h}px;transform:translateZ(${T / 2}px)`, el('img', { src: url, alt: '', draggable: 'false' }), el('div', { class: 'glass' }), hinge ? el('div', { class: 'hinge' }) : null, el('div', { class: 'cracks' })),
-      f('back', `width:${w}px;height:${h}px;transform:rotateY(180deg) translateZ(${T / 2}px)`, el('img', { class: 'thru', src: url, alt: '', draggable: 'false' }), el('div', { class: 'glass' })),
+      f('front', `width:${w}px;height:${h}px;transform:translateZ(${T / 2}px)`, el('img', { src: url, alt: '', draggable: 'false' }), el('div', { class: 'ptint' }), el('div', { class: 'pfin' }), el('div', { class: 'glass' }), el('div', { class: 'pwear' }), hinge ? el('div', { class: 'hinge' }) : null, el('div', { class: 'cracks' })),
+      f('back', `width:${w}px;height:${h}px;transform:rotateY(180deg) translateZ(${T / 2}px)`, el('img', { class: 'thru', src: url, alt: '', draggable: 'false' }), el('div', { class: 'ptint' }), el('div', { class: 'pfin' }), el('div', { class: 'glass' }), el('div', { class: 'pwear' })),
       f('side', `width:${T}px;height:${h}px;left:${(w - T) / 2}px;transform:rotateY(90deg) translateZ(${w / 2}px)`),
       f('side spine', `width:${T}px;height:${h}px;left:${(w - T) / 2}px;transform:rotateY(-90deg) translateZ(${w / 2}px)`),
       f('side', `width:${w}px;height:${T}px;top:${(h - T) / 2}px;transform:rotateX(90deg) translateZ(${h / 2}px)`),
       f('side', `width:${w}px;height:${T}px;top:${(h - T) / 2}px;transform:rotateX(-90deg) translateZ(${h / 2}px)`)));
 }
-function packageView() {
-  const d = S.d, cs = d.caseStyle;
-  S.view3d ||= 'all';
-  const scene = el('div', { class: 'scene3d' });
-  const ctl = el('div', { class: 'panel sidep' },
-    el('div', { class: 'insp-sub' }, 'View'),
-    el('div', { class: 'fxlib' }, [['all', 'Full package'], ['disc', 'Disc close-up'], ['front', 'Front case close-up'], ['back', 'Back case close-up']].map(([k, n]) => el('button', { class: 'chip' + (S.view3d === k ? ' on' : ''), onclick: () => { S.view3d = k; renderEditor(); } }, n))),
-    el('div', { class: 'insp-sub' }, 'Case style', helpBtn('caseStyle')),
-    el('div', { class: 'fxlib' }, Object.entries(CASES).map(([k, n]) => el('button', { class: 'chip' + (cs.style === k ? ' on' : ''), onclick: () => { touch(); cs.style = k; changed(false); renderEditor(); } }, n))),
-    ['colored', 'custom', 'premium'].includes(cs.style) ? el('label', { class: 'num' }, 'Case color', el('input', { type: 'color', value: cs.color, oninput: e => { cs.color = e.target.value; scene.style.setProperty('--case', e.target.value); changed(false); } })) : null,
-    el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!S.spin, onchange: e => { S.spin = e.target.checked; scene.classList.toggle('spin', S.spin); } }), 'Spin the disc'),
-    el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: S.sway !== false, onchange: e => { S.sway = e.target.checked; } }), 'Gentle motion'),
-    el('button', { onclick: () => scene.resetView && scene.resetView() }, 'Front view'),
-    el('p', { class: 'hint' }, 'Move the mouse over the scene to tilt it in the light. Drag to turn things around. Turn the disc over to see the shiny side. Front view snaps it back.'),
-    helpBtn('package3d'));
-  scene.className = `scene3d case-${cs.style} view-${S.view3d}` + (S.spin ? ' spin' : '');
-  scene.style.setProperty('--case', cs.color);
+// plastic controls: tint, finish and wear, shared by the case preview and the 3D studio
+function plasticPanel(cs, apply) {
+  const p = plasticOf(cs), put = (k, v, re = true) => { touch(); p[k] = v; changed(false); apply(); if (re) renderEditor(); };
+  const rng = (label, k, min, max, step, fmt) => { const out = el('span', { class: 'val' }, fmt(p[k])); const i = el('input', { type: 'range', min, max, step, value: p[k] }); i.oninput = () => { p[k] = +i.value; out.textContent = fmt(+i.value); changed(false); apply(); }; return el('label', { class: 'knob' }, el('span', { class: 'lab' }, el('span', {}, label), out), i); };
+  return [
+    el('div', { class: 'insp-sub' }, 'Plastic', helpBtn('plastic')),
+    el('div', { class: 'fxlib' }, ...PFINISH.map(([k, n]) => el('button', { class: 'chip' + (p.finish === k ? ' on' : ''), onclick: () => put('finish', k) }, n))),
+    el('label', { class: 'num' }, 'Tint color', el('input', { type: 'color', value: p.tint, oninput: e => put('tint', e.target.value, false) })),
+    rng('Tint strength', 'tintAmt', 0, 1, 0.01, v => v ? Math.round(v * 100) + '%' : 'none'),
+    el('div', { class: 'insp-sub' }, 'Condition'),
+    el('div', { class: 'fxlib' }, ...PWEAR.map(([k, n]) => el('button', { class: 'chip' + (p.wear === k ? ' on' : ''), onclick: () => put('wear', k) }, n))),
+    p.wear !== 'new' ? rng('How much', 'wearAmt', 0.1, 1, 0.01, v => Math.round(v * 100) + '%') : null];
+}
+// ---------- shared 3D pieces (case preview, cover mockup and 3D studio all use the real 3D renderer) ----------
+const PAPER_TYPES = [['gloss', 'Glossy'], ['satin', 'Satin'], ['matte', 'Matte'], ['textured', 'Textured art paper']];
+const TRAYS = [['', 'Match the case'], ['black', 'Black'], ['white', 'White'], ['clear', 'Clear'], ['color', 'Case color']];
+function mount3d(d, opts, ready) {
+  const host = el('div', { class: 'view3d' }), status = el('p', { class: 'hint' }, 'Loading 3D...');
   (async () => {
-    const [f, b, dc] = await Promise.all([faceCanvas(d, 'cover', { size: 640 }), faceCanvas(d, 'back', { size: 720 }), faceCanvas(d, 'disc', { size: 640 })]);
-    // floor reflection = a mirrored live copy (CSS box-reflect would flatten the 3D)
-    const wrap = (cls, node) => { const m = node.cloneNode(true); m.classList.add('mirrored'); return el('div', { class: 'reflectwrap ' + cls }, node, el('div', { class: 'floorshadow' }), el('div', { class: 'mirror', 'aria-hidden': 'true' }, m)); };
-    scene.append(el('div', { class: 'floor' }),
-      wrap('w-front', case3d(f.toDataURL(), 280, 280, true)),
-      wrap('w-disc', disc3d(dc.toDataURL(), d)),
-      wrap('w-back', case3d(b.toDataURL('image/jpeg', 0.9), 340, 268, false)));
-    tilt3d(scene);
+    try { const mod = await import('./viewer3d.js'); const V = await mod.mountViewer(host, d, opts); S.viewer = V; ready(V); }
+    catch (e) { status.textContent = '3D could not start in this browser: ' + e.message; }
   })();
-  return el('div', { class: 'artmain pkg' }, scene, ctl);
+  return { host, status };
+}
+const zoomHint = () => el('p', { class: 'hint center' }, 'Drag to turn it. Mouse wheel or pinch to zoom in close. Right-drag to move it.');
+function zoomBtns(V) { return el('div', { class: 'pbtns' }, el('button', { onclick: () => V.zoom(0.8) }, 'Zoom in'), el('button', { onclick: () => V.zoom(1.25) }, 'Zoom out'), el('button', { onclick: () => V.frame() }, 'Fit')); }
+function paperPanel(V) {
+  const m = S.d.mock;
+  return [el('div', { class: 'insp-sub' }, 'Paper', helpBtn('paper3d')),
+    el('div', { class: 'fxlib' }, PAPER_TYPES.map(([k, n]) => el('button', { class: 'chip' + ((m.paper || 'satin') === k ? ' on' : ''), onclick: () => { touch(); m.paper = k; changed(false); V.rebuild(); renderEditor(); } }, n)))];
+}
+function trayPanel(V) {
+  const p = plasticOf(S.d.caseStyle);
+  return [el('div', { class: 'insp-sub' }, 'Disc tray'),
+    el('div', { class: 'fxlib' }, TRAYS.map(([k, n]) => el('button', { class: 'chip' + ((p.tray || '') === k ? ' on' : ''), onclick: () => { touch(); p.tray = k; changed(false); V.rebuild(); renderEditor(); } }, n)))];
+}
+function caseStylePanel(V) {
+  const cs = S.d.caseStyle;
+  return [el('div', { class: 'insp-sub' }, 'Case style', helpBtn('caseStyle')),
+    el('div', { class: 'fxlib' }, Object.entries(CASES).map(([k, n]) => el('button', { class: 'chip' + (cs.style === k ? ' on' : ''), onclick: () => { touch(); cs.style = k; changed(false); V.rebuild(); renderEditor(); } }, n))),
+    el('label', { class: 'num' }, 'Case color', el('input', { type: 'color', value: cs.color, onchange: e => { touch(); cs.color = e.target.value; changed(false); V.rebuild(); } }))];
+}
+// the MiniDisc label: picture or GIF, words, label color, spine text
+function mdLabelPanel(V) {
+  const d = S.d, f = d.faces.mdlabel, F = FACES.mdlabel, txt = f.layers.find(l => l.mdText);
+  const redo = async () => { changed(false); await V.refresh(); };
+  return [el('div', { class: 'insp-sub' }, 'MiniDisc label', helpBtn('mdlabel3d')),
+    el('p', { class: 'hint' }, 'The paper label on the front. Put a picture or a moving GIF on it, write on it, or open the full label editor.'),
+    el('div', { class: 'pbtns' },
+      el('button', { class: 'hot', onclick: async () => { const [file] = await pickFiles('image/*', false); if (!file) return; try { const id = await addArt(file); const a = await artImage(id); touch(); f.layers = f.layers.filter(l => !l.mdPic); const k = Math.max(F.w / a.width, F.h / a.height); f.layers.unshift(newLayer('image', { src: id, mdPic: true, w: a.width * k, h: a.height * k, x: F.w / 2, y: F.h / 2 })); await redo(); renderEditor(); } catch { toast('Could not read that picture.'); } } }, 'Picture or GIF'),
+      f.layers.some(l => l.mdPic) ? el('button', { onclick: async () => { touch(); f.layers = f.layers.filter(l => !l.mdPic); await redo(); renderEditor(); } }, 'Remove picture') : null,
+      el('button', { onclick: () => { S.face = 'mdlabel'; renderEditor(); } }, 'Full label editor')),
+    el('label', { class: 'num' }, 'Words on the label', el('input', { class: 'textin', value: txt ? txt.text : '', placeholder: 'song or mix name', onchange: async e => { touch(); const v = e.target.value; let l = f.layers.find(x => x.mdText); if (!v) f.layers = f.layers.filter(x => !x.mdText); else if (l) l.text = v; else f.layers.push(newLayer('text', { text: v, mdText: true, font: 'Permanent Marker', size: 90, color: '#1a1a1a', x: F.w / 2, y: F.h * 0.55, w: 820, h: 140 })); await redo(); } })),
+    el('label', { class: 'num' }, 'Label color', el('input', { type: 'color', value: f.bg.c1 || '#f4f1ea', onchange: async e => { touch(); f.bg = { type: 'color', c1: e.target.value, c2: e.target.value, angle: 135 }; await redo(); } })),
+    el('label', { class: 'num' }, 'Spine text', el('input', { class: 'textin', value: d.mock.shellText || '', placeholder: d.name, onchange: e => { touch(); d.mock.shellText = e.target.value; changed(false); V.rebuild(); } }))];
+}
+function mdShellPanel(V) {
+  const m = S.d.mock, set = (k, v, re) => { touch(); m[k] = v; changed(false); V.rebuild(); if (re) renderEditor(); };
+  return [el('div', { class: 'insp-sub' }, 'MiniDisc shell'),
+    el('label', { class: 'num' }, 'Shell color', el('input', { type: 'color', value: m.shell, onchange: e => set('shell', e.target.value) })),
+    el('label', { class: 'knob' }, 'Color strength', el('input', { type: 'range', min: 0, max: 0.9, step: 0.01, value: m.shellAlpha, onchange: e => set('shellAlpha', +e.target.value) })),
+    el('button', { onclick: () => set('shellAlpha', 0, true) }, 'Crystal clear shell'),
+    el('label', { class: 'num' }, 'Disc inside', select([['silver', 'Silver'], ['magenta', 'Magenta'], ['red', 'Red'], ['blue', 'Blue'], ['gold', 'Gold'], ['green', 'Green'], ['black', 'Black']], m.mdDisc || 'silver', v => set('mdDisc', v))),
+    el('label', { class: 'num' }, 'Shutter', select([['metal', 'Silver metal'], ['black', 'Black'], ['color', 'Same as shell']], m.shutter, v => set('shutter', v))),
+    el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: m.insert, onchange: e => set('insert', e.target.checked) }), 'Insert arrow')];
+}
+function packageView() {
+  const d = S.d, cs = d.caseStyle, panel = el('div', { class: 'panel sidep' });
+  const { host, status } = mount3d(d, { format: 'cdcase', auto: false }, V => {
+    V.view('hero');
+    panel.innerHTML = '';
+    panel.append(...[].concat(...[
+      el('p', { class: 'hint' }, 'A real CD case you can open, turn and zoom into. Your front cover is the booklet under the lid. Your back cover is the inlay behind the tray, folded into the spines.'),
+      ...caseStylePanel(V),
+      el('label', { class: 'knob' }, 'Open the case', el('input', { type: 'range', min: 0, max: 1, step: 0.01, value: V.st.open, oninput: e => V.set('open', +e.target.value) })),
+      ...plasticPanel(cs, () => V.rebuild()),
+      ...trayPanel(V), ...paperPanel(V),
+      el('div', { class: 'insp-sub' }, 'Look'),
+      el('div', { class: 'addgrid' }, [['hero', 'Angle'], ['front', 'Front'], ['back', 'Back'], ['left', 'Spine'], ['top', 'Top']].map(([k, n]) => el('button', { onclick: () => V.view(k) }, n))),
+      zoomBtns(V),
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: V.st.spin, onchange: e => V.set('spin', e.target.checked) }), 'Spin the disc'),
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: V.st.auto, onchange: e => V.set('auto', e.target.checked) }), 'Turn slowly by itself'),
+      el('button', { onclick: () => { S.tab = '3d'; S.face = '3d'; renderEditor(); } }, 'More in the 3D studio'),
+      helpBtn('package3d')]).flat(4).filter(Boolean));
+  });
+  panel.append(status);
+  return el('div', { class: 'artmain pkg' }, el('div', { class: 'stagewrap s3d' }, host, zoomHint()), panel);
 }
 // Mouse tilt + drag to turn, with smoothing and a gentle idle sway. Light effects follow the angle.
 function tilt3d(scene) {
@@ -422,6 +512,38 @@ function tilt3d(scene) {
   step();
 }
 
+// ---------- GIF and design files ----------
+async function coverGif(d, faceKey, size, spin) {
+  const { setArtTime } = await import('./art.js'), { encodeGIF } = await import('./gifenc.js');
+  const n = 36, frames = [], c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d', { willReadFrequently: true });
+  for (let i = 0; i < n; i++) {
+    setArtTime(i / n * 3000);
+    const f = await faceCanvas(d, faceKey, { size: spin ? size * 0.9 : size });
+    g.fillStyle = spin ? '#0b0b0d' : '#000'; g.fillRect(0, 0, size, size);
+    if (spin) { g.save(); g.translate(size / 2, size / 2); g.rotate(i / n * Math.PI * 2); g.drawImage(f, -f.width / 2, -f.height / 2); g.restore(); const sh = g.createLinearGradient(0, 0, size, size); sh.addColorStop(0.35, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,.18)'); sh.addColorStop(0.65, 'rgba(255,255,255,0)'); g.fillStyle = sh; g.beginPath(); g.arc(size / 2, size / 2, size * 0.45, 0, 7); g.fill(); }
+    else g.drawImage(f, 0, 0, size, size);
+    frames.push(g.getImageData(0, 0, size, size)); await new Promise(r => setTimeout(r, 0));
+  }
+  setArtTime(null);
+  download(encodeGIF(frames, 80), `${safeName(d.name)}-${spin ? 'disc-spin' : 'cover'}.gif`);
+}
+const blobURL = b => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); });
+async function saveDesignFile(d) {
+  const ids = new Set(); for (const f of Object.values(d.faces)) for (const l of f.layers) if (l.type === 'image' && l.src) ids.add(l.src);
+  const pics = {}; for (const id of ids) { const a = await db.get('art', id); if (a) pics[id] = { name: a.name, data: await blobURL(a.blob) }; }
+  const file = { kind: 'sheloops-cover', version: 1, design: d, pics };
+  download(new Blob([JSON.stringify(file)], { type: 'application/json' }), `${safeName(d.name)}.sheloopscover`);
+}
+async function openDesignFile() {
+  const [f] = await pickFiles('.sheloopscover,application/json', false); if (!f) return;
+  try {
+    const file = JSON.parse(await f.text()); if (file.kind !== 'sheloops-cover') throw new Error('not a SHELOOPS cover file');
+    const map = {}; for (const [old, p] of Object.entries(file.pics || {})) { const b = await (await fetch(p.data)).blob(); map[old] = await addArt(new File([b], p.name || 'picture', { type: b.type })); }
+    const d = JSON.parse(JSON.stringify(file.design)); d.id = Math.random().toString(36).slice(2, 10); d.name = d.name + ' (opened)';
+    for (const fc of Object.values(d.faces)) for (const l of fc.layers) if (l.type === 'image' && l.src) l.src = map[l.src] || null;
+    await saveDesign(d); toast(`Opened "${d.name}".`); await openDesign(d);
+  } catch (e) { toast('Could not open that file: ' + e.message); }
+}
 // ---------- export ----------
 function exportMenu() {
   const d = S.d;
@@ -440,7 +562,12 @@ function exportMenu() {
       await file('cover', { size: 3000 }, 'cover-3000'); for (const [k, s] of [['cover', 'front-print'], ['back', 'back-print'], ['booklet', 'booklet-print']]) { await file(k, { bleed: true }, s); await new Promise(r => setTimeout(r, 300)); }
       await file('disc', {}, 'disc'); download(await canvasBlob(await printSheet(d)), `${safeName(d.name)}-cd-package.png`);
     })),
-    el('p', { class: 'hint' }, 'Tip: streaming stores want a square image 3000 x 3000 px, RGB, under 10 MB, with no website links or blurry text.')));
+    el('div', { class: 'exgroup' }, 'Moving pictures (GIF)'),
+    row('Animated cover GIF', 'Your cover with GIFs, holograms and glitter moving. 600 x 600 px.', async () => go('cover GIF', () => coverGif(d, 'cover', 600, false))),
+    row('Spinning disc GIF', 'Your disc label turning like it is playing. 500 x 500 px.', async () => go('disc GIF', () => coverGif(d, 'disc', 500, true))),
+    el('div', { class: 'exgroup' }, 'Design file'),
+    row('Save this design', 'A .sheloopscover file with every picture inside. Open it on any computer, or share it.', async () => go('design file', () => saveDesignFile(d))),
+    el('p', { class: 'hint' }, 'Tip: streaming stores want a square image 3000 x 3000 px, RGB, under 10 MB, with no website links or blurry text. For the 3D package as a GIF, open the 3D studio tab.')));
 }
 
 // ---------- song covers ----------
@@ -475,48 +602,40 @@ export function artKey(e) {
 }
 
 // ---------- flat mockups (CD in clear case, MiniDisc, disc) ----------
-const MOCK_FORMATS = [['cdcase', 'CD in clear case'], ['slim', 'Colored slim case'], ['minidisc', 'MiniDisc'], ['disc', 'Disc only']];
+const MOCK_FORMATS = [['cdcase', 'CD case'], ['slim', 'Colored slim case'], ['sleeve', 'Card sleeve'], ['minidisc', 'MiniDisc'], ['disc', 'Disc only'], ['wallet', 'CD book'], ['fan', 'Stack of cases']];
 function mockupView() {
-  const d = S.d, m = d.mock;
-  const prev = el('canvas', { class: 'mockprev', width: 900, height: 900 });
-  let t, busy = false;
-  const redraw = () => { clearTimeout(t); t = setTimeout(async () => { if (busy) return redraw(); busy = true; const cv = await renderMockup(d, 900); const g = prev.getContext('2d'); g.clearRect(0, 0, 900, 900); g.drawImage(cv, 0, 0); busy = false; }, 60); };
-  const set = (k, v, re) => { touch(); m[k] = v; changed(false); redraw(); if (re) renderEditor(); };
-  const col = (label, k) => el('label', { class: 'num' }, label, el('input', { type: 'color', value: m[k], oninput: e => set(k, e.target.value) }));
-  const sl = (label, k, min, max) => { const i = el('input', { type: 'range', min, max, step: 0.01 }); i.value = m[k]; i.oninput = () => set(k, +i.value); return el('label', { class: 'knob' }, label, i); };
-  let size = 3000;
-  const exp = async mime => {
-    toast('Making your cover...');
-    const cv = await renderMockup(d, size); const ext = mime.split('/')[1].replace('jpeg', 'jpg');
-    download(await new Promise(r => cv.toBlob(r, mime, 0.93)), `${safeName(d.name)}-${m.format}-${size}.${ext}`); toast('Saved to your downloads.');
-  };
-  const ctl = el('div', { class: 'panel sidep' },
-    el('div', { class: 'insp-sub' }, 'Style', helpBtn('mockup')),
-    el('div', { class: 'fxlib' }, MOCK_FORMATS.map(([k, n]) => el('button', { class: 'chip' + (m.format === k ? ' on' : ''), onclick: () => set('format', k, true) }, n))),
-    el('div', { class: 'pbtns' },
-      el('button', { onclick: () => { S.face = 'disc'; renderEditor(); } }, 'Edit disc art'),
-      m.format === 'minidisc' ? el('button', { onclick: () => { S.face = 'mdlabel'; renderEditor(); } }, 'Edit MiniDisc label') : null),
-    m.format === 'slim' ? el('div', { class: 'pbtns' }, el('label', { class: 'num' }, 'Case color', el('input', { type: 'color', value: m.slim || '#7a3cff', oninput: e => set('slim', e.target.value) })), ['#7a3cff', '#ff2f8f', '#ff9a1f', '#2f6bff', '#2fd06a'].map(c => el('button', { class: 'swatchbtn', style: `background:${c}`, title: c, onclick: () => set('slim', c, true) }))) : null,
-    el('div', { class: 'insp-sub' }, 'Background'),
-    el('div', { class: 'pbtns' }, col('Color', 'bg'), el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: m.transparent, onchange: e => set('transparent', e.target.checked) }), 'See-through (PNG, WebP)')),
-    el('div', { class: 'insp-sub' }, 'Light'),
-    sl('Shine and glare', 'glare', 0, 1.5), sl('Rainbow reflection', 'sparkle', 0, 1),
-    m.format === 'minidisc' ? [
-      el('div', { class: 'insp-sub' }, 'MiniDisc shell'),
-      col('Shell color', 'shell'), sl('Color strength', 'shellAlpha', 0, 0.9),
-      el('button', { onclick: () => set('shellAlpha', 0, true) }, 'Clear shell (no color)'),
-      el('label', { class: 'num' }, 'Disc inside', select([['silver', 'Silver'], ['magenta', 'Magenta'], ['red', 'Red'], ['blue', 'Blue'], ['gold', 'Gold'], ['green', 'Green'], ['black', 'Black']], m.mdDisc || 'silver', v => set('mdDisc', v))),
-      el('label', { class: 'num' }, 'Shutter', select([['metal', 'Silver metal'], ['black', 'Black'], ['color', 'Same as shell']], m.shutter, v => set('shutter', v))),
-      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: m.insert, onchange: e => set('insert', e.target.checked) }), 'Insert this end arrow'),
-      el('label', { class: 'num' }, 'Shell text', el('input', { class: 'textin', value: m.shellText, placeholder: 'your name or logo', oninput: e => set('shellText', e.target.value) })),
-    ] : null,
-    el('div', { class: 'insp-sub' }, 'Export'),
-    el('label', { class: 'num' }, 'Size', select([[640, '640 px (Spotify playlist minimum)'], [1000, '1000 px'], [1400, '1400 px (Apple podcast / playlist)'], [3000, '3000 px (streaming stores)'], [4000, '4000 px (extra large)']], size, v => size = +v)),
-    el('div', { class: 'pbtns' }, el('button', { class: 'hot', onclick: () => exp('image/png') }, 'PNG'), el('button', { onclick: () => exp('image/jpeg') }, 'JPG'), el('button', { onclick: () => exp('image/webp') }, 'WebP')),
-    el('button', { onclick: async () => { const cv = await renderMockup(d, 1000); await useImageAsCover(cv, d); } }, 'Use as song cover'),
-    el('p', { class: 'hint' }, 'Tip: for playlist covers use a dark background and bold disc art, like your Pinterest favorites.'));
-  redraw();
-  return el('div', { class: 'artmain pkg' }, el('div', { class: 'stagewrap' }, prev), ctl);
+  const d = S.d, m = d.mock, panel = el('div', { class: 'panel sidep' });
+  const fmt = () => m.format === 'cdcase' ? 'cdcase' : m.format;
+  const { host, status } = mount3d(d, { format: fmt(), auto: false, bg: m.bg }, V => {
+    V.view('hero'); V.set('light', 0.4 + m.glare); V.set('rainbow', m.sparkle * 2.5); if (m.slim) V.set('caseColor', m.slim);
+    let size = 3000;
+    const set = (k, v, re) => { touch(); m[k] = v; changed(false); if (re) renderEditor(); };
+    const exp = async mime => { toast('Making your picture...'); const b = await V.snapshot(size, mime, m.transparent); download(b, `${safeName(d.name)}-${m.format}-${size}.${mime.split('/')[1].replace('jpeg', 'jpg')}`); toast('Saved to your downloads.'); };
+    panel.innerHTML = '';
+    panel.append(...[].concat(...[
+      el('div', { class: 'insp-sub' }, 'Style', helpBtn('mockup')),
+      el('div', { class: 'fxlib' }, MOCK_FORMATS.map(([k, n]) => el('button', { class: 'chip' + (m.format === k ? ' on' : ''), onclick: () => { set('format', k); V.set('format', fmt()); V.view('hero'); renderEditor(); } }, n))),
+      el('div', { class: 'pbtns' }, el('button', { onclick: () => { S.face = 'disc'; renderEditor(); } }, 'Edit disc art'), el('button', { onclick: () => { S.face = 'cover'; renderEditor(); } }, 'Edit front cover')),
+      m.format === 'slim' ? el('label', { class: 'num' }, 'Case color', el('input', { type: 'color', value: m.slim || '#7a3cff', onchange: e => { set('slim', e.target.value); V.set('caseColor', e.target.value); } })) : null,
+      m.format === 'cdcase' ? [...caseStylePanel(V), ...plasticPanel(d.caseStyle, () => V.rebuild()), ...trayPanel(V)] : null,
+      m.format === 'minidisc' ? [...mdLabelPanel(V), ...mdShellPanel(V)] : null,
+      m.format !== 'disc' ? paperPanel(V) : null,
+      el('div', { class: 'insp-sub' }, 'Light and background'),
+      el('label', { class: 'knob' }, 'Shine and glare', el('input', { type: 'range', min: 0, max: 1.5, step: 0.01, value: m.glare, oninput: e => { m.glare = +e.target.value; V.set('light', 0.4 + m.glare); }, onchange: () => { touch(); changed(false); } })),
+      el('label', { class: 'knob' }, 'Rainbow on the disc', el('input', { type: 'range', min: 0, max: 1, step: 0.01, value: m.sparkle, onchange: e => { set('sparkle', +e.target.value); V.set('rainbow', m.sparkle * 2.5); } })),
+      el('div', { class: 'pbtns' }, el('label', { class: 'num' }, 'Color', el('input', { type: 'color', value: m.bg, oninput: e => { m.bg = e.target.value; V.set('bg', m.bg); }, onchange: () => { touch(); changed(false); } })),
+        el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: m.transparent, onchange: e => set('transparent', e.target.checked) }), 'See-through (PNG, WebP)')),
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: V.st.mirror, onchange: e => V.set('mirror', e.target.checked) }), 'Shiny floor reflection'),
+      el('div', { class: 'addgrid' }, [['hero', 'Angle'], ['front', 'Front'], ['top', 'Top']].map(([k, n]) => el('button', { onclick: () => V.view(k) }, n))),
+      zoomBtns(V),
+      el('div', { class: 'insp-sub' }, 'Export'),
+      el('label', { class: 'num' }, 'Size', select([[640, '640 px (Spotify playlist minimum)'], [1000, '1000 px'], [1400, '1400 px (Apple podcast / playlist)'], [3000, '3000 px (streaming stores)'], [4000, '4000 px (extra large)']], size, v => size = +v)),
+      el('div', { class: 'pbtns' }, el('button', { class: 'hot', onclick: () => exp('image/png') }, 'PNG'), el('button', { onclick: () => exp('image/jpeg') }, 'JPG'), el('button', { onclick: () => exp('image/webp') }, 'WebP')),
+      el('button', { onclick: async () => { const b = await V.snapshot(1000, 'image/png', false); const bmp = await createImageBitmap(b); const cv = document.createElement('canvas'); cv.width = bmp.width; cv.height = bmp.height; cv.getContext('2d').drawImage(bmp, 0, 0); await useImageAsCover(cv, d); } }, 'Use as song cover'),
+      el('p', { class: 'hint' }, 'What you see is what you export. Zoom and turn it to frame your shot first.')]).flat(4).filter(Boolean));
+  });
+  panel.append(status);
+  return el('div', { class: 'artmain pkg' }, el('div', { class: 'stagewrap s3d' }, host, zoomHint()), panel);
 }
 async function useImageAsCover(cv, d) {
   const projects = (await db.all('projects')).sort((a, b) => b.updated - a.updated);
@@ -539,10 +658,10 @@ function studio3dView() {
     try { const mod = await import('./viewer3d.js'); V = await mod.mountViewer(host, d); }
     catch (e) { panel.innerHTML = ''; panel.append(el('p', {}, '3D could not start in this browser: ' + e.message)); return; }
     S.viewer = V;
-    const st = V.st, draw = () => { panel.innerHTML = ''; panel.append(...controls3d(V, st, draw)); };
+    const st = V.st, draw = () => { panel.innerHTML = ''; panel.append(...controls3d(V, st, draw).flat(4).filter(Boolean)); };
     draw();
   })();
-  return el('div', { class: 'artmain pkg' }, el('div', { class: 'stagewrap s3d' }, host, el('p', { class: 'hint center' }, 'Drag to turn it all the way around. Scroll or pinch to zoom. Right-drag to move.')), panel);
+  return el('div', { class: 'artmain pkg' }, el('div', { class: 'stagewrap s3d' }, host, zoomHint()), panel);
 }
 function controls3d(V, st, draw) {
   const set = (k, v, re = true) => { V.set(k, v); if (re) draw(); };
@@ -552,10 +671,16 @@ function controls3d(V, st, draw) {
   const shot = async mime => { toast('Rendering...'); const b = await V.snapshot(size, mime, transparent); download(b, `${safeName(S.d.name)}-3d-${size}.${mime.split('/')[1].replace('jpeg', 'jpg')}`); toast('Saved to your downloads.'); };
   return [
     el('div', { class: 'insp-sub' }, 'Object', helpBtn('studio3d')),
-    el('div', { class: 'fxlib' }, [['cdcase', 'CD in clear case'], ['slim', 'Colored slim case'], ['fan', 'Slim case set'], ['disc', 'CD only'], ['pile', 'Pile of discs'], ['spindle', 'Spindle stack'], ['wallet', 'CD wallet'], ['minidisc', 'MiniDisc']].map(([k, n]) => el('button', { class: 'chip' + (st.format === k ? ' on' : ''), onclick: () => set('format', k) }, n))),
+    el('div', { class: 'fxlib' }, FORMATS_3D.map(([k, n]) => el('button', { class: 'chip' + (st.format === k ? ' on' : ''), onclick: () => set('format', k) }, n))),
     st.format === 'slim' ? el('div', { class: 'pbtns' }, el('label', { class: 'num' }, 'Case color', el('input', { type: 'color', value: st.caseColor, onchange: e => set('caseColor', e.target.value) })), ['#7a3cff', '#ff2f8f', '#ff9a1f', '#2f6bff', '#2fd06a'].map(c => el('button', { class: 'swatchbtn', style: `background:${c}`, onclick: () => set('caseColor', c) }))) : null,
     st.format === 'spindle' ? [el('label', { class: 'knob' }, 'How many discs', el('input', { type: 'range', min: 5, max: 100, step: 5, value: st.count, onchange: e => set('count', +e.target.value) })), chk('Clear dome cover', 'dome')] : null,
     ['cdcase', 'slim'].includes(st.format) ? el('label', { class: 'knob' }, 'Open the case', el('input', { type: 'range', min: 0, max: 1, step: 0.01, value: st.open, oninput: e => set('open', +e.target.value, false) })) : null,
+    st.format === 'cdcase' ? caseStylePanel(V) : null,
+    ['cdcase', 'slim', 'fan'].includes(st.format) ? plasticPanel(S.d.caseStyle, () => V.rebuild()) : null,
+    st.format === 'cdcase' ? trayPanel(V) : null,
+    st.format === 'minidisc' ? [...mdLabelPanel(V), ...mdShellPanel(V)] : null,
+    ['cdcase', 'slim', 'fan', 'sleeve', 'minidisc'].includes(st.format) ? paperPanel(V) : null,
+    zoomBtns(V),
     chk('Spin the disc', 'spin'), chk('Turn slowly by itself', 'auto'), chk('Mirror floor (reflection)', 'mirror'),
     el('label', { class: 'knob' }, 'Light', el('input', { type: 'range', min: 0.3, max: 2, step: 0.01, value: st.light, oninput: e => set('light', +e.target.value, false) })),
     el('label', { class: 'num' }, 'Background', el('input', { type: 'color', value: st.bg, oninput: e => set('bg', e.target.value, false) })),
@@ -575,6 +700,17 @@ function controls3d(V, st, draw) {
         try { const b = await V.record(secs, t); download(b, `${safeName(S.d.name)}-3d-spin.${t.includes('mp4') ? 'mp4' : 'webm'}`); toast('Video saved to your downloads.'); } catch (err) { toast('Recording failed: ' + err.message); }
         b0.disabled = false;
       } }, t.includes('mp4') ? 'MP4' : 'WebM')))] : el('p', { class: 'hint' }, 'This browser cannot record video.'),
+    el('div', { class: 'insp-sub' }, 'Export GIF'),
+    el('p', { class: 'hint' }, 'One full turn that loops forever. Great for posts and profiles.'),
+    el('div', { class: 'pbtns' }, ...[[360, 'Small'], [540, 'Medium'], [720, 'Large']].map(([sz, n]) => el('button', { class: sz === 540 ? 'hot' : '', onclick: async e => {
+      const b0 = e.currentTarget; b0.disabled = true; const label = b0.textContent;
+      try {
+        const frames = await V.gifFrames(sz >= 720 ? 40 : 48, sz, p => { b0.textContent = Math.round(p * 100) + '%'; });
+        b0.textContent = 'Saving...'; await new Promise(r => setTimeout(r, 20));
+        const { encodeGIF } = await import('./gifenc.js'); download(encodeGIF(frames, 60), `${safeName(S.d.name)}-3d.gif`); toast('GIF saved to your downloads.');
+      } catch (err) { toast('GIF failed: ' + err.message); }
+      b0.disabled = false; b0.textContent = label;
+    } }, n + ' ' + sz + 'px'))),
     el('div', { class: 'insp-sub' }, 'Export 3D model'),
     el('button', { onclick: async () => { toast('Making the 3D file...'); try { download(await V.exportGLB(), `${safeName(S.d.name)}-${st.format}.glb`); toast('GLB saved. Opens in Blender, Windows 3D Viewer and most 3D apps.'); } catch (err) { toast('Export failed: ' + err.message); } } }, 'GLB (3D model)'),
   ];

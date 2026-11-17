@@ -1748,3 +1748,50 @@ html.fxm-still .runlogo .runner, html.fxm-still .runlogo .streak { animation: no
 .hfind.bad .dot { background: #ff3b3b; box-shadow: 0 0 10px #ff3b3b; } .hfind.warn .dot { background: #ffd84a; box-shadow: 0 0 10px #ffd84a; } .hfind.good .dot { background: var(--green); box-shadow: 0 0 10px var(--green); }
 .hfind b { display: block; font-size: 13px; } .hfind small { font-size: 11.5px; color: var(--dim); line-height: 1.4; }
 .hsteps { margin: 0; padding-left: 18px; font-size: 12px; color: var(--dim); display: grid; gap: 4px; }
+/* ===== cover designer: tool thumbnails, sticker looks ===== */
+.addgrid.thumbs { grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)) !important; gap: 6px; }
+.tthumb { display: grid; gap: 3px; justify-items: center; padding: 6px 4px !important; border-radius: 6px; background: linear-gradient(160deg, color-mix(in srgb, var(--led) 6%, var(--panel)), var(--well)); transition: transform .15s, box-shadow .2s, border-color .2s; }
+.tthumb img { width: 54px; height: 54px; object-fit: contain; filter: drop-shadow(0 4px 6px #0008); transition: transform .2s; }
+.tthumb span { font: 400 11px var(--label); letter-spacing: .08em; color: var(--dim); text-align: center; line-height: 1.1; }
+.tthumb:hover { transform: translateY(-2px); border-color: var(--led); box-shadow: 0 8px 18px -10px var(--led); } .tthumb:hover img { transform: scale(1.12) rotate(-4deg); } .tthumb:hover span { color: var(--text); }
+.finishes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.finish { display: grid; gap: 4px; justify-items: center; padding: 6px 4px; font: 400 11px var(--label); letter-spacing: .06em; }
+.finish i { width: 100%; height: 18px; border-radius: 4px; box-shadow: inset 0 0 0 1px #0006; }
+.finish.f-none i { background: #e9e9ee; } .finish.f-gloss i { background: linear-gradient(120deg, #ddd 30%, #fff 45%, #ddd 60%); }
+.finish.f-holo i { background: linear-gradient(110deg, #ff5ec8, #ffb35e, #fff35e, #5effa0, #5ed8ff, #8c5eff, #ff5ec8); background-size: 200% 100%; animation: holoMove 3s linear infinite; }
+.finish.f-gold i { background: linear-gradient(110deg, #7a5a12, #f7e08a, #b8862b, #fff2c2, #8a6416); } .finish.f-silverfoil i { background: linear-gradient(110deg, #6f747c, #f4f6fa, #a3a8b1, #fff, #7d828a); }
+.finish.f-chrome i { background: linear-gradient(180deg, #fff, #9aa 45%, #222 50%, #ccd 100%); } .finish.f-glitter i { background: radial-gradient(#fff 1px, transparent 1.5px) 0 0 / 6px 6px, #8a6cff; }
+.finish.f-matte i { background: #b9b4aa; } .finish.f-neon i { background: #ff5ca8; box-shadow: 0 0 12px #ff5ca8; }
+.finish.on { border-color: var(--led); box-shadow: 0 0 14px -6px var(--led); color: #fff; }
+@keyframes holoMove { to { background-position: -200% 0; } }
+
+/* ===== CD case plastic ===== */
+.cf .ptint, .cf .pfin, .cf .pwear { position: absolute; inset: 0; pointer-events: none; }
+.cf .ptint { background: var(--ptint, transparent); opacity: calc(var(--ptintamt, 0) * .55); mix-blend-mode: multiply; }
+.cf .pwear { background: var(--pwear, none) center / cover; opacity: var(--pwearamt, .7); mix-blend-mode: screen; }
+.pf-frosted .cf img { filter: blur(2.2px) brightness(1.06) saturate(.85); } .pf-frosted .cf .pfin { background: rgba(255,255,255,.22); }
+.pf-smoked .cf .pfin { background: rgba(10,10,14,.52); }
+.pf-iridescent .cf .pfin { background: conic-gradient(from var(--ang, 0deg), #ff5ec855, #5ed8ff55, #5effa055, #fff35e55, #ff5ec855); mix-blend-mode: screen; }
+.pf-glitter .cf .pfin { background: var(--pglitter) center / 220px; mix-blend-mode: screen; opacity: .85; animation: glitTw 2.4s steps(4) infinite; }
+@keyframes glitTw { 50% { opacity: .45; background-position: 7px 5px; } }
+.pf-mirror .cf .pfin { background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.55) 45%, transparent 55%), linear-gradient(115deg, transparent 60%, rgba(255,255,255,.25) 68%, transparent 75%); mix-blend-mode: screen; }
+
+/* theme card color strip: one band per color so similar themes look different */
+.themecard .tswatch { height: 18px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); filter: none; }
+
+/* ===== Home intro title: modern, moving ===== */
+.hero h1.intro-h { position: relative; padding-bottom: 12px; perspective: 600px; }
+.intro-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; letter-spacing: -.035em; text-transform: none; display: inline-flex; flex-wrap: wrap; row-gap: .05em; }
+.intro-title .iw { display: inline-flex; white-space: nowrap; }
+.intro-title .isp { width: .28em; }
+.intro-title .ich { display: inline-block; transform-origin: 50% 100%; animation: introIn .9s cubic-bezier(.2,.85,.25,1) both, introWave 4.8s ease-in-out infinite; animation-delay: calc(var(--i) * .045s), calc(1.1s + var(--i) * .07s); }
+.intro-title .ich:hover { color: var(--led); text-shadow: 0 0 16px var(--led); transform: translateY(-.12em) scale(1.12); transition: transform .15s; }
+.hero h1.intro-h::after { content: ''; position: absolute; left: 0; bottom: 0; height: 3px; width: 46%; border-radius: 3px; background: linear-gradient(90deg, var(--led), transparent); box-shadow: 0 0 12px var(--led); animation: introBar 3.2s ease-in-out infinite; transform-origin: left; }
+.hero-text > small { display: inline-block; animation: introTag 1.2s ease both, introTagPulse 3.2s ease-in-out 1.2s infinite; }
+@keyframes introIn { from { opacity: 0; transform: translateY(.55em) rotateX(75deg); filter: blur(10px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes introWave { 0%, 78%, 100% { color: var(--text); text-shadow: none; transform: none; } 86% { color: var(--led); text-shadow: 0 0 14px var(--led), 0 0 36px var(--led); transform: translateY(-.07em) scale(1.04); } }
+@keyframes introBar { 0%, 100% { transform: scaleX(.35); opacity: .55; } 50% { transform: scaleX(1); opacity: 1; } }
+@keyframes introTag { from { letter-spacing: .6em; opacity: 0; } to { letter-spacing: .1em; opacity: 1; } }
+@keyframes introTagPulse { 50% { color: var(--led); text-shadow: 0 0 10px var(--led); } }
+@media (prefers-reduced-motion: reduce) { .intro-title .ich, .hero h1.intro-h::after, .hero-text > small { animation: none; } }
+.welcome > summary .intro-title { font-size: 1.15em; text-transform: none; }

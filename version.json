@@ -1,14 +1,26 @@
 {
-  "version": "2.3.0",
+  "version": "2.4.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Found the noise: the warm saturation, tape and exciter effects were turning quiet sounds (room hiss, fans, speaker bleed) up by as much as 4 times each. They now leave quiet sounds alone and only color your voice.",
-    "New vocal tracks have a gentle room gate on, so background noise goes quiet between your words.",
-    "What I hear now has 3 tabs. Parts: turn anything on or off. Sound safety: silence the room between words on every vocal, all vocal effects on or off, hear-myself controls, feedback guard, master volume and a Stop all sound button. Find the noise: checks your setup and tells you the most likely cause.",
-    "Checked all 182 presets and every effect: none of them keeps building or ringing on its own."
+    "Real 3D CD cases, discs, MiniDisc, CD book and case stack with mouse wheel zoom",
+    "Paper types for your art, tray and plastic options, MiniDisc label pictures, GIFs and words",
+    "GIF export, design files, sticker finishes",
+    "Cursor effects no longer get stuck, plus new cursors, trails and clicks",
+    "New animated intro and clearer theme colors",
+    "New styles: G-Funk, Island Soul, Bedroom Indie, Shoegaze Metal, Guitar Rap, 4AM"
   ],
   "history": [
+    {
+      "version": "2.3.0",
+      "date": "2026-11-16",
+      "notes": [
+        "Found the noise: the warm saturation, tape and exciter effects were turning quiet sounds (room hiss, fans, speaker bleed) up by as much as 4 times each. They now leave quiet sounds alone and only color your voice.",
+        "New vocal tracks have a gentle room gate on, so background noise goes quiet between your words.",
+        "What I hear now has 3 tabs. Parts: turn anything on or off. Sound safety: silence the room between words on every vocal, all vocal effects on or off, hear-myself controls, feedback guard, master volume and a Stop all sound button. Find the noise: checks your setup and tells you the most likely cause.",
+        "Checked all 182 presets and every effect: none of them keeps building or ringing on its own."
+      ]
+    },
     {
       "version": "2.2.0",
       "date": "2026-11-16",

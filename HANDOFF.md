@@ -213,3 +213,12 @@ Stage 8 (AI helper, tour, desktop app) was skipped by the user on 2026-11-16 ("d
 - js/djvisuals.js drawVisuals(cv, V, A): 8 looks, layer2 + blend, palettes, CSS 3D camera. dj.js DJ.V settings, visual desk. djlights.js kept only for its SCENES palettes.
 - js/tour.js: quick tour banners prepended to #view by a MutationObserver.
 - look.js: 24 themes, look.uifx + applyUiFx (html classes fxg-*, fxm-*, fxp-*, fxflash).
+
+## 2.4.0 real 3D packaging, CD designer remaster, cursor fixes
+- js/viewer3d.js rebuilt at real size (1 unit = 100 mm) with a softbox studio environment. Case preview, Cover mockup and 3D studio all use it now (mouse wheel zoom, drag to turn). mockup.js is no longer used by the editor.
+- Models: jewel case (booklet under lid, back inlay folded into spines, tray rosette), slim case, card sleeve, stack of cases, disc (clear hub, stacking ring, mirror band, anisotropic data side with thin film rainbow), MiniDisc (68x72x5, label you can put a picture/GIF/words on, spine text), CD book (padded zip binder, sleeve pages, a turning page), spindle, pile.
+- Paper types (gloss, satin, matte, textured) in d.mock.paper. Tray choice in caseStyle.plastic.tray. plasticOf and ensureDesign now fill in place (panels used to lose edits).
+- GIF export (js/gifenc.js, verified by decoding), design files (.sheloopscover), sticker finishes, plastic tint/finish/wear.
+- Cursor: effects follow the mouse in capture phase and hide when the mouse leaves; more designs, trails, clicks, rainbow option.
+- Home intro title: Space Grotesk, letters rise in, glow wave, pulsing bar. Theme cards show full color strips.
+- New song tools: G-Funk Night Drive, Island Soul, Bedroom Indie, Shoegaze Metal, Guitar Rap, 4AM.

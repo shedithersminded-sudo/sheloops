@@ -34,7 +34,7 @@ function pickFile(accept) {
 // ---------- welcome guide on Home: make it yours, Simple vs Advanced, what you can make ----------
 const GENRES = [['Trap', 'hard 808s'], ['Drill', 'sliding bass'], ['R&B', 'smooth'], ['Hip-Hop', 'boom bap'], ['Afrobeats', 'bouncy'], ['Pop', 'bright'], ['Lo-fi', 'dusty chill'],
   ['Jungle', 'chopped breaks'], ['Drum & Bass', 'fast and deep'], ['Breakcore', 'chaos breaks'], ['Heavenly Breakcore', 'dreamy and fast'], ['Lonely Breakcore', 'sad piano'],
-  ['Outsider House', 'dusty house'], ['Healing House', 'warm and soft'], ['Get Lost', 'dreamy and slow'], ['Starlight Pop', 'glossy dance'], ['Ambient Breaks', 'dreamy breaks'], ['Euphoric Trance', 'uplifting'], ['Acid House', 'squelchy'], ['Rave Breaks', 'hoovers'], ['Gospel', 'church keys'], ['Soul', 'warm']];
+  ['Outsider House', 'dusty house'], ['Healing House', 'warm and soft'], ['G-Funk Night Drive', 'West Coast'], ['Island Soul', '70s soul'], ['Bedroom Indie', 'chorus guitars'], ['Shoegaze Metal', 'heavy and dreamy'], ['Guitar Rap', 'melodic'], ['4AM', 'late night'], ['Get Lost', 'dreamy and slow'], ['Starlight Pop', 'glossy dance'], ['Ambient Breaks', 'dreamy breaks'], ['Euphoric Trance', 'uplifting'], ['Acid House', 'squelchy'], ['Rave Breaks', 'hoovers'], ['Gospel', 'church keys'], ['Soul', 'warm']];
 function welcome() {
   const open = !settings.hideWelcome;
   const step = (n, title, text, ...kids) => el('div', { class: 'wcard' }, el('div', { class: 'wnum' }, n), el('b', {}, title), el('p', {}, text), ...kids);
@@ -76,7 +76,7 @@ function welcome() {
     const next = cards[i]; next.style.setProperty('--dir', dir); next.classList.remove('slidein'); void next.offsetWidth; next.classList.add('slidein'); body.replaceChildren(next);
   } }, el('span', { class: 'wtnum' }, String(i + 1).padStart(2, '0')), el('b', {}, t), el('small', {}, sub))));
   const d = el('details', { class: 'welcome', open },
-    el('summary', {}, el('span', { class: 'wled' }), scatter('Welcome to your studio'), el('small', {}, open ? 'Click to fold' : 'Click to open')),
+    el('summary', {}, el('span', { class: 'wled' }), el('span', { class: 'intro-h wtitle' }, introText('Welcome to your studio')), el('small', {}, open ? 'Click to fold' : 'Click to open')),
     el('div', { class: 'wlayout' }, bar, body));
   d.addEventListener('toggle', () => { settings.hideWelcome = !d.open; saveSettings(); d.querySelector('summary small').textContent = d.open ? 'Click to fold' : 'Click to open'; });
   return d;
@@ -84,6 +84,11 @@ function welcome() {
 // big words with letters that sit a little off and float, so titles never look flat
 function scatter(text, cls = 'scatter') {
   return el('span', { class: cls, 'aria-label': text }, ...[...text].map((ch, i) => ch === ' ' ? el('span', { class: 'sp' }, ' ') : el('span', { class: 'ch', style: `--r:${((i * 37) % 9) - 4}deg;--y:${((i * 53) % 7) - 3}px;--d:${(i % 7) * 0.12}s` }, ch)));
+}
+// the big Home title: letters rise in out of a blur, then a glowing wave runs through them, and the bar under it pulses
+function introText(text) {
+  let i = 0;
+  return el('span', { class: 'intro-title', 'aria-label': text }, ...text.split(' ').map((w, wi, a) => el('span', { class: 'iw' }, ...[...w].map(ch => el('span', { class: 'ich', 'aria-hidden': 'true', style: `--i:${i++}` }, ch)), wi < a.length - 1 ? el('span', { class: 'isp' }, ' ') : null)));
 }
 // ---------- the journey: the steps of making a song, lit up as you go ----------
 const JOURNEY = [
@@ -191,7 +196,7 @@ export async function renderHome() {
       P ? coverEl(P, 'cover big') : null,
       heroLogo(),
       el('div', { class: 'hero-text' },
-        el('small', {}, P ? 'Current song' : 'Welcome'), el('h1', {}, scatter(P ? P.name : "Let's make something", 'scatter big')),
+        el('small', {}, P ? 'Current song' : 'Welcome'), el('h1', { class: 'intro-h' }, introText(P ? P.name : "Let's make something")),
         P && P.artist ? el('p', {}, P.artist) : null,
         el('div', { class: 'wrow' },
           P ? el('button', { class: 'hot', onclick: () => go('studio') }, 'Continue in the studio') : el('button', { class: 'hot', onclick: () => createSong(null) }, 'Start a new song'),
