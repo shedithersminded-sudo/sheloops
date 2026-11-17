@@ -1,6 +1,6 @@
 // DJ booth: two decks (turntables or CDJs), a club mixer with Beat FX and Color FX, a sampler,
 // transitions, a club light rig with an LED wall, deep customization, and mix recording.
-import { $, el, clamp, toast, knob, select, ask, download, uid, safeName } from './util.js';
+import { $, el, clamp, toast, knob, select, ask, download, uid, safeName, modal } from './util.js';
 import { helpBtn } from './help.js';
 import { app } from './state.js';
 import { E, ensureCtx, encodeWav, renderSong, renderMastered, playDrum } from './engine.js';
@@ -9,7 +9,8 @@ import { db, saveAudio } from './store.js';
 import { newFx, buildFx } from './fx.js';
 import { encodeMp3 } from './mp3.js';
 import { PERC_NAMES } from './instruments.js';
-import { drawVisuals, PALETTES, LOOKS } from './djvisuals.js';
+import { drawVisuals, PALETTES, LOOKS, BACKDROPS } from './djvisuals.js';
+import { loadAnim, frameOf, animOf, isMoving, forgetAnim } from './gif.js';
 import { makeMovable, resetBtn } from './movable.js';
 
 // ---------- saved settings ----------
@@ -22,7 +23,7 @@ const DEF = {
   sampler: ['airhorn', 'siren', 'rewind', 'f_impact', 'f_rev', 'laser', 'vinyl', 'f_up'], samplerVol: 0.8,
   keys: { playA: 'q', playB: 'p', cueA: 'w', cueB: 'o', syncA: 'e', syncB: 'i', xfLeft: 'z', xfRight: 'm', trans: 't', strobe: 'b', blinder: 'n', blackout: 'v', fx: 'f', rec: 'r' },
 };
-const VIS_DEF = { look: 'liquid', layer2: 'orbs', layer2Amt: 0.6, blend: 'screen', palette: 'Neon club', c1: '#ff2bd6', c2: '#00e5ff', c3: '#ffd84a', colorBeats: 8, speed: 1, react: 1, count: 0.5, size: 1, symmetry: 6, spin: 0.2, trails: 0.6, glow: 0.7, grain: true, res: 0.6, tilt: 0, sway: 0, roll: 0, turn: 0, zoom: 1, kickZoom: true, saturation: 1.2, contrast: 1.05, auto: false };
+const VIS_DEF = { backdrop: 'deep', space: 0.6, twinkle: true, look: 'galaxy', layer2: 'nebula', layer2Amt: 0.6, blend: 'screen', palette: 'Neon club', c1: '#ff2bd6', c2: '#00e5ff', c3: '#ffd84a', colorBeats: 8, speed: 1, react: 1, count: 0.5, size: 1, symmetry: 6, spin: 0.2, trails: 0.6, glow: 0.7, grain: true, res: 0.6, tilt: 0, sway: 0, roll: 0, turn: 0, zoom: 1, kickZoom: true, saturation: 1.2, contrast: 1.05, auto: false };
 export const DJ = (() => { const s = JSON.parse(localStorage.getItem(KEY) || '{}'); return { ...DEF, ...s, V: { ...VIS_DEF, ...(s.V || {}) }, L: { ...LIGHT_DEF, ...(s.L || {}) }, beatFx: { ...DEF.beatFx, ...(s.beatFx || {}) }, keys: { ...DEF.keys, ...(s.keys || {}) }, sampler: s.sampler || DEF.sampler }; })();
 const saveDJ = () => { try { localStorage.setItem(KEY, JSON.stringify(DJ)); } catch { toast('That picture is too big to save. Try a smaller one.'); } };
 
@@ -312,7 +313,11 @@ async function loadItem(item, deck) { const b = await bufFor(item); if (b) load(
 // ---------- drawing ----------
 let root = null, raf = 0, last = performance.now(), held = { flash: false, invert: false, warp: false, freeze: false };
 const labelCache = {};
-function labelImg(id) { const u = DJ['img' + id]; if (!u) return null; if (!labelCache[id] || labelCache[id].src !== u) { const im = new Image(); im.src = u; labelCache[id] = im; } return labelCache[id].complete ? labelCache[id] : null; }
+function labelImg(id) {
+  const u = DJ['img' + id]; if (!u) return null;
+  if (u === 'anim') { const a = animOf('djlabel' + id); if (!a && !labelCache['L' + id]) { labelCache['L' + id] = 1; db.get('audio', 'dj-label-' + id).then(d => d && loadAnim('djlabel' + id, d.img)); } return frameOf(a); }
+  if (!labelCache[id] || labelCache[id].src !== u) { const im = new Image(); im.src = u; labelCache[id] = im; } return labelCache[id].complete ? labelCache[id] : null;
+}
 const HOTC = ['#ff3b5c', '#ffb020', '#2bd97a', '#2bb3ff'];
 const tbuf = new Uint8Array(512);
 function meterLevel(id) { if (!G) return 0; const an = G.ch[id].an; an.getByteTimeDomainData(tbuf); let m = 0; for (const v of tbuf) m = Math.max(m, Math.abs(v - 128)); return m / 128; }
@@ -492,12 +497,19 @@ function mixerUI() {
     el('div', { class: 'xfopts' }, el('small', {}, 'CURVE'), ...[['smooth', 'Blend'], ['linear', 'Linear'], ['sharp', 'Cut (scratch)']].map(([v, l]) => el('button', { class: 'csel' + (DJ.curve === v ? ' on' : ''), onclick: () => { DJ.curve = v; saveDJ(); applyXf(); renderMixer(); } }, l))));
 }
 function renderMixer() { const old = root && root.querySelector('.djmixer'); if (old) old.replaceWith(mixerUI()); }
+const SPAD_COLORS = ['#ff3b5c', '#ffb020', '#2bd97a', '#2bb3ff', '#b46bff', '#ff5ea8', '#00e5ff', '#ffd84a'];
 function samplerUI() {
+  const pad = (s, k) => el('button', { class: 'spad', 'data-k': k, style: `--sc:${SPAD_COLORS[k]}`, title: 'Click or press ' + (k + 1) + '. Right-click to change the sound.', onpointerdown: e => { if (e.button === 0) fire(k); }, oncontextmenu: e => { e.preventDefault(); pickSample(k); } },
+    el('span', { class: 'skey' }, k + 1), el('b', {}, PERC_NAMES[s] || s), el('span', { class: 'sled' }));
   return el('div', { class: 'sampler panel' },
-    el('div', { class: 'fxtop' }, el('b', {}, 'Sampler'), helpBtn('djSampler'), el('span', { class: 'hint' }, 'Keys 1 to 8. Right-click a pad to change its sound.')),
-    el('div', { class: 'spads' }, ...DJ.sampler.map((s, k) => el('button', { class: 'spad', 'data-k': k, onpointerdown: () => fire(k), oncontextmenu: async e => {
-      e.preventDefault(); const pick = await ask('Sampler pad ' + (k + 1), 'Sound (' + SAMPLE_CHOICES.join(', ') + ')', s); if (pick && PERC_NAMES[pick] || pick && ['crash'].includes(pick)) { DJ.sampler[k] = pick; saveDJ(); render(); } else if (pick) toast('Pick one of the listed sounds.');
-    } }, el('span', {}, k + 1), el('b', {}, (PERC_NAMES[s] || s).replace(/ /g, ' '))))));
+    el('div', { class: 'fxtop' }, el('b', {}, 'Sampler'), helpBtn('djSampler'), el('span', { class: 'spacer' }), dial('Volume', 0, 1.2, 0.01, DJ.samplerVol, v => { DJ.samplerVol = v; saveDJ(); applyXf(); }, v => Math.round(v * 100) + '', null, 'dial sm')),
+    el('div', { class: 'srow' }, el('small', {}, 'HYPE'), el('div', { class: 'spads' }, ...DJ.sampler.slice(0, 4).map((s, k) => pad(s, k)))),
+    el('div', { class: 'srow' }, el('small', {}, 'FX'), el('div', { class: 'spads' }, ...DJ.sampler.slice(4, 8).map((s, k) => pad(s, k + 4)))),
+    el('div', { class: 'explain', style: 'display:block' }, 'Tap a pad or press 1 to 8 on your keyboard. Right-click a pad to give it a different sound.'));
+}
+function pickSample(k) {
+  let close; const body = el('div', { class: 'samplepick' }, ...SAMPLE_CHOICES.map(s => el('button', { class: 'csel' + (DJ.sampler[k] === s ? ' on' : ''), onpointerenter: async () => { await ctx(); playDrum(G.c, G.samp, s, G.c.currentTime + 0.01, 0.8); }, onclick: () => { DJ.sampler[k] = s; saveDJ(); close(); render(); } }, PERC_NAMES[s] || s)));
+  close = modal('Sound for pad ' + (k + 1), el('div', {}, el('p', { class: 'hint' }, 'Hover a sound to hear it, click to choose.'), body));
 }
 function transUI() {
   return el('div', { class: 'trans panel' },
@@ -543,9 +555,11 @@ function lightDesk() {
     ...LOOKS.map(([k, n, w]) => el('button', { class: 'lookbtn' + (cur === k ? ' on' : ''), title: w, onclick: () => onPick(k) }, el('b', {}, n), el('small', {}, w))));
   return el('div', { class: 'lightdesk panel', 'data-panel': 'desk', 'data-title': 'Visual desk' },
     el('div', { class: 'fxtop' }, el('b', {}, 'Visual desk'), helpBtn('djLights'), el('span', { class: 'spacer' }),
-      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: V.auto, onchange: e => set('auto', e.target.checked) }), 'Auto VJ (new looks every 16 beats)')),
+      el('span', { class: 'hint' }, 'Live buttons and Auto VJ are right under the visuals.')),
     el('div', { class: 'explain', style: 'display:block' }, 'Pick a main look, add a second look on top if you like, choose colors, then shape how it moves. Everything reacts to the music you play. Hold the Live buttons for moments like drops. Drag any knob up or down.'),
     el('div', { class: 'deskgrid' },
+      sect('Space backdrop', null, el('div', { class: 'bfxrow' }, el('small', {}, 'BEHIND EVERYTHING'), ...BACKDROPS.map(([v, l]) => el('button', { class: 'csel' + (V.backdrop === v ? ' on' : ''), onclick: () => set('backdrop', v) }, l))),
+        knobs(['space', 'Stars', 0, 1, 0.01]), el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: V.twinkle, onchange: e => set('twinkle', e.target.checked, false) }), 'Twinkle')),
       sect('Main look', null, lookBtn('look', V.look, k => set('look', k))),
       sect('Second layer', null, lookBtn('layer2', V.layer2, k => set('layer2', k), true),
         el('div', { class: 'bfxrow' }, el('small', {}, 'BLEND'), ...[['screen', 'Glow'], ['lighter', 'Add'], ['difference', 'Trippy'], ['overlay', 'Overlay'], ['multiply', 'Shadow']].map(([v, l]) => el('button', { class: 'csel' + (V.blend === v ? ' on' : ''), onclick: () => set('blend', v) }, l))),
@@ -558,15 +572,26 @@ function lightDesk() {
         el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: V.kickZoom, onchange: e => set('kickZoom', e.target.checked, false) }), 'Zoom on the kick')),
       sect('Feel', null, knobs(['trails', 'Trails', 0, 1, 0.01], ['glow', 'Glow', 0, 1.5, 0.01], ['saturation', 'Color', 0.3, 2.5, 0.01, v => v.toFixed(1)], ['contrast', 'Contrast', 0.6, 1.8, 0.01, v => v.toFixed(2)], ['res', 'Detail', 0.3, 1, 0.05, v => Math.round(v * 100) + '%']),
         el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: V.grain, onchange: e => set('grain', e.target.checked, false) }), 'Film grain')),
-      sect('Live', null, el('div', { class: 'livebtns' }, hold('flash', 'FLASH', 'Hold: flashes on the beat'), hold('warp', 'WARP', 'Hold: punches the picture in'), hold('invert', 'INVERT', 'Hold: flips all the colors'), hold('freeze', 'FREEZE', 'Hold: freezes the picture')),
-        el('small', { class: 'hint' }, `Keys: ${DJ.keys.strobe.toUpperCase()} flash, ${DJ.keys.blinder.toUpperCase()} warp, ${DJ.keys.blackout.toUpperCase()} freeze (change them in Customize).`))));
+    ));
+}
+// performance strip: big hold buttons right under the visuals
+function liveStrip() {
+  const hold = (k, label, what, key) => el('button', { class: 'livepad ' + k, title: what, onpointerdown: () => { held[k] = true; }, onpointerup: () => { held[k] = false; }, onpointerleave: () => { held[k] = false; } }, el('b', {}, label), el('small', {}, what), key ? el('kbd', {}, key.toUpperCase()) : null);
+  return el('div', { class: 'livestrip' },
+    el('div', { class: 'livehead' }, el('b', {}, 'LIVE'), el('small', {}, 'Hold a button for a moment in the show')),
+    hold('flash', 'Flash', 'Bright flashes on the beat', DJ.keys.strobe), hold('warp', 'Warp', 'Punches the picture toward you', DJ.keys.blinder),
+    hold('invert', 'Invert', 'Flips every color'), hold('freeze', 'Freeze', 'Stops the picture in place', DJ.keys.blackout),
+    el('label', { class: 'chk autovj' }, el('input', { type: 'checkbox', checked: DJ.V.auto, onchange: e => { DJ.V.auto = e.target.checked; saveDJ(); } }), 'Auto VJ'));
 }
 function renderDesk() { const old = root && root.querySelector('.lightdesk'); if (old) { old.replaceWith(lightDesk()); makeMovable(root, 'dj'); } }
 function customUI() {
   const set = (k, v, re = true) => { DJ[k] = v; saveDJ(); if (re) render(); };
   const color = (k, label) => el('label', { class: 'num' }, label, el('input', { type: 'color', value: DJ[k], oninput: e => set(k, e.target.value, false) }));
   const chips = (k, opts) => el('div', { class: 'fxlib' }, ...opts.map(([v, l]) => el('button', { class: 'csel' + (DJ[k] === v ? ' on' : ''), onclick: () => set(k, v) }, l)));
-  const pickImg = id => { const i = el('input', { type: 'file', accept: 'image/*' }); i.onchange = () => { const f = i.files[0]; if (!f) return; const im = new Image(); im.onload = () => { const cv = el('canvas', { width: 360, height: 360 }), g = cv.getContext('2d'), s = Math.min(im.width, im.height); g.drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, 360, 360); set('img' + id, cv.toDataURL('image/jpeg', 0.85)); }; im.src = URL.createObjectURL(f); }; i.click(); };
+  const pickImg = id => { const i = el('input', { type: 'file', accept: 'image/*' }); i.onchange = async () => { const f = i.files[0]; if (!f) return;
+    // moving pictures (GIF) are kept whole and play on the record
+    if (/gif|webp/i.test(f.type)) { try { forgetAnim('djlabel' + id); const a = await loadAnim('djlabel' + id, f); if (isMoving(a)) { await db.put('audio', 'dj-label-' + id, { img: f, name: f.name }); delete labelCache['L' + id]; set('img' + id, 'anim'); toast('Moving picture on deck ' + id + '.'); return; } } catch { } }
+    const im = new Image(); im.onload = () => { const cv = el('canvas', { width: 360, height: 360 }), g = cv.getContext('2d'), s = Math.min(im.width, im.height); g.drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, 360, 360); set('img' + id, cv.toDataURL('image/jpeg', 0.85)); }; im.src = URL.createObjectURL(f); }; i.click(); };
   const keyBtn = (act, label) => el('button', { class: 'keybind', onclick: e => { const b = e.currentTarget; b.querySelector('kbd').textContent = '...'; const h = ev => { ev.preventDefault(); ev.stopPropagation(); removeEventListener('keydown', h, true); DJ.keys[act] = ev.key.toLowerCase(); saveDJ(); render(); }; addEventListener('keydown', h, true); } }, el('small', {}, label), el('kbd', {}, (DJ.keys[act] || '').toUpperCase()));
   return el('details', { class: 'djcustom panel', open: !!DJ.customOpen, ontoggle: e => { DJ.customOpen = e.target.open; saveDJ(); } },
     el('summary', {}, 'Customize your booth', helpBtn('djCustom')),
@@ -588,7 +613,7 @@ function customUI() {
 export function renderDJ() {
   const view = $('#view'); view.innerHTML = '';
   root = el('div', { class: `djpage mat-${DJ.material} deck-${DJ.deckStyle}`, style: `--djled:${DJ.led}` });
-  const stage = el('div', { class: 'stagewrap', 'data-panel': 'visuals', 'data-title': 'Visuals' }, el('canvas', { class: 'stage' }),
+  const stage = el('div', { class: 'stagewrap', 'data-panel': 'visuals', 'data-title': 'Visuals' }, el('canvas', { class: 'stage' }), liveStrip(),
     el('div', { class: 'stagectl' }, el('span', { class: 'stagetitle' }, 'LIVE VISUALS'), el('span', { class: 'spacer' }),
       el('button', { class: 'hw sm', title: 'Full screen light show', onclick: () => { const w = root.querySelector('.stagewrap'); (document.fullscreenElement ? document.exitFullscreen() : w.requestFullscreen()).catch(() => { }); } }, '⛶ FULL SCREEN')));
   root.append(

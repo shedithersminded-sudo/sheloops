@@ -7,7 +7,7 @@ import { E, ensureCtx, openMic, reopenMic, setInputGain, peakOf, rmsOf, testReco
 import { importBeatFile } from './studio.js';
 import { U, check, whatsNew, install } from './update.js';
 import { exportSongFile, exportEverything, openSheloopsFile } from './exporter.js';
-import { look, saveLook, applyLook, allThemes, applyGlow, UIFX_PRESETS, applyUiFx, derive } from './look.js';
+import { look, saveLook, applyLook, allThemes, applyGlow, UIFX_PRESETS, applyUiFx, derive, HEAD_FONTS, applyHeadFont } from './look.js';
 import { STARTERS } from './state.js';
 
 const go = v => emit('goto:' + v);
@@ -33,14 +33,12 @@ function pickFile(accept) {
 // ---------- welcome guide on Home: make it yours, Simple vs Advanced, what you can make ----------
 const GENRES = [['Trap', 'hard 808s'], ['Drill', 'sliding bass'], ['R&B', 'smooth'], ['Hip-Hop', 'boom bap'], ['Afrobeats', 'bouncy'], ['Pop', 'bright'], ['Lo-fi', 'dusty chill'],
   ['Jungle', 'chopped breaks'], ['Drum & Bass', 'fast and deep'], ['Breakcore', 'chaos breaks'], ['Heavenly Breakcore', 'dreamy and fast'], ['Lonely Breakcore', 'sad piano'],
-  ['Outsider House', 'dusty house'], ['Healing House', 'warm and soft'], ['Ambient Breaks', 'dreamy breaks'], ['Euphoric Trance', 'uplifting'], ['Acid House', 'squelchy'], ['Rave Breaks', 'hoovers'], ['Gospel', 'church keys'], ['Soul', 'warm']];
+  ['Outsider House', 'dusty house'], ['Healing House', 'warm and soft'], ['Get Lost', 'dreamy and slow'], ['Starlight Pop', 'glossy dance'], ['Ambient Breaks', 'dreamy breaks'], ['Euphoric Trance', 'uplifting'], ['Acid House', 'squelchy'], ['Rave Breaks', 'hoovers'], ['Gospel', 'church keys'], ['Soul', 'warm']];
 function welcome() {
   const open = !settings.hideWelcome;
   const step = (n, title, text, ...kids) => el('div', { class: 'wcard' }, el('div', { class: 'wnum' }, n), el('b', {}, title), el('p', {}, text), ...kids);
   const themes = settings.simple ? allThemes().slice(0, 8) : allThemes();
-  const d = el('details', { class: 'welcome', open },
-    el('summary', {}, el('span', { class: 'wled' }), 'Welcome to your studio', el('small', {}, open ? 'Click to hide this guide' : 'Click to show the guide')),
-    el('div', { class: 'wgrid' },
+  const cards = [
       step('1', 'Make it yours', 'Your studio can look and feel any way you want. Here is everything you can change:',
         el('div', { class: 'wcan' }, ...[['Theme colors', 'look'], ['Your own palette', 'look'], ['Glow, pulse and flash', 'look'], ['Text glow and color', 'look'], ['Fonts', 'look'], ['Background', 'look'], ['Mouse effects', 'look'], ['CD player and visualizer', 'look'], ['Your logo', 'look'], ['Move sections around', 'studio']].map(([l, v]) => el('button', { class: 'wcanchip', onclick: () => go(v) }, l))),
         el('div', { class: 'wsub' }, '1. Pick a theme'),
@@ -64,9 +62,83 @@ function welcome() {
         el('p', { class: 'hint' }, 'The same switch is always at the top right. Press ? on any screen for the keys, and click any ? button to learn what something does.')),
       step('3', 'What do you want to make?', 'Pick a style. You get a new song with a ready beat in that style, then you can change everything.',
         el('div', { class: 'wgenres' }, GENRES.filter(([g]) => STARTERS[g]).map(([g, s]) => el('button', { class: 'wgenre', onclick: () => createSong(false, g) }, el('b', {}, g), el('small', {}, s)))),
-        el('div', { class: 'wrow' }, el('button', { onclick: () => go('pads') }, 'Or tap a beat on the Pad machine'), el('button', { onclick: () => go('learn') }, 'Step by step lessons')))));
-  d.addEventListener('toggle', () => { settings.hideWelcome = !d.open; saveSettings(); d.querySelector('summary small').textContent = d.open ? 'Click to hide this guide' : 'Click to show the guide'; });
+        el('div', { class: 'wrow' }, el('button', { onclick: () => go('pads') }, 'Or tap a beat on the Pad machine'), el('button', { onclick: () => go('learn') }, 'Step by step lessons'))),
+    step('4', 'Pick your lettering', 'Choose the font for every title and big word in the app. Your body text font is in Appearance.',
+      el('div', { class: 'wfonts' }, ...HEAD_FONTS.map(([f, n]) => el('button', { class: 'wfont' + ((look.headFont || 'Bungee') === f ? ' on' : ''), style: `font-family:"${f}"`, onclick: e => { look.headFont = f === 'Bungee' ? '' : f; saveLook(); applyHeadFont(); e.currentTarget.parentNode.querySelectorAll('.wfont').forEach(b => b.classList.toggle('on', b === e.currentTarget)); toast(`Titles now use ${f}.`); } }, el('b', {}, 'SheLoops'), el('small', {}, n))))),
+  ];
+  const tabs = [['Make it yours', 'Colors, feel, glow'], ['Simple or Advanced', 'How much you see'], ['Start a style', 'A ready beat in one click'], ['Lettering', 'Fonts for titles']];
+  let cur = clamp(settings.welcomeTab || 0, 0, cards.length - 1);
+  const body = el('div', { class: 'wbody' }, cards[cur]);
+  const bar = el('div', { class: 'wtabs' }, ...tabs.map(([t, sub], i) => el('button', { class: 'wtab' + (i === cur ? ' on' : ''), style: `--i:${i}`, onclick: e => {
+    if (i === cur) return; const dir = i > cur ? 1 : -1; cur = i; settings.welcomeTab = i; saveSettings();
+    bar.querySelectorAll('.wtab').forEach(b => b.classList.toggle('on', b === e.currentTarget));
+    const next = cards[i]; next.style.setProperty('--dir', dir); next.classList.remove('slidein'); void next.offsetWidth; next.classList.add('slidein'); body.replaceChildren(next);
+  } }, el('span', { class: 'wtnum' }, String(i + 1).padStart(2, '0')), el('b', {}, t), el('small', {}, sub))));
+  const d = el('details', { class: 'welcome', open },
+    el('summary', {}, el('span', { class: 'wled' }), scatter('Welcome to your studio'), el('small', {}, open ? 'Click to fold' : 'Click to open')),
+    el('div', { class: 'wlayout' }, bar, body));
+  d.addEventListener('toggle', () => { settings.hideWelcome = !d.open; saveSettings(); d.querySelector('summary small').textContent = d.open ? 'Click to fold' : 'Click to open'; });
   return d;
+}
+// big words with letters that sit a little off and float, so titles never look flat
+function scatter(text, cls = 'scatter') {
+  return el('span', { class: cls, 'aria-label': text }, ...[...text].map((ch, i) => ch === ' ' ? el('span', { class: 'sp' }, ' ') : el('span', { class: 'ch', style: `--r:${((i * 37) % 9) - 4}deg;--y:${((i * 53) % 7) - 3}px;--d:${(i % 7) * 0.12}s` }, ch)));
+}
+// ---------- the journey: the steps of making a song, lit up as you go ----------
+const JOURNEY = [
+  ['mic', 'Set up', 'Plug in your mic or headphones and test them.', 'Mic setup', () => settings.wizardDone, 'mic', 'You can skip this and use your laptop mic.'],
+  ['beat', 'Get a beat', 'Drop in a beat file, start a style, make one in the beat maker, or tap one on the pads.', 'Beat maker', P => P && (P.tracks.some(t => t.kind === 'file' && t.clips.length) || P.beat.tracks.some(t => (t.notes || []).length || (t.rows || []).some(r => r.steps.some(Boolean)))), 'beat', 'Try a style on the Start a style tab above for a ready beat.'],
+  ['record', 'Record', 'Rap or sing over your beat. Every take is kept.', 'Studio', P => P && P.tracks.some(t => t.kind !== 'file' && t.clips.length), 'studio', 'Press R in the Studio to record. A click counts you in.'],
+  ['shape', 'Shape your sound', 'Pick a vocal style, stack Enhance and Voice FX, and turn the knobs.', 'Vocal presets', P => P && P.tracks.some(t => (t.fx || []).length), 'studio', 'Check my voice in Fix my voice finds problems for you.'],
+  ['mix', 'Mix and master', 'Balance the levels, then make it loud and polished.', 'Master', () => (settings.visited || []).includes('master'), 'master', 'Pick a mastering style and compare before and after.'],
+  ['cover', 'Cover art', 'Design the cover, the CD and the case.', 'Cover art', P => P && !!P.coverDesign, 'art', 'Your own pictures and GIFs work on covers and discs.'],
+  ['share', 'Share it', 'Export your song as MP3 or WAV, or play it in the Player.', 'Export', () => (settings.visited || []).includes('export'), 'export', 'Export everything to keep a backup of all your work.'],
+];
+function journey(P) {
+  const done = JOURNEY.map(j => !!j[4](P)), next = done.indexOf(false), pct = done.filter(Boolean).length / JOURNEY.length;
+  let open = settings.journeyOpen ?? (next < 0 ? 0 : next);
+  const detail = el('div', { class: 'jdetail' });
+  const show = i => {
+    open = i; settings.journeyOpen = i; saveSettings();
+    const [, title, what, where, , view, tip] = JOURNEY[i];
+    nodes.querySelectorAll('.jnode').forEach((n, k) => n.classList.toggle('open', k === i));
+    detail.replaceChildren(el('div', { class: 'jcard' },
+      el('div', { class: 'jcardhead' }, el('span', { class: 'jstate ' + (done[i] ? 'done' : i === next ? 'next' : '') }, done[i] ? 'Done' : i === next ? 'Next step' : 'Later'), el('b', {}, title)),
+      el('p', {}, what), el('p', { class: 'jtip' }, el('b', {}, 'Tip: '), tip),
+      el('button', { class: 'hot', onclick: () => view === 'export' ? import('./exporter.js').then(m => m.openExport()) : view === 'beat' || view === 'studio' || view === 'master' ? (app.P ? go(view) : createSong(view === 'beat' ? false : null)) : go(view) }, 'Go to ' + where + ' →')));
+  };
+  const nodes = el('div', { class: 'jnodes', style: `--pct:${pct}` }, el('div', { class: 'jline' }, el('i')),
+    ...JOURNEY.map((j, i) => el('button', { class: 'jnode' + (done[i] ? ' done' : '') + (i === next ? ' next' : ''), style: `--i:${i}`, onclick: () => show(i) },
+      el('span', { class: 'jdot' }, done[i] ? '✓' : i + 1), el('b', {}, j[1]))));
+  const box = el('div', { class: 'journey panel reveal' },
+    el('div', { class: 'jhead' }, el('h2', { class: 'jtitle' }, scatter('Your song, step by step')), el('small', {}, next < 0 ? 'Every step done. Make another one!' : `${Math.round(pct * 100)}% done · next: ${JOURNEY[next][1]}`)),
+    nodes, detail);
+  show(open); return box;
+}
+// ---------- explore: every tool, grouped, revealed as you scroll ----------
+const EXPLORE = [
+  ['Create', 'Make music', [['studio', 'Studio', 'Record, takes, vocal effects'], ['beat', 'Beat maker', 'Drums, 75 instruments, guitar'], ['pads', 'Pad machine', '128 pads, loops, voice loops'], ['dj', 'DJ booth', 'Mix, scratch, transitions, visuals']]],
+  ['Shape', 'Make it sound right', [['fix', 'Fix my voice', 'Finds and fixes problems'], ['presets', 'Vocal presets', '172 styles and effects'], ['build', 'Build my sound', 'Pick a vibe, shape it'], ['sounds', 'My sounds', 'Your drums, loops and recordings']]],
+  ['Finish', 'Make it done', [['mixer', 'Mixer', 'Faders, meters, groups'], ['master', 'Master', 'Loud and polished'], ['export', 'Export', 'MP3, WAV, stems, backups'], ['player', 'Player', 'Listen with your covers']]],
+  ['Design', 'Make it yours', [['art', 'Cover art', 'Covers, CDs, cases, GIFs'], ['look', 'Appearance', 'Themes, glow, fonts, mouse'], ['profile', 'My sound', 'Your artist profile']]],
+  ['Learn', 'Get better', [['learn', 'Lessons', 'Step by step'], ['mic', 'Mic setup', 'Test your mic'], ['projects', 'Projects', 'All your songs']]],
+];
+function explore(P) {
+  const open = (v) => {
+    if (v === 'export') return import('./exporter.js').then(m => m.openExport());
+    if (['fix', 'presets', 'build'].includes(v)) { settings.inspTab = v; saveSettings(); return P ? go('studio') : createSong(null); }
+    if (['studio', 'mixer', 'master', 'beat'].includes(v) && !P) return createSong(v === 'beat' ? false : null);
+    go(v);
+  };
+  return el('div', { class: 'explore' },
+    el('h2', { class: 'jtitle reveal' }, scatter('Explore everything')),
+    ...EXPLORE.map(([cat, sub, items], ci) => el('div', { class: 'xrow reveal', style: `--ci:${ci}` },
+      el('div', { class: 'xhead' }, el('b', {}, cat), el('small', {}, sub)),
+      el('div', { class: 'xcards' }, ...items.map(([v, t, w], k) => el('button', { class: 'xcard', style: `--k:${k}`, onclick: () => open(v) }, el('span', { class: 'xnum' }, String(ci * 4 + k + 1).padStart(2, '0')), el('b', {}, t), el('small', {}, w), el('span', { class: 'xgo' }, '→')))))));
+}
+function revealOnScroll(root) {
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('inview'); io.unobserve(e.target); } }), { threshold: 0.12 });
+  root.querySelectorAll('.reveal').forEach(n => io.observe(n));
 }
 function setMode(v) { settings.simple = v; saveSettings(); document.body.classList.toggle('simple', v); emit('modechange'); toast(v ? 'Simple mode: plain explanations everywhere.' : 'Advanced mode: every tool is out.'); }
 
@@ -106,51 +178,36 @@ function ticker(P, all) {
   const line = bits.join('  ✦  ') + '  ✦  ';
   return el('div', { class: 'ticker', 'aria-hidden': 'true' }, el('span', { class: 'led' }), el('div', { class: 'ticker-track' }, el('span', {}, line), el('span', {}, line)));
 }
+let homeToken = 0;
 export async function renderHome() {
-  const view = $('#view'); view.innerHTML = '';
+  const my = ++homeToken; // only the newest call may draw, so Home never shows twice
   const all = (await db.all('projects')).sort((a, b) => b.updated - a.updated);
-  if (app.view !== 'home') return;
+  if (app.view !== 'home' || my !== homeToken) return;
+  const view = $('#view'); view.innerHTML = '';
   const P = app.P;
-  const tile = (title, sub, fn, hot) => el('button', { class: 'tile' + (hot ? ' hot' : ''), onclick: fn }, el('b', {}, title), el('span', {}, sub));
   const home = el('div', { class: 'home' },
     el('div', { class: 'hero panel' },
       P ? coverEl(P, 'cover big') : null,
       heroLogo(),
       el('div', { class: 'hero-text' },
-        el('small', {}, 'Current song'), el('h1', {}, P ? P.name : 'No song yet'),
+        el('small', {}, P ? 'Current song' : 'Welcome'), el('h1', {}, scatter(P ? P.name : "Let's make something", 'scatter big')),
         P && P.artist ? el('p', {}, P.artist) : null,
-        P ? el('button', { class: 'hot', onclick: () => go('studio') }, 'Continue in the studio') : null),
+        el('div', { class: 'wrow' },
+          P ? el('button', { class: 'hot', onclick: () => go('studio') }, 'Continue in the studio') : el('button', { class: 'hot', onclick: () => createSong(null) }, 'Start a new song'),
+          el('button', { onclick: async () => { const f = await pickFile('audio/*'); if (f) createSong(f); } }, 'Start with my beat'))),
       el('div', { class: 'dropzone', id: 'homedrop' }, el('b', {}, 'Drop a beat file here'), el('span', {}, 'Starts a new song with your beat, ready to record.')),
     ),
     ticker(P, all),
     welcome(),
-    el('div', { class: 'tiles' },
-      tile('Start with my beat', 'Pick an MP3 or WAV and record over it', async () => { const f = await pickFile('audio/*'); if (f) createSong(f); }, true),
-      tile('Create new song', 'Starts with a simple built-in beat', () => createSong(null)),
-      tile('Record vocals', 'Open the recording studio', () => P ? go('studio') : createSong(null)),
-      tile('Fix my voice', 'Check a take and fix problems', () => { settings.inspTab = 'fix'; saveSettings(); P ? go('studio') : createSong(null); }),
-      tile('Pad machine', 'Finger drum pads, your voice on a pad, loops', () => go('pads'), true),
-      tile('DJ booth', 'Mix songs, scratch, transitions, lights', () => go('dj'), true),
-      tile('My sound', 'Your studio profile and defaults', () => go('profile')),
-      tile('My studio appearance', 'Themes, backgrounds, cursor, layout', () => go('look')),
-      tile('My cover art', 'Covers, CD discs, back covers and cases', () => go('art')),
-      tile('Player', 'Listen to your songs with their covers', () => go('player')),
-      tile('Vocal presets', 'Change how your voice sounds', () => { settings.inspTab = 'presets'; saveSettings(); P ? go('studio') : createSong(null); }),
-      tile('Build my sound', 'Pick a vibe, shape it, keep it', () => { settings.inspTab = 'build'; saveSettings(); P ? go('studio') : createSong(null); }),
-      tile('Make a beat', 'Drums, instruments, patterns', () => P ? go('beat') : createSong(false)),
-      tile('My sounds', 'Upload your own drums, loops and samples', () => go('sounds')),
-      tile('Mixing studio', 'Faders, meters, groups', () => P ? go('mixer') : createSong(null)),
-      tile('Mastering studio', 'Make your song loud and polished', () => P ? go('master') : createSong(null)),
-      tile('My projects', `${all.length} song${all.length === 1 ? '' : 's'}`, () => go('projects')),
-      tile('Mic setup', settings.wizardDone ? 'Check or change your mic' : 'Start here if you are new', () => go('mic'), !settings.wizardDone),
-      tile('Learn', 'Short step by step lessons', () => go('learn')),
-    ),
+    journey(P),
+    explore(P),
     all.length ? el('div', {}, el('h2', { class: 'h2' }, 'Recent songs'),
       el('div', { class: 'recent' }, all.slice(0, 6).map(p => el('button', { class: 'recent-card', onclick: async () => { await openProject(p); go('studio'); } },
         coverEl(p), el('b', {}, p.name), el('small', {}, ago(p.updated)))))) : null,
     updatesPanel(),
   );
   view.append(home);
+  revealOnScroll(home);
   const dz = $('#homedrop');
   dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
   dz.addEventListener('dragleave', () => dz.classList.remove('over'));

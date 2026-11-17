@@ -1,18 +1,32 @@
 {
-  "version": "2.0.0",
+  "version": "2.1.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Move everything: hover any big section and drag its grip to put it where you want, or fold it away. Works in the Studio, the vocal presets, the Pad machine and the DJ booth. Reset layout puts it back.",
-    "What I hear: a switchboard in the top bar (or Shift + H) to turn any part on or off while you work: your beat file, vocals, the beat maker and each instrument, the click, the pad loop and the DJ decks.",
-    "Vocal presets organized: a sidebar with Vocal styles (rap, R&B, pop, club and world, rock and live, speech), Enhance and Voice FX by mood, favorites, your folders, and search.",
-    "172 presets now: 46 vocal styles, 42 Enhance and 84 Voice FX, including a new Healing mood. 5 new effects: Exciter, Shimmer reverb, Tape machine, Trance gate and Auto-pan.",
-    "DJ visuals: the lights are replaced by liquid metal, light orbs, flow fields, silk ribbons, kaleidoscope, plasma, aurora and a warp tunnel. Two layers, palettes, 3D camera angles, trails and glow, Live Flash, Warp, Invert and Freeze, and Auto VJ.",
-    "Healing house: dream pad, supersaw, glass keys and warm pluck instruments, Healing House, Ambient Breaks and Euphoric Trance starters, and Healing wash, Soft focus and Euphoric gate quick sounds.",
-    "Make it yours: 24 themes, make your own palette from 3 colors, and Style effects for glow, motion, pulsing and flashing, with one-click combos.",
-    "Quick tour banners on each page: hover a step and the button it talks about lights up."
+    "Home rebuilt: it no longer repeats. A tabbed welcome (Make it yours, Simple or Advanced, Start a style, Lettering), Your song step by step (a path that lights up as you finish each step and tells you where to go next), and Explore everything by category, revealed as you scroll.",
+    "Choose the font for every title (12 lettering styles), and titles now float with scattered letters.",
+    "New animated SHELOOPS runner logo. Switch back to your own picture or GIF in Appearance.",
+    "GIFs now move on cover art, on the CD player disc, on DJ record labels, and as your logo or background.",
+    "DJ visuals: 6 space looks (Hyperspace, Nebula, Galaxy, Planet, Black hole, Dancers) and a space backdrop with twinkling stars behind any look. Live buttons sit right under the visuals.",
+    "DJ sampler organized into Hype and FX rows with colored pads, and hover-to-hear when picking sounds.",
+    "Fixed: changing the feel (Calm studio, Party and so on) no longer makes scrolling text race or crawl.",
+    "New sounds: Get Lost and Starlight Pop starters, crystal bell and star pluck instruments, and Lost in Space, Starlight, Dance Floor Echo and Stargazer voice effects."
   ],
   "history": [
+    {
+      "version": "2.0.0",
+      "date": "2026-11-16",
+      "notes": [
+        "Move everything: hover any big section and drag its grip to put it where you want, or fold it away. Works in the Studio, the vocal presets, the Pad machine and the DJ booth. Reset layout puts it back.",
+        "What I hear: a switchboard in the top bar (or Shift + H) to turn any part on or off while you work: your beat file, vocals, the beat maker and each instrument, the click, the pad loop and the DJ decks.",
+        "Vocal presets organized: a sidebar with Vocal styles (rap, R&B, pop, club and world, rock and live, speech), Enhance and Voice FX by mood, favorites, your folders, and search.",
+        "172 presets now: 46 vocal styles, 42 Enhance and 84 Voice FX, including a new Healing mood. 5 new effects: Exciter, Shimmer reverb, Tape machine, Trance gate and Auto-pan.",
+        "DJ visuals: the lights are replaced by liquid metal, light orbs, flow fields, silk ribbons, kaleidoscope, plasma, aurora and a warp tunnel. Two layers, palettes, 3D camera angles, trails and glow, Live Flash, Warp, Invert and Freeze, and Auto VJ.",
+        "Healing house: dream pad, supersaw, glass keys and warm pluck instruments, Healing House, Ambient Breaks and Euphoric Trance starters, and Healing wash, Soft focus and Euphoric gate quick sounds.",
+        "Make it yours: 24 themes, make your own palette from 3 colors, and Style effects for glow, motion, pulsing and flashing, with one-click combos.",
+        "Quick tour banners on each page: hover a step and the button it talks about lights up."
+      ]
+    },
     {
       "version": "1.9.0",
       "date": "2026-11-16",

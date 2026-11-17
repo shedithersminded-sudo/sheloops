@@ -1,4 +1,5 @@
 // Cover art + CD designer: data, storage, rendering, export. Artwork comes only from my uploads + drawn shapes/text.
+import { loadAnim, frameOf, isMoving } from './gif.js';
 import { uid, clamp } from './util.js';
 import { db } from './store.js';
 
@@ -49,18 +50,19 @@ export const deleteDesign = id => db.del('designs', id);
 export const listArt = async () => (await db.all('art')).sort((a, b) => b.added - a.added);
 const imgCache = new Map();
 export async function addArt(file) {
-  const bmp = await createImageBitmap(file); // throws if not a picture
-  const id = 'a' + uid();
-  await db.put('art', id, { id, blob: file, name: file.name, w: bmp.width, h: bmp.height, fav: false, added: Date.now() });
-  imgCache.set(id, bmp);
+  const id = 'a' + uid(), a = await loadAnim('art:' + id, file); // throws if not a picture; GIFs keep every frame
+  await db.put('art', id, { id, blob: file, name: file.name, w: a.w, h: a.h, fav: false, added: Date.now(), moving: isMoving(a) });
+  imgCache.set(id, a);
   return id;
 }
 export async function artImage(id) {
   if (!id) return null;
-  if (imgCache.has(id)) return imgCache.get(id);
+  if (imgCache.has(id)) return frameOf(imgCache.get(id));
   const d = await db.get('art', id); if (!d) return null;
-  const bmp = await createImageBitmap(d.blob); imgCache.set(id, bmp); return bmp;
+  const a = await loadAnim('art:' + id, d.blob); imgCache.set(id, a); return frameOf(a);
 }
+// true when a design uses a moving picture (GIF), so editors and the CD player keep redrawing it
+export const designMoves = (design, face) => Object.entries(design.faces || {}).some(([k, f]) => (!face || k === face) && f.layers.some(l => l.type === 'image' && !l.hidden && isMoving(imgCache.get(l.src))));
 export async function preload(design) {
   ensureDesign(design);
   const ids = new Set();
@@ -186,7 +188,7 @@ function drawImage(g, l, img, editor) {
 export function drawLayer(g, l, editor) {
   if (l.hidden) return;
   g.save(); g.translate(l.x, l.y); g.rotate(l.rot * Math.PI / 180); g.globalAlpha *= l.opacity;
-  if (l.type === 'image') drawImage(g, l, imgCache.get(l.src), editor);
+  if (l.type === 'image') drawImage(g, l, frameOf(imgCache.get(l.src)), editor);
   else if (l.type === 'text') drawText(g, l);
   else if (l.type === 'shape') drawShape(g, l);
   else if (l.type === 'sticker') drawSticker(g, l);

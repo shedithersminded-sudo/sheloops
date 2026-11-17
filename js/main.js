@@ -58,7 +58,7 @@ const MENU = [
     ['welcome', 'Welcome guide', 'Themes, Simple or Advanced, and quick starts on Home']]],
 ];
 function menuGo(v) {
-  if (v === 'export') return openExport();
+  if (v === 'export') { settings.visited ||= []; if (!settings.visited.includes('export')) { settings.visited.push('export'); saveSettings(); } return openExport(); }
   if (v === 'keys') return openKeyGuide(app.view);
   if (v === 'welcome') { settings.hideWelcome = false; saveSettings(); goto('home'); return; }
   goto(v);
@@ -107,8 +107,11 @@ function brandEl() {
   const L = look.logo || {};
   logoURL().then(url => {
     b.innerHTML = '';
-    if (url) b.append(el('img', { class: 'logo ' + (L.shape || ''), src: url, alt: 'logo', draggable: 'false', oncontextmenu: e => e.preventDefault() }));
-    if (!url || L.text !== false) b.append(el('span', { class: 'brandtext' }, 'SHE', el('span', {}, 'LOOPS')));
+    const mode = L.mode || 'runner';
+    // the SHELOOPS runner: always on the move, with speed lines behind her
+    if (mode === 'runner') b.append(el('span', { class: 'runlogo', 'aria-hidden': 'true' }, el('i', { class: 'streak s1' }), el('i', { class: 'streak s2' }), el('i', { class: 'streak s3' }), el('span', { class: 'runner' })));
+    else if (mode === 'mine' && url) b.append(el('img', { class: 'logo ' + (L.shape || ''), src: url, alt: 'logo', draggable: 'false', oncontextmenu: e => e.preventDefault() }));
+    if (mode !== 'mine' || !url || L.text !== false) b.append(el('span', { class: 'brandtext' }, 'SHE', el('span', {}, 'LOOPS')));
   });
   return b;
 }
@@ -142,6 +145,7 @@ export function goto(v) {
   if (NEEDS_SONG.includes(v) && !app.P) { createSong(v === 'beat' ? false : null); return; }
   const was = app.view;
   app.view = v;
+  settings.visited ||= []; if (!settings.visited.includes(v)) { settings.visited.push(v); saveSettings(); } // lights up steps on Home
   if (T.playing && (was === 'beat') !== (v === 'beat')) refresh();
   nav(); footer();
   VIEWS[v]();

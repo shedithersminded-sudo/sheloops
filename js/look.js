@@ -75,6 +75,8 @@ look.cursor = { trailLen: 450, spot: false, ...look.cursor };
 look.layout = { ...DEFAULT_LAYOUT, ...look.layout };
 // 2026-11 new studio look: move the old default font to the new one once
 if ((look.skinV || 0) < 2) { if (!look.font || look.font === 'Fredoka') look.font = 'Comfortaa'; look.skinV = 2; }
+// 2026-11: the running SHELOOPS logo becomes the default (your own picture stays one click away in Appearance)
+if ((look.skinV || 0) < 3) { look.logo = { ...(look.logo || {}), mode: 'runner' }; look.skinV = 3; }
 if (look.cursor) delete look.cursor.imgEl;
 for (const k of DEFAULT_LAYOUT.toolbar) if (!look.layout.toolbar.includes(k)) look.layout.toolbar.push(k);
 // never store the loaded cursor picture element (it turns into {} and breaks the next start)
@@ -96,6 +98,7 @@ export async function applyLook() {
   root.classList.toggle('light', lum(th.c.bg) > 0.5);
   resetCssVars();
   applyFont();
+  applyHeadFont();
   applyGlow();
   applyUiFx();
   await applyLogo();
@@ -163,6 +166,9 @@ export function applyFont() {
   const f = look.font || 'Comfortaa', mono = f === 'Cascadia Mono';
   document.documentElement.style.setProperty('--font', mono ? '"Cascadia Mono", Consolas, monospace' : `"${f}", "Nunito", system-ui, sans-serif`);
 }
+// heading font (titles, big words) can be chosen separately
+export const HEAD_FONTS = [['Bungee', 'Block signage (default)'], ['Monoton', 'Neon tubes'], ['Righteous', 'Retro round'], ['Rubik Glitch', 'Glitched'], ['Permanent Marker', 'Hand drawn'], ['Press Start 2P', 'Arcade pixels'], ['Bebas Neue', 'Tall and clean'], ['Abril Fatface', 'Magazine'], ['Cinzel', 'Classic'], ['UnifrakturMaguntia', 'Gothic'], ['Pacifico', 'Script'], ['Lobster', 'Bold script']];
+export function applyHeadFont() { const f = look.headFont; document.documentElement.style.setProperty('--display', f ? `"${f}", "Bungee", sans-serif` : "'Bungee', 'Righteous', var(--font)"); }
 // ---------- logo (my own art, kept in this browser only) ----------
 let logoUrl = null;
 export async function logoURL() {
@@ -174,7 +180,7 @@ export async function setLogo(file) {
   await createImageBitmap(file); // make sure it is a picture
   await db.put('audio', 'look-logo', { img: file, name: file.name }); // stored exactly as uploaded
   if (logoUrl) URL.revokeObjectURL(logoUrl); logoUrl = null;
-  look.logo = { size: 34, shape: 'none', text: true, ...(look.logo || {}), has: true }; saveLook(); await applyLogo();
+  look.logo = { size: 34, shape: 'none', text: true, ...(look.logo || {}), has: true, mode: 'mine' }; saveLook(); await applyLogo();
 }
 export async function removeLogo() {
   await db.del('audio', 'look-logo').catch(() => { }); if (logoUrl) URL.revokeObjectURL(logoUrl); logoUrl = null;

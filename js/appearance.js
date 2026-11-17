@@ -30,6 +30,8 @@ function logoFontPanel() {
   const setL = async (k, v) => { L[k] = v; saveLook(); await applyLogo(); redraw(); };
   return el('div', { class: 'panel mpanel' },
     el('div', { class: 'insp-sub' }, 'My logo', helpBtn('logo')),
+    el('div', { class: 'fxlib' }, ...[['runner', 'SHELOOPS runner (animated)'], ['mine', 'My picture or GIF'], ['none', 'Just the name']].map(([v, l]) => el('button', { class: 'chip' + ((L.mode || 'runner') === v ? ' on' : ''), onclick: () => setL('mode', v) }, l))),
+    el('p', { class: 'hint' }, 'Your own logo can be a GIF, and it moves. So can the background picture.'),
     el('div', { class: 'fxtop' }, prev,
       el('button', { class: 'hot', onclick: async () => { const f = await pickFile('image/*'); if (!f) return; try { await setLogo(f); toast('Logo set.'); redraw(); } catch { toast('Could not read that picture.'); } } }, L.has ? 'Change logo' : 'Upload my logo'),
       L.has ? el('button', { class: 'danger', onclick: async () => { await removeLogo(); redraw(); } }, 'Remove') : null),

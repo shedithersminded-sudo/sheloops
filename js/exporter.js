@@ -104,6 +104,7 @@ export async function importData(d) {
 
 // ---------- the Export window ----------
 export function openExport() {
+  import('./store.js').then(({ settings, saveSettings }) => { settings.visited ||= []; if (!settings.visited.includes('export')) { settings.visited.push('export'); saveSettings(); } });
   const P = app.P, hasMp3 = !!window.lamejs;
   let name = P ? (P.artist ? P.artist + ' - ' : '') + P.name : 'my-sheloops';
   let fmt = 'wav';

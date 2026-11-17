@@ -257,7 +257,7 @@ export function renderLanes() {
   ruler.addEventListener('pointerdown', e => {
     const r = ruler.getBoundingClientRect();
     const set = ev => seek((ev.clientX - r.left) / pps());
-    set(e); ruler.setPointerCapture(e.pointerId);
+    set(e); try { ruler.setPointerCapture(e.pointerId); } catch { };
     ruler.onpointermove = ev => { if (ev.buttons) { app.playhead = clamp((ev.clientX - r.left) / pps(), 0, songEnd()); updatePlayhead(); } };
     ruler.onpointerup = ev => { ruler.onpointermove = null; set(ev); };
   });
@@ -265,7 +265,7 @@ export function renderLanes() {
   rangeEl = el('div', { class: 'range' });
   strip.addEventListener('pointerdown', e => {
     const r = strip.getBoundingClientRect(), a = snapT((e.clientX - r.left) / pps(), e);
-    strip.setPointerCapture(e.pointerId); snapshot();
+    try { strip.setPointerCapture(e.pointerId); } catch { }; snapshot();
     strip.onpointermove = ev => { const b = snapT((ev.clientX - r.left) / pps(), ev); P.range = { start: Math.max(0, Math.min(a, b)), end: Math.max(a, b) }; renderRange(); };
     strip.onpointerup = () => { strip.onpointermove = null; save(); refresh(); };
   });
@@ -371,7 +371,7 @@ function clipDown(e, t, c, d) {
   const x = e.offsetX, mode = x < 7 ? 'l' : x > d.clientWidth - 7 ? 'r' : 'm';
   const o = { ...c }, x0 = e.clientX, buf = audioCache.get(c.audioId), maxLen = buf ? buf.duration : c.offset + c.dur;
   let moved = false;
-  d.setPointerCapture(e.pointerId);
+  try { d.setPointerCapture(e.pointerId); } catch { };
   d.onpointermove = ev => {
     const dt = (ev.clientX - x0) / pps();
     if (!moved && Math.abs(ev.clientX - x0) < 3) return;
@@ -569,7 +569,7 @@ function autoLane(t, W) {
     if (e.button === 2) { if (i >= 0) { t.auto.splice(i, 1); draw(); save(); refresh(); renderInspector(); } return; }
     if (i < 0) { t.auto.push({ t: Math.max(0, x / pps()), v: yToV(y) }); t.auto.sort((a, b) => a.t - b.t); i = hit(x, y); }
     const p = t.auto[i]; draw();
-    cv.setPointerCapture(e.pointerId);
+    try { cv.setPointerCapture(e.pointerId); } catch { };
     cv.onpointermove = ev => { p.t = Math.max(0, ev.offsetX / pps()); p.v = yToV(ev.offsetY); t.auto.sort((a, b) => a.t - b.t); draw(); };
     cv.onpointerup = () => { cv.onpointermove = null; save(); refresh(); renderInspector(); };
   });

@@ -3,7 +3,7 @@ import { el, clamp, select } from './util.js';
 import { app, songEnd } from './state.js';
 import { T, E, play, stop, currentPos } from './engine.js';
 import { db } from './store.js';
-import { faceCanvas, ensureDesign, listDesigns } from './art.js';
+import { faceCanvas, ensureDesign, listDesigns, designMoves } from './art.js';
 import { look, saveLook } from './look.js';
 import { isPreviewing } from './library.js';
 
@@ -23,7 +23,13 @@ async function loadDisc() {
   let d = id ? await db.get('designs', id).catch(() => null) : null;
   if (!d && p.disc === 'song') { const all = await listDesigns(); d = all[0] || null; } // fall back to my latest design
   discImg = d ? await faceCanvas(ensureDesign(d), 'disc', { size: 600 }) : null;
-  loading = false;
+  discDesign = d; loading = false;
+}
+// a disc with a GIF on it is redrawn a few times a second so it keeps moving
+let discDesign = null, discT = 0;
+async function animateDisc() {
+  if (!discDesign || loading || performance.now() - discT < 90 || !designMoves(discDesign, 'disc')) return;
+  discT = performance.now(); loading = true; discImg = await faceCanvas(discDesign, 'disc', { size: 400 }); loading = false;
 }
 export function refreshDisc() { discKey = ''; }
 
@@ -322,7 +328,7 @@ export function nowPlayingTick() {
   if (!show) { if (box) box.style.display = 'none'; if (menu && P().mode === 'never') { menu.remove(); menu = null; } return; }
   if (!box) build();
   box.style.display = '';
-  loadDisc();
+  loadDisc(); animateDisc();
   // spin up to about 3.5 turns per second while playing, slow down when stopped
   const target = playing() ? 3.5 * Math.PI * 2 : 0; speed += (target - speed) * Math.min(1, dt * 2.5); angle += speed * dt;
   draw(dt);

@@ -3,7 +3,7 @@ import { $, el, clamp, toast, ask, confirmBox, modal, select, download, safeName
 import { helpBtn } from './help.js';
 import { app, flush, emit } from './state.js';
 import { db } from './store.js';
-import { FACES, DISC, FONTS, STICKERS, MATERIALS, CONDITIONS, COND_KEYS, newDesign, newLayer, listDesigns, saveDesign, deleteDesign, listArt, addArt, artImage, preload, renderFace, measureText, faceCanvas, canvasBlob, printSheet } from './art.js';
+import { FACES, DISC, FONTS, STICKERS, MATERIALS, CONDITIONS, COND_KEYS, newDesign, newLayer, listDesigns, saveDesign, deleteDesign, listArt, addArt, artImage, preload, designMoves, renderFace, measureText, faceCanvas, canvasBlob, printSheet } from './art.js';
 import { COLLECTIONS, fromCollection } from './artcollections.js';
 import { PATTERNS, ensureDesign } from './art.js';
 import { renderMockup } from './mockup.js';
@@ -120,8 +120,20 @@ function buildStage() {
   stage = el('canvas', { width: Math.round(F.w * S.scale), height: Math.round(F.h * S.scale), class: 'stage' + (F.disc ? ' checker' : '') });
   stageWrap.append(stage, el('p', { class: 'hint center' }, `${F.name}: ${F.mm}. Drag to move, corners to resize, the top dot to rotate.`));
   stage.addEventListener('pointerdown', stageDown);
+  animLoop();
   stage.addEventListener('dblclick', () => { const l = selLayer(); if (l && (l.type === 'text' || l.type === 'tracklist')) { const ta = document.querySelector('#artside textarea'); if (ta) { ta.focus(); ta.select(); } } });
   draw();
+}
+// GIFs on the design keep moving in the editor
+let animOn = false, animLast = 0;
+function animLoop() {
+  if (animOn) return; animOn = true;
+  const step = now => {
+    if (app.view !== 'art' || !S.d || !stage || !document.body.contains(stage)) { animOn = false; return; }
+    if (now - animLast > 60 && designMoves(S.d, S.face)) { animLast = now; draw(); }
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 function bounds(l) { // w/h for hit-testing (text measures itself)
   if (l.type === 'text') { const m = measureText(stage.getContext('2d'), l); return { w: Math.max(m.w, 40), h: Math.max(m.h, 40) }; }
