@@ -2034,3 +2034,13 @@ button.rec { background: #ff2e4d; color: #fff; animation: fixPulse 1s infinite; 
 .gtime { font-family: var(--mono, monospace); color: var(--led); }
 @media (max-width: 900px) { .gsteps { grid-template-columns: repeat(2, minmax(0, 1fr)); } .gmic, .grec, .gsave { grid-template-columns: 1fr; } }
 #view:has(.guide) .tour { display: none; }
+
+/* pop-up windows: never wider than the screen, and their content wraps instead of scrolling sideways */
+.modal { width: min(560px, calc(100vw - 32px)); }
+.modal-body { overflow-x: hidden; overflow-y: auto; }
+.modal-body > * { max-width: 100%; box-sizing: border-box; }
+.modal-body .smmodal { width: auto; max-width: 100%; }
+.modal:has(.smmodal) { width: min(960px, calc(100vw - 32px)); }
+.modal-body button, .modal-body p, .modal-body .explain { white-space: normal; overflow-wrap: anywhere; }
+.modal-body input:not([type=checkbox]):not([type=range]) { max-width: 100%; box-sizing: border-box; }
+.aalink input { min-width: 0; }

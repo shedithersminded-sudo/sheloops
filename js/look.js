@@ -7,6 +7,8 @@ const hex = h => { h = h.replace('#', ''); if (h.length === 3) h = h.split('').m
 const toHex = ([r, g, b]) => '#' + [r, g, b].map(v => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0')).join('');
 export const mix = (a, b, t) => { const A = hex(a), B = hex(b); return toHex(A.map((v, i) => v + (B[i] - v) * t)); };
 const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${a})`; };
+const lumL0 = h => { const [r, g, b] = hex(h).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+export const contrastOf = (a, b) => { const A = lumL0(a), B = lumL0(b); return (Math.max(A, B) + 0.05) / (Math.min(A, B) + 0.05); };
 const lum = h => { const [r, g, b] = hex(h); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
 
 // Build every theme color from a few base colors.
@@ -148,7 +150,10 @@ export function applyGlow() {
   root.classList.toggle('tg-soft', !!g.on && g.style === 'soft');
   root.style.setProperty('--tgc', g.color || th.c.led);
   root.style.setProperty('--tga', String(g.amount));
-  if (g.text) root.style.setProperty('--text', g.text); else root.style.setProperty('--text', th.c.text);
+  // a custom text color is kept readable: if it is too dark for the background it is lightened (or darkened on light themes)
+  let tx = g.text || th.c.text;
+  if (g.text) { const bgc = th.c.panel || th.c.bg, to = lum(bgc) > 0.5 ? '#000000' : '#ffffff'; let k = 0; while (contrastOf(tx, bgc) < 4.5 && k < 1) { k += 0.1; tx = mix(g.text, to, k); } }
+  root.style.setProperty('--text', tx);
 }
 // ---------- style effects: how much things glow, move, pulse and flash ----------
 export const UIFX_PRESETS = {

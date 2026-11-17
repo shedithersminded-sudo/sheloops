@@ -1,11 +1,20 @@
 {
-  "version": "2.7.1",
+  "version": "2.7.2",
   "date": "2026-11-17",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Echo and space controls: echo amount, how many repeats, echo speed, room amount and room size, plus one-click Dry, Just a little, Big echo and Endless"
+    "Pop-up windows fit the screen with no sideways scrolling",
+    "Custom text colors stay readable",
+    "Paste a link works better: Google Drive, Dropbox and GitHub share links, press Enter to use it, and clear messages when a site blocks it"
   ],
   "history": [
+    {
+      "version": "2.7.1",
+      "date": "2026-11-17",
+      "notes": [
+        "Echo and space controls: echo amount, how many repeats, echo speed, room amount and room size, plus one-click Dry, Just a little, Big echo and Endless"
+      ]
+    },
     {
       "version": "2.7.0",
       "date": "2026-11-17",

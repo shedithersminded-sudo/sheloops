@@ -75,18 +75,35 @@ export function openAddAudio(files = null) {
   if (files) showTargets(files);
   else {
     const pick = el('button', { class: 'hot big', onclick: () => { const i = el('input', { type: 'file', accept: 'audio/*,.mp3,.wav,.m4a,.ogg,.flac', multiple: true }); i.onchange = () => i.files.length && showTargets([...i.files]); i.click(); } }, 'Choose audio from my device');
-    const url = el('input', { class: 'textin', placeholder: 'https://... direct link to an .mp3 or .wav', type: 'url' });
-    const fetchBtn = el('button', { onclick: async () => {
-      const u = url.value.trim(); if (!u) return;
-      if (/youtube\.com|youtu\.be|spotify\.com|soundcloud\.com|music\.apple\.com|tiktok\.com/i.test(u)) return toast('Streaming sites cannot be used. Download the beat from the producer’s link (BeatStars, Google Drive and so on), then add the file.');
+    const url = el('input', { class: 'textin', placeholder: 'Paste a link to an .mp3 or .wav (Google Drive and Dropbox links work too)', type: 'url' });
+    // share links from common hosts point to a web page, so turn them into the real file link first
+    const direct = u => {
+      let m = u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*id=)([\w-]+)/); if (m) return 'https://drive.google.com/uc?export=download&id=' + m[1];
+      if (/dropbox\.com/.test(u)) return u.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace(/[?&]dl=0/, '').replace(/[?&]raw=1/, '');
+      if (/github\.com\/.+\/blob\//.test(u)) return u.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+      return u;
+    };
+    const useLink = async () => {
+      let u = url.value.trim(); if (!u) return toast('Paste a link first.');
+      if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+      if (/youtube\.com|youtu\.be|spotify\.com|soundcloud\.com|music\.apple\.com|tiktok\.com|instagram\.com/i.test(u)) return toast('Streaming sites cannot be used. Download the beat from the producer link (BeatStars, Google Drive and so on), then add the file.');
       fetchBtn.disabled = true; fetchBtn.textContent = 'Getting it...';
+      const done = msg => { if (msg) toast(msg); fetchBtn.disabled = false; fetchBtn.textContent = 'Use this link'; };
+      let r;
+      try { r = await fetch(direct(u)); } catch { return done('That site does not let other apps download its files. Open the link, download the file, then choose it from your device.'); }
+      if (!r.ok) return done(`The link answered "${r.status}". Check that the link is right and the file is shared publicly.`);
       try {
-        const r = await fetch(u); if (!r.ok) throw 0;
-        const b = await r.blob(), name = decodeURIComponent(u.split('/').pop().split('?')[0] || 'linked audio');
-        const f = new File([b], /\.\w{2,4}$/.test(name) ? name : name + '.mp3', { type: b.type || 'audio/mpeg' });
-        if (!isAudio(f)) throw 0; showTargets([f]);
-      } catch { toast('That link could not be opened here. Some sites block it. Download the file first, then choose it from your device.'); fetchBtn.disabled = false; fetchBtn.textContent = 'Use this link'; }
-    } }, 'Use this link');
+        const b = await r.blob(), raw = decodeURIComponent(u.split('/').pop().split('?')[0] || 'linked audio');
+        if (/text\/html/.test(b.type)) return done('That link opens a web page, not an audio file. Use the direct download link (it usually ends in .mp3 or .wav).');
+        const name = /\.(mp3|wav|m4a|ogg|flac|aac|webm)$/i.test(raw) ? raw : raw.replace(/\.\w+$/, '') + '.mp3';
+        const f = new File([b], name, { type: b.type && b.type.startsWith('audio') ? b.type : 'audio/mpeg' });
+        try { const c = new OfflineAudioContext(1, 1, 44100); await c.decodeAudioData(await b.arrayBuffer()); } catch { return done('That file could not be played as audio. Try an .mp3 or .wav link.'); }
+        done(); showTargets([f]);
+      } catch { done('Something went wrong getting that file. Download it, then choose it from your device.'); }
+    };
+    url.addEventListener('keydown', e => { if (e.key === 'Enter') useLink(); });
+    const fetchBtn = el('button', { class: 'hot', onclick: useLink }, 'Use this link');
+
     body.append(
       el('p', { class: 'hint' }, 'Add a beat, song, loop or sample. You can also drag audio files onto any page at any time.'),
       pick,
