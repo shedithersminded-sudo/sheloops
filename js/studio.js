@@ -1,7 +1,7 @@
 // Recording studio: song timeline, tracks, clips, takes.
 import { makeMovable } from './movable.js';
 import { keyOf } from './keys.js';
-import { openMicPanel } from './micui.js';
+import { openMicPanel, clickPicker } from './micui.js';
 import { $, el, uid, clamp, pct, panFmt, fmtTime, toast, knob, toggle, download, safeName, confirmBox, modal, cssVar } from './util.js';
 import { helpBtn } from './help.js';
 import { app, barDur, songEnd, selTrack, save, snapshot, undo, redo, emit, newVocalTrack } from './state.js';
@@ -168,6 +168,7 @@ export function renderStudio() {
     el('span', { class: 'withhelp meterwrap' }, meterCv, clipLed, helpBtn('clipping')),
     el('span', { class: 'withhelp adv' }, toggle('Automation', !!settings.showAuto, v => { settings.showAuto = v; saveSettings(); renderLanes(); }), helpBtn('automation')),
     el('button', { class: 'micbtn', 'data-k': 'mic', title: 'Mic EQ, background noise, monitor and feedback guard', onclick: () => openMicPanel() }, '🎙 Mic sound'),
+    clickPicker(),
   );
   ['tostart', 'play', 'record', 'lcd', 'bpm', 'click', 'countin', 'loop', 'punch', 'monitor', 'meter', 'automation'].forEach((k, i) => { if (tb.children[i]) tb.children[i].dataset.k = k; });
   arrangeToolbar(tb);

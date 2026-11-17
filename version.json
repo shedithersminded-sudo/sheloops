@@ -1,16 +1,28 @@
 {
-  "version": "2.5.0",
+  "version": "2.6.0",
   "date": "2026-11-17",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Change your own shortcut keys, and R no longer jumps out of the Beat maker",
-    "Squeal shield keeps hearing yourself safe, even with effects, plus a Fix my squeal button",
-    "What I hear is now a clear sound path",
-    "New Sample maker: chop songs you own, and make your producer tag",
-    "20 new beat styles in packs",
-    "Clearer pad editor, regrouped Studio tools, bolder text, smoother 3D"
+    "Beat maker has a big Record button and tells you what is happening",
+    "Play keys as chords, arpeggios, strums, octaves, with Hold and human feel",
+    "Quick sounds and effects are in scrollable groups, and stacked effects never get cut off",
+    "8 metronome click sounds",
+    "44 more voice presets and 12 more instruments",
+    "Sample maker and Tag maker have many more settings, several sounds at once, and repeat play"
   ],
   "history": [
+    {
+      "version": "2.5.0",
+      "date": "2026-11-17",
+      "notes": [
+        "Change your own shortcut keys, and R no longer jumps out of the Beat maker",
+        "Squeal shield keeps hearing yourself safe, even with effects, plus a Fix my squeal button",
+        "What I hear is now a clear sound path",
+        "New Sample maker: chop songs you own, and make your producer tag",
+        "20 new beat styles in packs",
+        "Clearer pad editor, regrouped Studio tools, bolder text, smoother 3D"
+      ]
+    },
     {
       "version": "2.4.0",
       "date": "2026-11-16",

@@ -2,7 +2,8 @@
 import { $, el, clamp, pct, panFmt, toast, knob, select, ask, confirmBox, cssVar } from './util.js';
 import { helpBtn } from './help.js';
 import { app, stepDur, save, snapshot, DRUMS, DRUM_NAMES, PRESETS, STARTERS, PACKS, PAT_IDS, newBeatTrack, applyStarter, patData, setNotes, copyPattern } from './state.js';
-import { applyMix, previewDrum, previewNote, liveNote, currentPos, T, refresh, ensureCtx } from './engine.js';
+import { applyMix, previewDrum, previewNote, liveNote, currentPos, T, refresh, ensureCtx, play as playSong, stop as stopSong } from './engine.js';
+import { clickPicker } from './micui.js';
 import { SOUNDS, loadSounds, soundName, soundBuffer } from './library.js';
 import { PERC, PERC_NAMES, PERC_KITS, isString, drumMenu } from './instruments.js';
 import { openGuitarMaker, voicing, chordName } from './guitar.js';
@@ -33,6 +34,8 @@ const GROUPS = [
   ['House and rave', ['house organ', 'house piano', 'rave stab', 'hoover', 'acid bass']],
   ['Dreamy and euphoric', ['dream pad', 'supersaw', 'glass keys', 'warm pluck', 'crystal bell', 'star pluck']],
   ['Guitar and soul', ['chorus guitar', 'heavy guitar', 'soul rhodes', 'g-funk lead']],
+  ['Synth leads and pads', ['saw lead', 'square lead', 'laser lead', 'chiptune', 'soft pad', 'string pad', 'vapor keys']],
+  ['Retro keys and bass', ['wurli', 'clav', 'brass stab', 'pluck bass', 'wobble bass']],
   ['Bass', ['bass', 'sub', '808 bass', 'reese bass']],
 ];
 function instrSelect(value, on) {
@@ -360,9 +363,34 @@ function playTabs(t, mode) {
   return el('div', { class: 'ptabs' }, el('b', {}, 'Play'), tab('piano', 'Piano keys'), tab('guitar', 'Guitar'),
     el('span', { class: 'spacer' }), el('button', { class: 'keysbtn', onclick: () => openKeyGuide('beat') }, '⌨ Keys guide'), helpBtn('playPanel'));
 }
+// ---------- the record bar: always on screen, says what is happening right now ----------
+let recWatch = 0;
+function recBar(t) {
+  const drums = t.type === 'drums';
+  const status = el('div', { class: 'rstatus' }, el('i'), el('span'));
+  const recBtn = el('button', { class: 'bigrec' + (recNotes ? ' on' : ''), onclick: async () => {
+    recNotes = !recNotes;
+    if (recNotes && !T.playing) await playSong();
+    if (!recNotes && T.playing) stopSong();
+    renderBeatEditor();
+  } }, el('span', { class: 'rdot' }), recNotes ? 'Stop recording' : drums ? 'Record my hits' : 'Record what I play');
+  const playBtn = el('button', { class: 'bigplay', onclick: () => { T.playing ? stopSong() : playSong(); } }, '▶ Play');
+  const show = () => {
+    if (!status.isConnected) return;
+    const p = T.playing, txt = recNotes && p ? `Recording into pattern ${cur()}. ${drums ? 'Tap the pads or their keys' : 'Play the keys'} now. It loops, so keep adding. Press Stop recording when you are done.`
+      : recNotes ? `Ready to record. Press Play (or ${'Space'}) and start playing.` : p ? `Playing pattern ${cur()}. Press Record to add what you play.` : `Stopped. Press Play to hear it, or Record to play into the pattern.`;
+    status.className = 'rstatus' + (recNotes && p ? ' rec' : p ? ' play' : ''); status.lastChild.textContent = txt;
+    playBtn.textContent = p ? '■ Stop' : '▶ Play';
+    recWatch = requestAnimationFrame(show);
+  };
+  cancelAnimationFrame(recWatch); requestAnimationFrame(show);
+  return el('div', { class: 'recbar' }, recBtn, playBtn, status,
+    el('button', { class: 'vocalrec', title: 'Go to the Studio and record your voice over this beat', onclick: () => import('./main.js').then(m => m.goto ? m.goto('studio') : null).then(() => import('./studio.js')).then(m => m.record()) }, '🎤 Record my voice on this beat'),
+    clickPicker(), helpBtn('recNotes'));
+}
 function playPanel(t) {
   const mode = modeOf(t);
-  return el('div', { class: 'playpanel' }, playTabs(t, mode), mode === 'guitar' ? guitarPanel(t) : vkeyboard(t));
+  return el('div', { class: 'playpanel' }, recBar(t), playTabs(t, mode), mode === 'guitar' ? guitarPanel(t) : el('div', {}, playStyle(), vkeyboard(t)));
 }
 const flash = node => { if (!node) return; node.classList.remove('hit'); void node.offsetWidth; node.classList.add('hit'); };
 
@@ -418,7 +446,7 @@ function guitarPanel(t) {
 // drum pads: one big pad per row, with its computer key
 function drumPads(t) {
   const n = Math.min(t.rows.length, 16);
-  return el('div', { class: 'playpanel' },
+  return el('div', { class: 'playpanel' }, recBar(t),
     el('div', { class: 'ptabs' }, el('b', {}, 'Drum pads'), el('span', { class: 'hint' }, 'Play live with the keys shown. Hold Shift for a loud hit.'),
       el('span', { class: 'spacer' }),
       el('span', { class: 'withhelp' }, el('button', { class: 'tog rec' + (recNotes ? ' on' : ''), onclick: e => { recNotes = !recNotes; e.target.classList.toggle('on', recNotes); toast(recNotes ? 'Recording on. Press Space to play, then hit the pads.' : 'Recording off.'); } }, 'Rec hits'), helpBtn('recNotes')), el('button', { class: 'keysbtn', onclick: () => openKeyGuide('beat') }, '⌨ Keys guide')),
@@ -453,7 +481,57 @@ function vkeyboard(t) {
 // ---------- live notes: computer keys, on-screen keys, MIDI ----------
 const held = new Map();
 function nowStep() { return Math.round(currentPos() / stepDur()) % (B().bars * 16); }
+export const KEY_MODES = [['single', 'One note', 'Each key plays one note.'], ['chord', 'Chords', 'Each key plays a full chord that fits your key.'], ['power', 'Power chord', 'Root and fifth, big and simple.'], ['octave', 'Octaves', 'The note plus the same note higher.'], ['arp', 'Arpeggio', 'Hold a key and the chord plays one note at a time.'], ['strum', 'Strum', 'The chord rolls out quickly, like a guitar.']];
+export const ARP_DIRS = [['up', 'Up'], ['down', 'Down'], ['updown', 'Up and down'], ['random', 'Random']];
+const KP = () => (app.P.beat.play ||= { mode: 'single', hold: false, human: 0, arpRate: 4, arpDir: 'up', arpOct: 1, vel: 'fixed' });
+// the notes one key press should play, using the song scale so chords always fit
+function chordFor(m, mode) {
+  const sc = SCALES[B().scale] || [], key = B().key, rel = ((m - key) % 12 + 12) % 12;
+  const stepUp = (n, k) => { if (!sc.length) return n + [0, 4, 7, 11][k]; let deg = sc.indexOf(((n - key) % 12 + 12) % 12); if (deg < 0) return n + [0, 4, 7, 11][k]; let out = n; for (let i = 0; i < k * 2; i++) { const a = sc[deg % sc.length], b = sc[(deg + 1) % sc.length]; out += ((b - a) + 12) % 12; deg++; } return out; };
+  if (mode === 'power') return [m, m + 7, m + 12];
+  if (mode === 'octave') return [m, m + 12];
+  void rel; return [m, stepUp(m, 1), stepUp(m, 2)];
+}
+const arps = new Map(), holds = new Set();
 export function noteOn(midi, vel = 0.8) {
+  const t = selBeatTrack(); if (!t || t.type === 'drums') return rawOn(midi, vel);
+  const K = KP(); if (K.human) vel = clamp(vel + (Math.random() - 0.5) * K.human, 0.1, 1);
+  if (K.hold && holds.has(midi)) { holds.delete(midi); return releaseKey(midi); } // hold: press again to let go
+  if (K.hold) holds.add(midi);
+  if (K.mode === 'single') return rawOn(midi, vel);
+  const notes = chordFor(midi, K.mode === 'arp' || K.mode === 'strum' ? 'chord' : K.mode);
+  if (K.mode === 'arp') {
+    let seq = []; for (let o = 0; o < K.arpOct; o++) seq.push(...notes.map(n => n + 12 * o));
+    if (K.arpDir === 'down') seq.reverse(); if (K.arpDir === 'updown') seq = [...seq, ...seq.slice(1, -1).reverse()];
+    let i = 0, last = null; const stepMs = () => stepDur() * 1000 * (16 / (K.arpRate * 4));
+    const tick = () => { if (last != null) rawOff(last); const n = K.arpDir === 'random' ? seq[Math.floor(Math.random() * seq.length)] : seq[i++ % seq.length]; rawOn(n, vel); last = n; arps.get(midi).last = n; arps.get(midi).timer = setTimeout(tick, stepMs()); };
+    arps.set(midi, { last: null, timer: 0 }); tick(); return;
+  }
+  notes.forEach((n, k) => K.mode === 'strum' ? setTimeout(() => rawOn(n, vel * (1 - k * 0.08)), k * 28) : rawOn(n, vel));
+}
+function releaseKey(midi) {
+  const a = arps.get(midi); if (a) { clearTimeout(a.timer); if (a.last != null) rawOff(a.last); arps.delete(midi); return; }
+  const K = KP(); if (K.mode === 'single') return rawOff(midi);
+  chordFor(midi, K.mode === 'strum' ? 'chord' : K.mode).forEach(n => rawOff(n));
+}
+export function noteOff(midi) {
+  const t = selBeatTrack(); if (!t || t.type === 'drums') return rawOff(midi);
+  if (KP().hold) return; releaseKey(midi);
+}
+function playStyle() {
+  const K = KP(), set = (k, v) => { K[k] = v; save(); renderBeatEditor(); };
+  return el('div', { class: 'pstyle' },
+    el('div', { class: 'pstyle-row' }, el('b', {}, 'How the keys play'), helpBtn('keyModes'),
+      ...KEY_MODES.map(([k, n, w]) => el('button', { class: 'chip' + (K.mode === k ? ' on' : ''), title: w, onclick: () => set('mode', k) }, n))),
+    el('div', { class: 'pstyle-row' },
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: K.hold, onchange: e => { holds.forEach(m => releaseKey(m)); holds.clear(); set('hold', e.target.checked); } }), 'Hold (press again to stop)'),
+      knob('Human feel', 0, 0.6, 0.01, K.human, v => { K.human = v; save(); }, v => v ? Math.round(v * 100) + '%' : 'off', null, 'dial sm'),
+      K.mode === 'arp' ? [
+        el('label', { class: 'num' }, 'Speed', select([[2, '1/8'], [4, '1/16'], [8, '1/32'], [3, '1/8 triplet'], [6, '1/16 triplet']], K.arpRate, v => { K.arpRate = +v; save(); })),
+        el('label', { class: 'num' }, 'Direction', select(ARP_DIRS, K.arpDir, v => { K.arpDir = v; save(); })),
+        el('label', { class: 'num' }, 'Octaves', select([[1, '1'], [2, '2'], [3, '3']], K.arpOct, v => { K.arpOct = +v; save(); }))] : null));
+}
+function rawOn(midi, vel = 0.8) {
   const t = selBeatTrack(); if (!t) return;
   if (t.type === 'drums') { // pads: MIDI 36 and up map to rows
     const ri = midi - 36; const r = t.rows[((ri % t.rows.length) + t.rows.length) % t.rows.length];
@@ -465,7 +543,7 @@ export function noteOn(midi, vel = 0.8) {
   if (recNotes && T.playing && app.view === 'beat') held.set(midi, { step: nowStep(), vel, t, time: performance.now() });
 }
 const live = new Map();
-export function noteOff(midi) {
+function rawOff(midi) {
   const stopIt = live.get(midi); if (stopIt) { live.delete(midi); stopIt(); }
   const h = held.get(midi); if (!h) return; held.delete(midi);
   const len = Math.max(1, Math.round((performance.now() - h.time) / 1000 / stepDur()));

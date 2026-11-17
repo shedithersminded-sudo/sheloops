@@ -2,6 +2,7 @@
 import { el, toast, knob, modal } from './util.js';
 import { helpBtn } from './help.js';
 import { on } from './state.js';
+import { CLICKS, click, ensureCtx } from './engine.js';
 import { E, openMic, reopenMic, setInputGain, micSettings, applyMicSettings, clearNotches, updateMonitor, peakOf, rmsOf, fixSqueal } from './engine.js';
 import { settings, saveSettings } from './store.js';
 
@@ -80,6 +81,13 @@ export function shieldPicker(M, set, rerender) {
 }
 export function fixButton(rerender) {
   return el('button', { class: 'hot fixsqueal', onclick: async e => { e.currentTarget.disabled = true; const did = await fixSqueal(); toast('Fixed: ' + did.join(', ') + '.'); rerender && rerender(); } }, 'Fix my squeal');
+}
+// the metronome sound and volume, with a test button
+export function clickPicker() {
+  return el('div', { class: 'clickpick' }, el('small', {}, 'Click'),
+    el('select', { title: 'Metronome sound', onchange: async e => { settings.clickSound = e.target.value; saveSettings(); const c = await ensureCtx(); click(c, c.currentTime + 0.01, true); } }, ...Object.entries(CLICKS).map(([k, n]) => el('option', { value: k, selected: (settings.clickSound || 'beep') === k }, n))),
+    el('input', { type: 'range', min: 0, max: 1, step: 0.01, value: settings.clickVol ?? 0.6, title: 'Click volume', oninput: e => { settings.clickVol = +e.target.value; saveSettings(); } }),
+    el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!settings.metro, onchange: e => { settings.metro = e.target.checked; saveSettings(); } }), 'On'));
 }
 export function openMicPanel() {
   let close; const wrap = el('div', { class: 'micwrap' });

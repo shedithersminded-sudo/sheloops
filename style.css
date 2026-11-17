@@ -1913,3 +1913,46 @@ button.rec { background: #ff2e4d; color: #fff; animation: fixPulse 1s infinite; 
 .i-redo { transform: scaleX(-1); } .i-redo::after { left: 0; top: 2px; border: 4px solid transparent; border-right-color: currentColor; transform: rotate(-30deg); }
 .zoomgrp { display: inline-flex; align-items: center; gap: 4px; } .zoomgrp button { width: 26px; padding: 2px 0; font-weight: 800; }
 .savebtn { border-color: var(--led); color: var(--led); }
+
+/* ===== carousels: short tabs + a row you scroll through ===== */
+.carousel { display: grid; gap: 6px; margin: 6px 0; }
+.chead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chead > b { font-family: 'Unbounded', var(--font); font-size: 12px; }
+.ctabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.ctab { padding: 2px 10px; border-radius: 999px; font-size: 11px; text-transform: none; }
+.ctab.on { background: var(--led); color: var(--ledtext, #111); border-color: var(--led); box-shadow: 0 0 10px -2px var(--led); }
+.cbody { display: grid; grid-template-columns: 28px minmax(0, 1fr) 28px; gap: 6px; align-items: stretch; }
+.carrow { padding: 0; font-size: 20px; border-radius: 10px; }
+.carrow:hover { border-color: var(--led); color: var(--led); }
+.ctrack { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: thin; padding: 2px 2px 6px; }
+.ccard { flex: 0 0 190px; scroll-snap-align: start; display: grid; gap: 3px; align-content: start; text-align: left; padding: 9px 11px; border-radius: 11px; text-transform: none; letter-spacing: 0; font: inherit; animation: stopIn .35s both; transition: transform .15s, border-color .15s, box-shadow .15s; }
+.ccard b { font-size: 12px; } .ccard small { color: var(--dim); font-size: 11px; line-height: 1.3; white-space: normal; }
+.ccard .cfx { font-size: 10px; color: var(--led); opacity: .8; }
+.ccard:hover { transform: translateY(-2px); border-color: var(--led); box-shadow: 0 6px 16px -10px var(--led); }
+.fxadd { flex-basis: 160px; }
+/* effects never get cut off: they wrap, and the editor scrolls */
+.fxchain { flex-wrap: wrap; overflow: visible; }
+.editor { overflow-y: auto; }
+
+/* ===== Beat maker record bar ===== */
+.recbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 8px; border-radius: 12px; border: 1px solid var(--line); background: linear-gradient(90deg, rgba(255,46,77,.08), transparent 40%); }
+.bigrec { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; font-weight: 800; border-color: #ff3d5a; color: #fff; background: linear-gradient(180deg, #e2284a, #a5122d); box-shadow: 0 0 14px -4px #ff2e4d; text-transform: none; }
+.bigrec .rdot { width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px #fff; }
+.bigrec.on { animation: fixPulse 1s infinite; } .bigrec.on .rdot { border-radius: 2px; }
+.bigplay { padding: 8px 16px; border-radius: 999px; font-weight: 800; border-color: var(--led); color: var(--led); text-transform: none; }
+.rstatus { flex: 1 1 260px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); }
+.rstatus i { width: 9px; height: 9px; border-radius: 50%; background: #666; flex: none; }
+.rstatus.play i { background: var(--green, #4cd964); box-shadow: 0 0 8px var(--green, #4cd964); }
+.rstatus.rec { color: #ff8a9c; } .rstatus.rec i { background: #ff2e4d; box-shadow: 0 0 10px #ff2e4d; animation: fixPulse .8s infinite; }
+.vocalrec { border-radius: 999px; text-transform: none; }
+.clickpick { display: inline-flex; align-items: center; gap: 6px; } .clickpick small { color: var(--dim); text-transform: uppercase; font-size: 10px; letter-spacing: .08em; }
+.clickpick input[type=range] { width: 70px; }
+.pstyle { display: grid; gap: 6px; margin: 4px 0 8px; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 10px; }
+.pstyle-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; } .pstyle-row > b { font-size: 12px; margin-right: 4px; }
+
+.smsteps { display: flex; flex-wrap: wrap; gap: 6px; }
+.smstep { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; border: 1px solid var(--line); font-size: 11px; color: var(--dim); }
+.smstep b { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: #333; color: #fff; font-size: 10px; }
+.smstep.done { color: var(--text); border-color: var(--led); } .smstep.done b { background: var(--led); color: var(--ledtext, #111); box-shadow: 0 0 8px var(--led); }
+.tagwave { width: 100%; height: 70px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.35); }
+.taghelp { border: 1px dashed var(--line); border-radius: 10px; padding: 8px 12px; } .taghelp summary { cursor: pointer; font-weight: 700; } .taghelp li { margin: 4px 0; color: var(--dim); }

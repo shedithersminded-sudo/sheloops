@@ -232,3 +232,11 @@ Stage 8 (AI helper, tour, desktop app) was skipped by the user on 2026-11-16 ("d
 - 20 new styles grouped into PACKS (state.js). Unbounded font for titles. Text thickness setting (bold default).
 - 3D viewer renders only when something changes, smooth camera glides, cheap reflection materials, pixel ratio capped at 1.5.
 - Movable panel labels sit on the panel's top edge, so they no longer cover buttons.
+
+## 2.6.0 record bar, play styles, carousels, more presets, sampler and tag upgrades
+- Beat maker: recBar() on every editor (Record what I play / Record my hits, Play, live status line, Record my voice, click picker). How the keys play: one note, chords (in key), power chord, octaves, arpeggio (speed, direction, octaves), strum, Hold, Human feel. Stored in P.beat.play. noteOn/noteOff wrap rawOn/rawOff.
+- carousel() in fxui.js: tabs + scroll row with arrows. Used for Quick sounds, Add one effect (beat and pads). .editor scrolls and .fxchain wraps, so stacked effects are never cut off.
+- Metronome: 8 click sounds (engine CLICKS, settings.clickSound, settings.clickVol), picker in the Studio toolbar and the record bar.
+- 44 more presets (6 per vocal group + 8 Voice FX), 12 more synth instruments in 2 new groups.
+- Sample maker: steps, zoom to piece, move piece, BPM detect with beat and bar lengths, one slice per beat, low cut, high cut, crunch, fades, volume, normalize, loop. Tag maker: 12 extra sounds, several at once, repeat play, waveform of the result, tips.
+- Not tested this round: song export render (test browser was hidden, which pauses offline audio). renderSong was not changed.

@@ -301,6 +301,26 @@ const BEAT_RECIPES = [
   { name: 'Reese wobble', what: 'Moving filter for dark basses.', fx: [['autowah', { rate: 0.5, freq: 400, depth: 0.7, q: 4, mix: 0.7 }], ['dist', { drive: 0.3, tone: 2500, mix: 0.3 }]] },
   { name: 'Glitch', what: 'Broken digital stutter.', fx: [['tremolo', { rate: 16, depth: 1, shape: 1 }], ['bitcrush', { bits: 5, tone: 8000, mix: 0.5 }]] },
 ];
+// Quick sounds by kind, so the list is short and easy to scan
+const RECIPE_CATS = ['Guitar and soul', 'Club and house', 'Breaks and glitch', 'Dreamy and chill'];
+const RECIPE_CAT = { 'Chorus guitar': 'Guitar and soul', 'Wall of sound': 'Guitar and soul', 'Night drive': 'Guitar and soul', 'Vintage soul': 'Guitar and soul', 'Lo-fi tape': 'Dreamy and chill',
+  'Healing wash': 'Dreamy and chill', 'Soft focus': 'Dreamy and chill', 'Heavenly wash': 'Dreamy and chill', 'Dub echo': 'Dreamy and chill',
+  'Euphoric gate': 'Club and house', 'Outsider dust': 'Club and house', 'House pump': 'Club and house', 'Filter sweep': 'Club and house', 'Acid squelch': 'Club and house', 'Warehouse': 'Club and house', 'Reese wobble': 'Club and house',
+  'Breakcore crunch': 'Breaks and glitch', 'Jungle break': 'Breaks and glitch', 'Stutter': 'Breaks and glitch', 'Glitch': 'Breaks and glitch' };
+const FX_GROUPS = ['Tone', 'Dynamics', 'Color', 'Space', 'Motion', 'Pitch', 'Clean up'];
+const carTab = {};
+// a row you scroll through with arrows (or the mouse wheel), with tabs on top for each kind
+export function carousel(title, help, cats, items) {
+  let cur = carTab[title] && cats.includes(carTab[title]) ? carTab[title] : cats[0];
+  const track = el('div', { class: 'ctrack' }), tabs = el('div', { class: 'ctabs' });
+  const fill = () => { track.replaceChildren(...items(cur)); track.scrollLeft = 0; tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.textContent === cur)); };
+  tabs.append(...cats.map(c => el('button', { class: 'ctab', onclick: () => { cur = carTab[title] = c; fill(); } }, c)));
+  track.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { track.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+  const go = d => track.scrollBy({ left: d * track.clientWidth * 0.8, behavior: 'smooth' });
+  fill();
+  return el('div', { class: 'carousel' }, el('div', { class: 'chead' }, el('b', {}, title), help ? helpBtn(help) : null, tabs),
+    el('div', { class: 'cbody' }, el('button', { class: 'carrow', title: 'Back', onclick: () => go(-1) }, '‹'), track, el('button', { class: 'carrow', title: 'More', onclick: () => go(1) }, '›')));
+}
 export function beatFxPanel(t, rr) {
   t.fx ||= [];
   const add = type => { snapshot(); t.fx.push(newFx(type)); save(); applyMix(); rr(); toast(`${FX[type].name} added to ${t.name}.`); };
@@ -308,9 +328,9 @@ export function beatFxPanel(t, rr) {
     el('div', { class: 'fxtop' }, el('b', {}, `Effects on ${t.name}`), helpBtn('beatFx'), el('span', { class: 'spacer' }),
       t.fx.length ? el('button', { onclick: () => { snapshot(); t.fx = []; save(); applyMix(); rr(); } }, 'Remove all') : null),
     el('div', { class: 'explain' }, 'Effects change how this track sounds. Click one to add it, then turn its knobs. Drag a knob up or down. Double-click a knob to reset it. Hover an effect to see what it does.'),
-    el('div', { class: 'recipes' }, el('span', { class: 'hint' }, 'Quick sounds:'), BEAT_RECIPES.map(r => el('button', { class: 'recipe', title: r.what, onclick: () => {
+    carousel('Quick sounds', 'beatRecipes', RECIPE_CATS, cat => BEAT_RECIPES.filter(r => (RECIPE_CAT[r.name] || 'More') === cat).map(r => el('button', { class: 'ccard recipe', title: r.what, onclick: () => {
       snapshot(); for (const [type, params] of r.fx) t.fx.push(newFx(type, params)); save(); applyMix(); rr(); toast(`${r.name} added to ${t.name}. Turn the knobs below to change it.`);
-    } }, r.name)), helpBtn('beatRecipes')),
-    el('div', { class: 'fxlib' }, BEAT_FX.map(type => el('button', { class: 'chip', title: (HELP['fx_' + type] || {}).what || FX[type].group, onclick: () => add(type) }, '+ ' + FX[type].name))),
+    } }, el('b', {}, r.name), el('small', {}, r.what), el('span', { class: 'cfx' }, r.fx.map(([ty]) => FX[ty].name).join(' + '))))),
+    carousel('Add one effect', 'beatFx', FX_GROUPS.filter(g => BEAT_FX.some(ty => FX[ty].group === g)), g => BEAT_FX.filter(ty => FX[ty].group === g).map(type => el('button', { class: 'ccard fxadd', title: (HELP['fx_' + type] || {}).what || '', onclick: () => add(type) }, el('b', {}, '+ ' + FX[type].name), el('small', {}, (HELP['fx_' + type] || {}).what || FX[type].group)))),
     t.fx.length ? el('div', { class: 'fxchain' }, t.fx.map((f, i) => fxCard(t, f, i, rr))) : el('p', { class: 'hint' }, 'No effects yet. Click one above. Each one gets its own knobs.'));
 }

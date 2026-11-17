@@ -9,7 +9,7 @@ import { PERC, PERC_NAMES, drumMenu } from './instruments.js';
 import { SOUNDS, loadSounds, soundBuffer } from './library.js';
 import { db, saveAudio } from './store.js';
 import { FX, FX_ORDER, newFx, buildFx } from './fx.js';
-import { fxCard } from './fxui.js';
+import { fxCard, carousel } from './fxui.js';
 import { makeMovable, resetBtn } from './movable.js';
 
 const KEY = 'loopden.pads';
@@ -410,7 +410,7 @@ function renderEditor() {
     el('div', { class: 'pedstep' }, el('span', {}, '3'), 'Add effects (only this pad)'),
     el('div', { class: 'fxtop' }, el('b', {}, 'Effects on this pad'), helpBtn('beatFx'), el('span', { class: 'spacer' }),
       (pad.fx || []).length ? el('button', { onclick: () => { for (const [j, p] of bank().entries()) if (j !== i) p.fx = JSON.parse(JSON.stringify(pad.fx)).map(f => ({ ...f, id: uid() })); rr(); toast('Copied these effects to every pad in this bank.'); } }, 'Copy to all pads') : null),
-    el('div', { class: 'fxlib' }, FX_ORDER.filter(t => t !== 'denoise').map(type => el('button', { class: 'chip', title: (HELP['fx_' + type] || {}).what || '', onclick: () => add(type) }, '+ ' + FX[type].name))),
+    carousel('Add one effect', 'beatFx', ['Tone', 'Dynamics', 'Color', 'Space', 'Motion', 'Pitch'], g => FX_ORDER.filter(ty => ty !== 'denoise' && FX[ty].group === g).map(type => el('button', { class: 'ccard fxadd', title: (HELP['fx_' + type] || {}).what || '', onclick: () => add(type) }, el('b', {}, '+ ' + FX[type].name), el('small', {}, (HELP['fx_' + type] || {}).what || '')))),
     (pad.fx || []).length ? el('div', { class: 'fxchain' }, pad.fx.map((f, j) => fxCard(pad, f, j, rr))) : el('p', { class: 'hint' }, 'No effects on this pad yet. Click one above.'));
 }
 // ---------- machine look ----------

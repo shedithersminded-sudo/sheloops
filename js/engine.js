@@ -460,10 +460,21 @@ export function playSample(c, dest, buf, t, vel) {
   const s = c.createBufferSource(), g = c.createGain();
   s.buffer = buf; g.gain.value = vel; s.connect(g); g.connect(dest); s.start(t);
 }
+// the metronome: pick the sound you like hearing. The first beat of each bar is higher or louder.
+export const CLICKS = { beep: 'Beep', wood: 'Woodblock', rim: 'Rim click', cow: 'Cowbell', hat: 'Soft hat', tick: 'Clock tick', clave: 'Clave', voice: 'Low pop' };
+let noiseB = null;
 export function click(c, t, accent) {
-  const o = c.createOscillator(), g = c.createGain();
-  o.frequency.value = accent ? 1760 : 1100; decayEnv(g.gain, t, 0.3, 0.04);
-  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.06);
+  const kind = settings.clickSound || 'beep', vol = (settings.clickVol ?? 0.6) * (accent ? 1 : 0.7), out = c.createGain(); out.gain.value = vol * 1.6; out.connect(c.destination);
+  const tone = (f, dur, type = 'sine', lvl = 0.5) => { const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.value = f; decayEnv(g.gain, t, lvl, dur); o.connect(g); g.connect(out); o.start(t); o.stop(t + dur * 4); };
+  const noise = (dur, hp, lvl) => { if (!noiseB || noiseB.sampleRate !== c.sampleRate) { noiseB = c.createBuffer(1, c.sampleRate * 0.2, c.sampleRate); const d = noiseB.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = noiseB; f.type = 'highpass'; f.frequency.value = hp; decayEnv(g.gain, t, lvl, dur); s.connect(f); f.connect(g); g.connect(out); s.start(t); s.stop(t + 0.2); };
+  if (kind === 'wood') tone(accent ? 1250 : 950, 0.03, 'triangle', 0.6);
+  else if (kind === 'rim') { tone(accent ? 1900 : 1600, 0.012, 'square', 0.25); noise(0.015, 3000, 0.3); }
+  else if (kind === 'cow') { tone(accent ? 800 : 560, 0.08, 'square', 0.18); tone(accent ? 1200 : 845, 0.08, 'square', 0.12); }
+  else if (kind === 'hat') noise(accent ? 0.05 : 0.03, 7000, 0.5);
+  else if (kind === 'tick') { tone(accent ? 3500 : 2800, 0.006, 'square', 0.3); }
+  else if (kind === 'clave') tone(accent ? 2600 : 2200, 0.025, 'sine', 0.7);
+  else if (kind === 'voice') tone(accent ? 440 : 330, 0.05, 'sine', 0.8);
+  else tone(accent ? 1760 : 1100, 0.04, 'sine', 0.3);
 }
 // Quick previews from the UI
 export async function previewDrum(t, row, vel = 0.9) {
