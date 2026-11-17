@@ -1,4 +1,6 @@
 import { renderPads } from './pads.js';
+import { renderSampler } from './sampler.js';
+import { actionFor, binds, keyOf } from './keys.js';
 import { renderDJ } from './dj.js';
 import { openAddAudio } from './dropanywhere.js';
 import { initHear, hearButton } from './hear.js';
@@ -28,7 +30,7 @@ import { renderHome, renderProjects, renderMic, renderLearn, createSong } from '
 
 setDecoder(async ab => (await ensureCtx()).decodeAudioData(ab));
 
-const VIEWS = { home: renderHome, studio: renderStudio, beat: renderBeat, mixer: renderMixer, master: renderMaster, profile: renderProfile, look: renderAppearance, art: renderArt, player: renderPlayer, sounds: renderLibrary, projects: renderProjects, mic: renderMic, learn: renderLearn, pads: renderPads, dj: renderDJ };
+const VIEWS = { home: renderHome, studio: renderStudio, beat: renderBeat, mixer: renderMixer, master: renderMaster, profile: renderProfile, look: renderAppearance, art: renderArt, player: renderPlayer, sounds: renderLibrary, projects: renderProjects, mic: renderMic, learn: renderLearn, pads: renderPads, dj: renderDJ, sampler: renderSampler };
 const NEEDS_SONG = ['studio', 'beat', 'mixer', 'master'];
 const PLAYS = ['studio', 'beat', 'mixer', 'master', 'player'];
 
@@ -38,6 +40,7 @@ const MENU = [
     ['studio', 'Studio', 'Record your voice over a beat, with takes and vocal effects'],
     ['beat', 'Beat maker', 'Drums, 75 instruments, patterns and the guitar maker'],
     ['pads', 'Pad machine', 'Tap beats on 128 glowing pads, record loops and voice loops'],
+    ['sampler', 'Sample maker', 'Chop pieces from your songs and make your producer tag'],
     ['dj', 'DJ booth', 'Mix two tracks with scratching, effects, transitions and lights']]],
   ['Finish', 'Make it sound done', [
     ['mixer', 'Mixer', 'Faders, meters and groups for every track'],
@@ -137,7 +140,7 @@ function footer() {
       select([[2, '1/8'], [3, '3/16'], [4, '1/4'], [6, '3/8']], M.delayDiv, v => { M.delayDiv = +v; applyMix(); save(); })),
     knob('Delay repeats', 0, 0.85, 0.01, M.delayFb, v => { M.delayFb = v; applyMix(); save(); }, pct, 'delayFb', 'adv'),
     el('canvas', { id: 'meter', width: 240, height: 14, title: 'Master level. Keep it out of the red.' }),
-    el('span', { class: 'hint keyhint' }, app.view === 'beat' ? 'Keys A to K play the selected synth. Z and X change octave.' : 'Space play, R record, S split, Ctrl+Z undo.'),
+    el('span', { class: 'hint keyhint' }, app.view === 'beat' ? `Letters play the selected sound. Z and X change octave. ${keyOf('beatRec')} goes to record.` : `${keyOf('play')} play, ${keyOf('record')} record, ${keyOf('split')} split, ${keyOf('undo')} undo.`, el('button', { class: 'keylink', onclick: () => openKeyGuide(app.view, true) }, 'Change keys')),
   );
 }
 
@@ -188,26 +191,26 @@ window.addEventListener('keydown', e => {
   if (artKey(e)) return;
   if (e.target.matches('input:not([type=range]):not([type=checkbox]), select, textarea')) return;
   if (document.querySelector('.modal-wrap')) return;
-  const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
-  if (e.key === '?' && !ctrl) { openKeyGuide(app.view); return; }
+  const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey, act = actionFor(e, app.view);
+  if (act === 'guide') { e.preventDefault(); openKeyGuide(app.view); return; }
+  if (act === 'hear') return; // What I hear handles its own key
   const inSong = app.P && PLAYS.includes(app.view);
   if (!inSong) return;
-  if (e.code === 'Space') { e.preventDefault(); T.playing ? stop() : play(); return; }
-  if (ctrl && k === 'z') { e.preventDefault(); e.shiftKey ? edit.redo() : edit.undo(); return; }
-  if (ctrl && k === 'y') { e.preventDefault(); edit.redo(); return; }
+  // in the Beat maker the instrument keys come first: a letter plays a note and does nothing else
+  if (app.view === 'beat' && !ctrl && !e.altKey && !e.repeat && beatKey(k, false, e)) { e.preventDefault(); return; }
+  if (act === 'play') { e.preventDefault(); T.playing ? stop() : play(); return; }
+  if (act === 'undo') { e.preventDefault(); edit.undo(); return; }
+  if (act === 'redo' || (ctrl && e.shiftKey && k === 'z')) { e.preventDefault(); edit.redo(); return; }
   if (app.view === 'studio') {
     if (ctrl && k === 'c') { edit.copy(); return; }
     if (ctrl && k === 'x') { edit.cut(); return; }
     if (ctrl && k === 'v') { edit.paste(); return; }
-    if (ctrl || e.altKey || e.repeat) return;
-    if (k === 'r') record();
-    else if (k === 's') edit.split();
-    else if (k === 'delete' || k === 'backspace') { e.preventDefault(); edit.del(); }
-    else if (k === 'home') seek(0);
-  } else if (app.view === 'beat' && !ctrl && !e.repeat) {
-    if (beatKey(k, false, e)) e.preventDefault();
-    else if (k === 'r') { goto('studio'); record(); }
-  }
+    if (e.repeat) return;
+    if (act === 'record') record();
+    else if (act === 'split') edit.split();
+    else if (act === 'del' || (!act && k === 'backspace' && binds().del === 'delete')) { e.preventDefault(); edit.del(); }
+    else if (act === 'home') seek(0);
+  } else if (app.view === 'beat' && act === 'beatRec' && !e.repeat) { e.preventDefault(); goto('studio'); record(); }
 });
 window.addEventListener('keyup', e => {
   if (app.view === 'beat' && !e.target.matches('input:not([type=range]), select, textarea')) beatKey(e.key.toLowerCase(), true, e);

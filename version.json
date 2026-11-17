@@ -1,16 +1,28 @@
 {
-  "version": "2.4.0",
-  "date": "2026-11-16",
+  "version": "2.5.0",
+  "date": "2026-11-17",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Real 3D CD cases, discs, MiniDisc, CD book and case stack with mouse wheel zoom",
-    "Paper types for your art, tray and plastic options, MiniDisc label pictures, GIFs and words",
-    "GIF export, design files, sticker finishes",
-    "Cursor effects no longer get stuck, plus new cursors, trails and clicks",
-    "New animated intro and clearer theme colors",
-    "New styles: G-Funk, Island Soul, Bedroom Indie, Shoegaze Metal, Guitar Rap, 4AM"
+    "Change your own shortcut keys, and R no longer jumps out of the Beat maker",
+    "Squeal shield keeps hearing yourself safe, even with effects, plus a Fix my squeal button",
+    "What I hear is now a clear sound path",
+    "New Sample maker: chop songs you own, and make your producer tag",
+    "20 new beat styles in packs",
+    "Clearer pad editor, regrouped Studio tools, bolder text, smoother 3D"
   ],
   "history": [
+    {
+      "version": "2.4.0",
+      "date": "2026-11-16",
+      "notes": [
+        "Real 3D CD cases, discs, MiniDisc, CD book and case stack with mouse wheel zoom",
+        "Paper types for your art, tray and plastic options, MiniDisc label pictures, GIFs and words",
+        "GIF export, design files, sticker finishes",
+        "Cursor effects no longer get stuck, plus new cursors, trails and clicks",
+        "New animated intro and clearer theme colors",
+        "New styles: G-Funk, Island Soul, Bedroom Indie, Shoegaze Metal, Guitar Rap, 4AM"
+      ]
+    },
     {
       "version": "2.3.0",
       "date": "2026-11-16",

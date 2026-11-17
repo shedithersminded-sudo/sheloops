@@ -1,5 +1,6 @@
 // Recording studio: song timeline, tracks, clips, takes.
 import { makeMovable } from './movable.js';
+import { keyOf } from './keys.js';
 import { openMicPanel } from './micui.js';
 import { $, el, uid, clamp, pct, panFmt, fmtTime, toast, knob, toggle, download, safeName, confirmBox, modal, cssVar } from './util.js';
 import { helpBtn } from './help.js';
@@ -171,26 +172,25 @@ export function renderStudio() {
   ['tostart', 'play', 'record', 'lcd', 'bpm', 'click', 'countin', 'loop', 'punch', 'monitor', 'meter', 'automation'].forEach((k, i) => { if (tb.children[i]) tb.children[i].dataset.k = k; });
   arrangeToolbar(tb);
   const fileIn = el('input', { type: 'file', accept: 'audio/*', hidden: true, onchange: e => { const f = e.target.files[0]; e.target.value = ''; if (f) importBeatFile(f); } });
-  const eb = el('div', { class: 'panel editbar' },
-    el('button', { class: 'hot', onclick: () => fileIn.click(), title: 'Or drag an audio file onto the timeline' }, 'Add my beat file'), fileIn,
-    el('button', { onclick: () => { snapshot(); const t = newVocalTrack('Vocal ' + (P.tracks.length + 1)); P.tracks.push(t); P.sel = t.id; save(); renderStudio(); } }, '+ Vocal track'),
-    el('span', { class: 'withhelp' }, el('button', { onclick: soundPicker }, 'Add from my sounds'), helpBtn('library')),
-    el('span', { class: 'sep' }),
-    el('button', { onclick: () => edit.split(), title: 'S' }, 'Split'),
-    el('button', { onclick: () => edit.cut(), title: 'Ctrl+X' }, 'Cut'),
-    el('button', { onclick: () => edit.copy(), title: 'Ctrl+C' }, 'Copy'),
-    el('button', { onclick: () => edit.paste(), title: 'Ctrl+V' }, 'Paste'),
-    el('button', { onclick: () => edit.del(), title: 'Delete' }, 'Delete'),
-    el('button', { onclick: () => edit.undo(), title: 'Ctrl+Z' }, 'Undo'),
-    el('button', { onclick: () => edit.redo(), title: 'Ctrl+Y' }, 'Redo'),
-    helpBtn('edit'),
-    el('span', { class: 'sep' }),
-    el('span', { class: 'adv withhelp' }, toggle('Snap', settings.snap, v => { settings.snap = v; saveSettings(); }), helpBtn('snap')),
-    el('span', { class: 'withhelp' }, el('button', { onclick: () => zoom(1 / 1.4) }, '-'), el('button', { onclick: () => zoom(1.4) }, '+'), helpBtn('zoom')),
-    el('label', { class: 'num adv' }, 'Bars', el('input', { type: 'number', min: 4, max: 400, value: P.lengthBars, onchange: e => { snapshot(); P.lengthBars = clamp(+e.target.value || 32, 4, 400); save(); renderLanes(); } }), helpBtn('songLength')),
-    el('span', { class: 'spacer' }),
-    el('span', { class: 'withhelp' }, el('button', { onclick: exportSong }, 'Export song'), helpBtn('exportSong')),
-    el('span', { class: 'withhelp adv' }, el('button', { onclick: exportStems }, 'Export tracks'), helpBtn('exportStems')),
+  // edit tools in labelled groups: Add, Edit, View, Save. Each tool has a small picture so it can be found fast.
+  const tool = (ic, label, fn, title) => el('button', { class: 'etool', title: title || label, onclick: fn }, el('span', { class: 'eic ' + ic }), el('small', {}, label));
+  const grp = (name, cls, ...kids) => el('div', { class: 'egroup ' + cls }, el('span', { class: 'egname' }, name), el('div', { class: 'egrow' }, ...kids));
+  const eb = el('div', { class: 'panel editbar egrid' },
+    grp('Add', 'g-add',
+      el('button', { class: 'hot', onclick: () => fileIn.click(), title: 'Or drag an audio file onto the timeline' }, '+ My beat file'), fileIn,
+      el('button', { onclick: () => { snapshot(); const t = newVocalTrack('Vocal ' + (P.tracks.length + 1)); P.tracks.push(t); P.sel = t.id; save(); renderStudio(); } }, '+ Vocal track'),
+      el('span', { class: 'withhelp' }, el('button', { onclick: soundPicker }, '+ From my sounds'), helpBtn('library'))),
+    grp('Edit', 'g-edit',
+      tool('i-split', 'Split', () => edit.split(), 'Split (' + keyOf('split') + ')'), tool('i-cut', 'Cut', () => edit.cut(), 'Cut (Ctrl + X)'), tool('i-copy', 'Copy', () => edit.copy(), 'Copy (Ctrl + C)'),
+      tool('i-paste', 'Paste', () => edit.paste(), 'Paste (Ctrl + V)'), tool('i-del', 'Delete', () => edit.del(), 'Delete (' + keyOf('del') + ')'),
+      tool('i-undo', 'Undo', () => edit.undo(), 'Undo (' + keyOf('undo') + ')'), tool('i-redo', 'Redo', () => edit.redo(), 'Redo (' + keyOf('redo') + ')'), helpBtn('edit')),
+    grp('View', 'g-view',
+      el('span', { class: 'adv withhelp' }, toggle('Snap', settings.snap, v => { settings.snap = v; saveSettings(); }), helpBtn('snap')),
+      el('span', { class: 'withhelp zoomgrp' }, el('button', { onclick: () => zoom(1 / 1.4), title: 'Zoom out' }, '−'), el('small', {}, 'Zoom'), el('button', { onclick: () => zoom(1.4), title: 'Zoom in' }, '+'), helpBtn('zoom')),
+      el('label', { class: 'num adv' }, 'Bars', el('input', { type: 'number', min: 4, max: 400, value: P.lengthBars, onchange: e => { snapshot(); P.lengthBars = clamp(+e.target.value || 32, 4, 400); save(); renderLanes(); } }), helpBtn('songLength'))),
+    grp('Save', 'g-save',
+      el('span', { class: 'withhelp' }, el('button', { class: 'savebtn', onclick: exportSong }, 'Export song'), helpBtn('exportSong')),
+      el('span', { class: 'withhelp adv' }, el('button', { onclick: exportStems }, 'Export tracks'), helpBtn('exportStems'))),
   );
   scroller = el('div', { class: 'tl-scroll' });
   const insp = el('div', { class: 'panel inspector', id: 'inspector' });

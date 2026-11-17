@@ -13,7 +13,7 @@ export const FACES = {
   mdlabel: { name: 'MiniDisc label', w: 900, h: 640, mm: 'shutter label' },
 };
 export const DISC = { R: 697, HOLE: 89, HUB: 195, PRINT: 130 };
-export const FONTS = ['Anton', 'Bebas Neue', 'Playfair Display', 'Abril Fatface', 'Cinzel', 'Pacifico', 'Great Vibes', 'Lobster', 'Permanent Marker', 'Monoton', 'Righteous', 'Bungee', 'Press Start 2P', 'Rubik Glitch', 'UnifrakturMaguntia', 'Space Grotesk', 'Arial', 'Georgia', 'Impact', 'Courier New', 'Cascadia Mono'];
+export const FONTS = ['Unbounded', 'Anton', 'Bebas Neue', 'Playfair Display', 'Abril Fatface', 'Cinzel', 'Pacifico', 'Great Vibes', 'Lobster', 'Permanent Marker', 'Monoton', 'Righteous', 'Bungee', 'Press Start 2P', 'Rubik Glitch', 'UnifrakturMaguntia', 'Space Grotesk', 'Arial', 'Georgia', 'Impact', 'Courier New', 'Cascadia Mono'];
 // ---------- sticker looks: die-cut edge, finishes, peeling corner, wear ----------
 export const FINISHES = [['none', 'Plain print'], ['gloss', 'Gloss'], ['holo', 'Hologram'], ['gold', 'Gold foil'], ['silverfoil', 'Silver foil'], ['chrome', 'Chrome'], ['glitter', 'Glitter'], ['matte', 'Matte paper'], ['neon', 'Neon glow']];
 let artTime = null; // fixed time while exporting a GIF, otherwise the clock

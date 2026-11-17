@@ -1,7 +1,7 @@
 // Beat maker: patterns, drum grid with my samples, piano roll instruments, keyboard + MIDI.
 import { $, el, clamp, pct, panFmt, toast, knob, select, ask, confirmBox, cssVar } from './util.js';
 import { helpBtn } from './help.js';
-import { app, stepDur, save, snapshot, DRUMS, DRUM_NAMES, PRESETS, STARTERS, PAT_IDS, newBeatTrack, applyStarter, patData, setNotes, copyPattern } from './state.js';
+import { app, stepDur, save, snapshot, DRUMS, DRUM_NAMES, PRESETS, STARTERS, PACKS, PAT_IDS, newBeatTrack, applyStarter, patData, setNotes, copyPattern } from './state.js';
 import { applyMix, previewDrum, previewNote, liveNote, currentPos, T, refresh, ensureCtx } from './engine.js';
 import { SOUNDS, loadSounds, soundName, soundBuffer } from './library.js';
 import { PERC, PERC_NAMES, PERC_KITS, isString, drumMenu } from './instruments.js';
@@ -76,7 +76,7 @@ export async function renderBeat() {
     knob('Swing', 0, 1, 0.01, b.swing, v => { b.swing = v; save(); }, pct, 'swing'),
     el('label', { class: 'num' }, 'Key', select(NOTE.map((n, i) => [i, n]), b.key, v => { b.key = +v; save(); applyMix(); renderBeatEditor(); }),
       select(Object.keys(SCALES), b.scale, v => { b.scale = v; save(); applyMix(); renderBeatEditor(); }), helpBtn('scale')),
-    el('label', { class: 'num' }, 'Style', select(Object.keys(STARTERS), starter, v => starter = v),
+    el('label', { class: 'num' }, 'Style', el('select', { onchange: e => starter = e.target.value }, ...Object.entries(PACKS).map(([g, list]) => el('optgroup', { label: g + ' pack' }, ...list.filter(n => STARTERS[n]).map(n => el('option', { value: n, selected: n === starter }, n)))), el('optgroup', { label: 'More' }, ...Object.keys(STARTERS).filter(n => !Object.values(PACKS).flat().includes(n)).map(n => el('option', { value: n, selected: n === starter }, n)))),
       el('button', { onclick: async () => {
         if (!await confirmBox('Load starter', `Load ${starter} drums, chords and bass into pattern ${cur()}? It replaces what is in this pattern and sets the BPM.`, 'Load')) return;
         snapshot(); app.P.bpm = applyStarter(b, starter, cur()); save(); applyMix(); renderBeat(); refresh(); toast(starter + ' starter loaded.');

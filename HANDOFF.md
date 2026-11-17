@@ -222,3 +222,13 @@ Stage 8 (AI helper, tour, desktop app) was skipped by the user on 2026-11-16 ("d
 - Cursor: effects follow the mouse in capture phase and hide when the mouse leaves; more designs, trails, clicks, rainbow option.
 - Home intro title: Space Grotesk, letters rise in, glow wave, pulsing bar. Theme cards show full color strips.
 - New song tools: G-Funk Night Drive, Island Soul, Bedroom Indie, Shoegaze Metal, Guitar Rap, 4AM.
+
+## 2.5.0 keys, squeal shield, sample maker, tag maker, beat packs
+- js/keys.js: every shortcut goes through actionFor(e, page). Users change keys in the keys guide (Change my keys, or the Change keys link in the footer). Clashes are blocked. In the Beat maker, instrument keys are handled first, so letters never trigger shortcuts (R no longer jumps to the Studio; Shift + Enter does).
+- Squeal shield (engine.js): monitor path mon > high pass > low pass > slightly modulated delay > limiter > shOut. Levels off/auto/strong in micSettings().shield. Auto turns itself to Strong after 2 squeals in 12 s. fixSqueal() sets everything safe in one go. Works with effects on.
+- What I hear: new Sound path tab (mic, effects, ears, speakers) with Fix my squeal.
+- js/sampler.js: Sample maker page (Create menu) with Sample a song (wave select, equal slices or find the hits, pitch, reverse, lo-fi, save, put slices on pads) and Producer tag (record, 9 styles, 6 extra sounds, save or WAV).
+- Pad editor: 3 steps with sound type cards, including Sample a song.
+- 20 new styles grouped into PACKS (state.js). Unbounded font for titles. Text thickness setting (bold default).
+- 3D viewer renders only when something changes, smooth camera glides, cheap reflection materials, pixel ratio capped at 1.5.
+- Movable panel labels sit on the panel's top edge, so they no longer cover buttons.

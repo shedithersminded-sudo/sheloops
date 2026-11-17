@@ -165,9 +165,11 @@ export const FONTS_UI = [['Comfortaa', 'SHELOOPS look (default)'], ['Fredoka', '
 export function applyFont() {
   const f = look.font || 'Comfortaa', mono = f === 'Cascadia Mono';
   document.documentElement.style.setProperty('--font', mono ? '"Cascadia Mono", Consolas, monospace' : `"${f}", "Nunito", system-ui, sans-serif`);
+  document.documentElement.style.setProperty('--tw', { regular: 400, bold: 700, heavy: 800 }[look.textWeight || 'bold'] || 700);
 }
+export const TEXT_WEIGHTS = [['regular', 'Regular'], ['bold', 'Bold (easier to read)'], ['heavy', 'Extra bold']];
 // heading font (titles, big words) can be chosen separately
-export const HEAD_FONTS = [['Bungee', 'Block signage (default)'], ['Monoton', 'Neon tubes'], ['Righteous', 'Retro round'], ['Rubik Glitch', 'Glitched'], ['Permanent Marker', 'Hand drawn'], ['Press Start 2P', 'Arcade pixels'], ['Bebas Neue', 'Tall and clean'], ['Abril Fatface', 'Magazine'], ['Cinzel', 'Classic'], ['UnifrakturMaguntia', 'Gothic'], ['Pacifico', 'Script'], ['Lobster', 'Bold script']];
+export const HEAD_FONTS = [['Bungee', 'Block signage (default)'], ['Unbounded', 'Modern wide'], ['Monoton', 'Neon tubes'], ['Righteous', 'Retro round'], ['Rubik Glitch', 'Glitched'], ['Permanent Marker', 'Hand drawn'], ['Press Start 2P', 'Arcade pixels'], ['Bebas Neue', 'Tall and clean'], ['Abril Fatface', 'Magazine'], ['Cinzel', 'Classic'], ['UnifrakturMaguntia', 'Gothic'], ['Pacifico', 'Script'], ['Lobster', 'Bold script']];
 export function applyHeadFont() { const f = look.headFont; document.documentElement.style.setProperty('--display', f ? `"${f}", "Bungee", sans-serif` : "'Bungee', 'Righteous', var(--font)"); }
 // ---------- logo (my own art, kept in this browser only) ----------
 let logoUrl = null;

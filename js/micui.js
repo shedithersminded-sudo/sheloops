@@ -2,7 +2,7 @@
 import { el, toast, knob, modal } from './util.js';
 import { helpBtn } from './help.js';
 import { on } from './state.js';
-import { E, openMic, reopenMic, setInputGain, micSettings, applyMicSettings, clearNotches, updateMonitor, peakOf, rmsOf } from './engine.js';
+import { E, openMic, reopenMic, setInputGain, micSettings, applyMicSettings, clearNotches, updateMonitor, peakOf, rmsOf, fixSqueal } from './engine.js';
 import { settings, saveSettings } from './store.js';
 
 export const MIC_PRESETS = {
@@ -19,7 +19,7 @@ export function micPanel(rerender) {
   const meter = el('div', { class: 'micmeter' }, el('i', { class: 'lvl' }), el('i', { class: 'gateline' }), el('span', { class: 'micdb' }, 'mic off'));
   const floorEl = el('b', {}, '...');
   const fb = el('div', { class: 'fbstatus' });
-  const showFb = () => { const n = (E.mic && E.mic.notches) || []; fb.replaceChildren(el('span', { class: 'fbled' + (M.guard ? ' on' : '') }), n.length ? el('span', {}, `Stopped ${n.length} ringing pitch${n.length === 1 ? '' : 'es'}: ${n.map(x => x.hz >= 1000 ? (x.hz / 1000).toFixed(1) + ' kHz' : Math.round(x.hz) + ' Hz').join(', ')}`) : el('span', {}, M.guard ? 'Listening for feedback. All quiet.' : 'Feedback guard is off.'), n.length ? el('button', { class: 'sq', title: 'Forget the fixes (if your voice sounds thin)', onclick: () => { clearNotches(); showFb(); } }, '↺') : null); };
+  const showFb = () => { const n = (E.mic && E.mic.notches) || []; fb.replaceChildren(...[el('span', { class: 'fbled' + (M.guard ? ' on' : '') }), n.length ? el('span', {}, `Stopped ${n.length} ringing pitch${n.length === 1 ? '' : 'es'}: ${n.map(x => x.hz >= 1000 ? (x.hz / 1000).toFixed(1) + ' kHz' : Math.round(x.hz) + ' Hz').join(', ')}`) : el('span', {}, M.guard ? 'Listening for feedback. All quiet.' : 'Feedback guard is off.'), n.length ? el('button', { class: 'sq', title: 'Forget the fixes (if your voice sounds thin)', onclick: () => { clearNotches(); showFb(); } }, '↺') : null].filter(Boolean)); };
   on(k => { if (k === 'feedback' && fb.isConnected) showFb(); });
   let raf = 0, floorMin = 0;
   const tick = () => {
@@ -40,7 +40,7 @@ export function micPanel(rerender) {
   const presetOn = n => Object.entries(MIC_PRESETS[n]).every(([k, v]) => M[k] === v);
   const sect = (title, help, ...kids) => el('div', { class: 'micsect' }, el('div', { class: 'micsect-t' }, title, help ? helpBtn(help) : null), ...kids);
   return el('div', { class: 'micpanel' },
-    el('div', { class: 'explain', style: 'display:block' }, el('b', {}, 'Hear a high squeal? '), 'That is feedback: your speakers going back into your mic. Wear headphones if you can. If not, turn on "I am on speakers" below and leave the Feedback guard on.'),
+    el('div', { class: 'explain squealbox', style: 'display:block' }, el('b', {}, 'Hear a high squeal? '), 'That is feedback: your speakers going back into your mic, round and round. Press the button and SHELOOPS sets everything up the safe way. Headphones fix it best.', el('div', {}, fixButton(rerender))),
     sect('Level', 'micLevel', meter,
       el('div', { class: 'knobrow' }, knob('Input', 0.1, 4, 0.01, settings.inputGain, v => setInputGain(v), v => Math.round(v * 100) + '%', null, 'dial'),
         el('div', { class: 'micinfo' }, el('small', {}, 'Room noise'), floorEl, el('small', {}, 'Speak normally: the bar should reach the yellow, never the red.')))),
@@ -64,11 +64,22 @@ export function micPanel(rerender) {
         knob('Volume', 0, 1.5, 0.01, M.monVol, v => set('monVol', v), v => Math.round(v * 100) + '%', null, 'dial sm')),
       el('div', { class: 'fxlib' },
         el('button', { class: 'chip' + (M.monFx ? ' on' : ''), onclick: () => { set('monFx', true); rerender(); } }, 'With my effects'),
-        el('button', { class: 'chip' + (!M.monFx ? ' on' : ''), onclick: () => { set('monFx', false); rerender(); } }, 'Dry (safer on speakers)')),
-      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: M.speakers, onchange: async e => { M.speakers = e.target.checked; if (M.speakers) { settings.ec = true; settings.nr = true; M.monFx = false; M.guard = true; } saveSettings(); await reopenMic().catch(() => { }); applyMicSettings(); rerender(); toast(M.speakers ? 'Speaker mode: echo cancelling on, monitor quieter and dry.' : 'Headphone mode.'); } }), 'I am on speakers (no headphones)'),
+        el('button', { class: 'chip' + (!M.monFx ? ' on' : ''), onclick: () => { set('monFx', false); rerender(); } }, 'Dry voice')),
+      shieldPicker(M, set, rerender),
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: M.speakers, onchange: async e => { M.speakers = e.target.checked; if (M.speakers) { settings.ec = true; settings.nr = true; M.shield = 'strong'; M.guard = true; } saveSettings(); await reopenMic().catch(() => { }); applyMicSettings(); rerender(); toast(M.speakers ? 'Speaker mode: echo cancelling on, squeal shield strong, monitor quieter. Your effects still work.' : 'Headphone mode.'); } }), 'I am on speakers (no headphones)'),
       el('div', { class: 'fxtop' }, el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!settings.ec, onchange: async e => { settings.ec = e.target.checked; saveSettings(); await reopenMic().catch(() => { }); } }), 'Echo cancel'),
         el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!settings.nr, onchange: async e => { settings.nr = e.target.checked; saveSettings(); await reopenMic().catch(() => { }); } }), 'Browser noise suppression'))),
     sect('Feedback guard', 'feedbackGuard', el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: M.guard, onchange: e => { set('guard', e.target.checked); showFb(); } }), 'Stop the squeal automatically'), fb));
+}
+// Squeal shield: protects what you hear, with or without effects. Your recording is never changed by it.
+export const SHIELD_INFO = { off: ['Off', 'Nothing added. Only for good headphones.'], auto: ['Auto', 'Light protection you will not notice. Turns itself up to Strong if a squeal keeps coming back.'], strong: ['Strong', 'For speakers or a room that keeps squealing. Trims the sharp highs, keeps your voice moving a tiny bit so a howl cannot build, and keeps the volume in check.'] };
+export function shieldPicker(M, set, rerender) {
+  return el('div', { class: 'shieldpick' }, el('div', { class: 'micsect-t' }, 'Squeal shield', helpBtn('shield')),
+    el('div', { class: 'fxlib' }, ...Object.entries(SHIELD_INFO).map(([k, [n]]) => el('button', { class: 'chip' + (M.shield === k ? ' on' : ''), onclick: () => { set('shield', k); rerender(); } }, n))),
+    el('small', { class: 'hint' }, SHIELD_INFO[M.shield || 'auto'][1] + ' Works with your effects on too.'));
+}
+export function fixButton(rerender) {
+  return el('button', { class: 'hot fixsqueal', onclick: async e => { e.currentTarget.disabled = true; const did = await fixSqueal(); toast('Fixed: ' + did.join(', ') + '.'); rerender && rerender(); } }, 'Fix my squeal');
 }
 export function openMicPanel() {
   let close; const wrap = el('div', { class: 'micwrap' });

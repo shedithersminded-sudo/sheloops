@@ -58,6 +58,8 @@ PADS.safe ??= true; PADS.chain ??= false;
 PADS.skin = { shape: 'rounded', light: 'both', glow: 0.6, body: 'graphite', lcd: '#7dff9a', size: 1, ...(PADS.skin || {}) };
 const savePads = () => localStorage.setItem(KEY, JSON.stringify(PADS));
 const bank = () => PADS.banks[PADS.bank];
+// the Sample maker sends its slices here: they go onto pads 1, 2, 3... of the bank you are on
+export async function loadSlicesToPads(ids) { await loadSounds(); ids.slice(0, bank().length).forEach((id, i) => Object.assign(bank()[i], { kind: 'sample', sample: id, name: (SOUNDS.find(s => s.id === id) || {}).name || 'Slice ' + (i + 1) })); savePads(); if (root && root.isConnected) renderPads(); }
 const bpm = () => (app.P && app.P.bpm) || 120;
 const beatSec = () => 60 / bpm();
 const loopSec = () => PADS.bars * 4 * beatSec();
@@ -368,15 +370,16 @@ function renderEditor() {
   const box = root && root.querySelector('.ped'); if (!box) return;
   const i = PADS.sel, pad = bank()[i], set = (k, v, re) => { pad[k] = v; savePads(); if (re) renderPads(); };
   const rr = () => { savePads(); renderPads(); };
-  const kinds = [['drum', 'Drum'], ['note', 'Instrument'], ['sample', 'My sound'], ['voice', 'Record my voice'], ['empty', 'Empty']];
-  const kindBtns = el('div', { class: 'fxlib' }, kinds.map(([k, l]) => el('button', { class: 'chip' + ((pad.kind === k || (k === 'voice' && pad.kind === 'voice')) ? ' on' : ''), onclick: () => {
+  const kinds = [['drum', 'Drum', 'Kicks, snares, hats, claps and more', 'k-drum'], ['note', 'Instrument', 'A note or a chord on any instrument', 'k-note'], ['sample', 'My sound', 'Your uploads, chops and tags', 'k-sample'], ['voice', 'Record my voice', 'Say or sing something onto this pad', 'k-voice'], ['chop', 'Sample a song', 'Cut a piece from a song you own', 'k-chop'], ['empty', 'Empty', 'Nothing on this pad', 'k-empty']];
+  const kindBtns = el('div', { class: 'kindgrid' }, kinds.map(([k, l, what, ic]) => el('button', { class: 'kindcard ' + ic + (pad.kind === k ? ' on' : ''), onclick: () => {
+    if (k === 'chop') { import('./sampler.js').then(m => m.openSampleMaker({ onSave: id => { Object.assign(pad, { kind: 'sample', sample: id }); loadSounds().then(() => { pad.name = (SOUNDS.find(x => x.id === id) || {}).name || 'Sample'; rr(); }); } })); return; }
     if (k === 'drum') Object.assign(pad, { kind: 'drum', sound: pad.sound || 'kick', name: soundLabel(pad.sound || 'kick') });
     else if (k === 'note') Object.assign(pad, { kind: 'note', preset: pad.preset || 'piano', note: pad.note || 60, chord: pad.chord || 'single', len: pad.len || 0.5, name: noteName(pad.note || 60) });
     else if (k === 'sample') { if (!SOUNDS.length) return toast('Upload sounds in My sounds first, or record your voice.'); Object.assign(pad, { kind: 'sample', sample: pad.sample || SOUNDS[0].id, name: (SOUNDS.find(s => s.id === (pad.sample || SOUNDS[0].id)) || {}).name }); }
     else if (k === 'voice') { pad.kind = pad.kind === 'voice' ? 'voice' : 'voice'; }
     else Object.assign(pad, { kind: 'empty', name: 'Empty' });
     rr();
-  } }, l)));
+  } }, el('span', { class: 'kicon' }, el('i'), el('i'), el('i')), el('b', {}, l), el('small', {}, what))));
   function stepSound(d) { const all = drumMenu(DRUMS, DRUM_NAMES).flatMap(([, l]) => l.map(x => x[0])), k = (all.indexOf(pad.sound) + d + all.length) % all.length; pad.sound = all[k]; pad.name = soundLabel(pad.sound); rr(); hit(i); }
   let src = null;
   if (pad.kind === 'drum') src = el('label', { class: 'num' }, 'Sound', el('select', { onchange: e => { pad.sound = e.target.value; pad.name = soundLabel(pad.sound); rr(); hit(i); } },
@@ -395,13 +398,16 @@ function renderEditor() {
   const add = type => { pad.fx ||= []; pad.fx.push(newFx(type)); rr(); };
   box.innerHTML = '';
   box.append(
-    el('div', { class: 'fxtop' }, el('b', { class: 'pedtitle', style: `--pc:${pad.color}` }, `Pad ${i + 1} · ${pad.name}`), helpBtn('padEdit'), el('span', { class: 'spacer' }),
-      el('div', { class: 'pcolors' }, COLORS.map(c => el('button', { class: 'swatchbtn', style: `background:${c}`, title: 'Pad color', onclick: () => set('color', c, true) }))),
+    el('div', { class: 'pedhead' }, el('b', { class: 'pedtitle', style: `--pc:${pad.color}` }, `Pad ${i + 1} · ${pad.name}`), helpBtn('padEdit')),
+    el('div', { class: 'pedtools' }, el('small', {}, 'Color'),
+      el('div', { class: 'pcolors' }, COLORS.map(c => el('button', { class: 'swatchbtn' + (pad.color === c ? ' on' : ''), style: `background:${c}`, title: 'Pad color', onclick: () => set('color', c, true) }))),
       el('button', { onclick: async () => { const n = await ask('Rename pad', 'Name', pad.name); if (n) set('name', n, true); } }, 'Rename')),
-    el('div', { class: 'explain' }, 'Pick what this pad plays. Turn the knobs to change it. Add effects below, they only change this pad. Right-click any pad to edit it.'),
+    el('div', { class: 'pedstep' }, el('span', {}, '1'), 'What should this pad play?'),
     kindBtns,
+    el('div', { class: 'pedstep' }, el('span', {}, '2'), 'Shape it'),
     el('div', { class: 'knobrow' }, src, knob('Volume', 0, 1.5, 0.01, pad.vol, v => set('vol', v), v => Math.round(v * 100) + '', null, 'dial'), knob('Pitch', -12, 12, 1, pad.pitch || 0, v => set('pitch', v), v => (v > 0 ? '+' : '') + v, null, 'dial'),
       el('button', { onclick: () => hit(i) }, '▶ Test')),
+    el('div', { class: 'pedstep' }, el('span', {}, '3'), 'Add effects (only this pad)'),
     el('div', { class: 'fxtop' }, el('b', {}, 'Effects on this pad'), helpBtn('beatFx'), el('span', { class: 'spacer' }),
       (pad.fx || []).length ? el('button', { onclick: () => { for (const [j, p] of bank().entries()) if (j !== i) p.fx = JSON.parse(JSON.stringify(pad.fx)).map(f => ({ ...f, id: uid() })); rr(); toast('Copied these effects to every pad in this bank.'); } }, 'Copy to all pads') : null),
     el('div', { class: 'fxlib' }, FX_ORDER.filter(t => t !== 'denoise').map(type => el('button', { class: 'chip', title: (HELP['fx_' + type] || {}).what || '', onclick: () => add(type) }, '+ ' + FX[type].name))),

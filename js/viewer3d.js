@@ -34,7 +34,7 @@ export async function mountViewer(host, d, o = {}) {
   const st = { format: o.format || (d.mock.format === 'minidisc' ? 'minidisc' : 'cdcase'), open: 0, spin: false, auto: o.auto ?? true, mirror: o.mirror ?? true, bg: o.bg || '#0b0b0d', transparent: false, light: 1, rainbow: 1, caseColor: d.mock.slim || '#7a3cff', count: 40, dome: true };
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
-  renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+  renderer.setPixelRatio(Math.min(1.5, devicePixelRatio)); // sharper than this costs a lot with see-through plastic
   host.append(renderer.domElement);
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -44,6 +44,7 @@ export async function mountViewer(host, d, o = {}) {
   const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 100); camera.position.set(1.2, 0.5, 3.6);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.minDistance = 0.4; controls.maxDistance = 12;
+  let flyId = 0, dirty = 6; const redraw = () => { dirty = Math.max(dirty, 2); }; controls.addEventListener('change', redraw);
   const model = new THREE.Group(); scene.add(model);
   let floor = null, spinner = null, lidPivot = null, lidMax = Math.PI * 0.72, framedFor = null;
 
@@ -322,7 +323,7 @@ export async function mountViewer(host, d, o = {}) {
     shadow.rotation.x = -Math.PI / 2; shadow.scale.set(s.x * 1.25 + 0.15, s.z * 1.25 + 0.15, 1);
     model.rotation.set(rx, ry, 0);
     if (framedFor !== f) { framedFor = f; frame(s); }
-    applyFloor();
+    applyFloor(); dirty = 4;
   }
   function frame(s = new V3(1.4, 1.3, 0.1)) {
     const target = new V3(0, model.position.y, 0), r = Math.max(s.x, s.y, s.z) * 0.5;
@@ -338,7 +339,7 @@ export async function mountViewer(host, d, o = {}) {
     if (!st.mirror) return;
     mirror = new THREE.Group(); mirror.scale.y = -1; mirror.position.y = 2 * FLOOR_Y;
     const copy = model.clone(true); mirror.add(copy); scene.add(mirror);
-    copy.traverse(o => { if (o.material && o.material.map === shadowTex) o.visible = false; });
+    const cheap = new Map(); copy.traverse(o => { if (!o.material) return; if (o.material.map === shadowTex) { o.visible = false; return; } if (!Array.isArray(o.material) && o.material.transmission > 0) { if (!cheap.has(o.material)) cheap.set(o.material, new THREE.MeshStandardMaterial({ color: o.material.color, transparent: true, opacity: 0.18, roughness: 0.1, depthWrite: false })); o.material = cheap.get(o.material); } }); // the reflection does not need real glass
     const a = [], b = []; model.traverse(o => a.push(o)); copy.traverse(o => b.push(o)); pairs = a.map((o, i) => [o, b[i]]);
     floor = new THREE.Mesh(new THREE.CircleGeometry(8, 64), new THREE.MeshPhysicalMaterial({ color: st.transparent ? 0x000000 : new THREE.Color(st.bg), transparent: true, opacity: 0.88, roughness: 0.5, metalness: 0, envMapIntensity: 0.2 }));
     floor.rotation.x = -Math.PI / 2; floor.position.y = FLOOR_Y; scene.add(floor);
@@ -348,22 +349,26 @@ export async function mountViewer(host, d, o = {}) {
 
   // ---------- loop ----------
   let raf, w = 0, h = 0, recording = null, stopped = false, animBusy = false, lastAnim = 0;
-  const resize = () => { const r = host.getBoundingClientRect(); if (r.width !== w || r.height !== h) { w = r.width; h = r.height; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); } };
+  const resize = () => { const r = host.getBoundingClientRect(); if (r.width !== w || r.height !== h) { w = r.width; h = r.height; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); dirty = 3; } };
   const animate = now => { // moving GIFs and foil stickers keep playing on the 3D model
     if (!movers.length || animBusy || now - lastAnim < 110) return;
     animBusy = true; lastAnim = now;
-    Promise.all(movers.map(async k => { art[k].image = await drawFace(k); art[k].needsUpdate = true; })).finally(() => { animBusy = false; });
+    Promise.all(movers.map(async k => { art[k].image = await drawFace(k); art[k].needsUpdate = true; })).finally(() => { animBusy = false; redraw(); });
   };
   const tick = now => {
     if (stopped) return;
     if (!host.isConnected) { api.dispose(); return; }
     if (!recording) resize();
-    if (st.auto && !recording) model.rotation.y += 0.004;
-    if (st.spin && spinner) spinner.rotation.z -= 0.08;
-    if (lidPivot) lidPivot.rotation.y += ((-st.open * lidMax) - lidPivot.rotation.y) * 0.15;
-    key.intensity = 1.2 * st.light; rim.intensity = 0.8 * st.light; scene.environmentIntensity = st.light;
+    let moving = false;
+    if (st.auto && !recording) { model.rotation.y += 0.004; moving = true; }
+    if (st.spin && spinner) { spinner.rotation.z -= 0.08; moving = true; }
+    if (lidPivot) { const goal = -st.open * lidMax, dl = goal - lidPivot.rotation.y; if (Math.abs(dl) > 0.0005) { lidPivot.rotation.y += dl * 0.15; moving = true; } }
     animate(now || performance.now());
-    syncMirror(); controls.update(); renderer.render(scene, camera);
+    controls.update(); // fires 'change' while the camera glides
+    if (moving || dirty > 0 || recording) { // only draw when something changed: keeps the fan quiet and the page smooth
+      key.intensity = 1.2 * st.light; rim.intensity = 0.8 * st.light; scene.environmentIntensity = st.light;
+      syncMirror(); renderer.render(scene, camera); if (dirty > 0) dirty--;
+    }
     raf = requestAnimationFrame(tick);
   };
   resize(); build(); applyBg(); tick();
@@ -371,17 +376,20 @@ export async function mountViewer(host, d, o = {}) {
   // ---------- api ----------
   const api = {
     st,
-    set(k, v) { st[k] = v; if (['format', 'caseColor', 'count', 'dome', 'rainbow'].includes(k)) build(); if (k === 'mirror') applyFloor(); if (k === 'bg' || k === 'transparent') applyBg(); },
-    rebuild() { build(); },
+    set(k, v) { st[k] = v; redraw(); if (['format', 'caseColor', 'count', 'dome', 'rainbow'].includes(k)) build(); if (k === 'mirror') applyFloor(); if (k === 'bg' || k === 'transparent') applyBg(); },
+    rebuild() { build(); redraw(); },
     async refresh() { for (const k of Object.keys(FACE_SIZE)) { art[k].image = await drawFace(k); art[k].needsUpdate = true; } findMovers(); build(); },
     frame() { framedFor = null; build(); },
     view(name) {
       model.rotation.set(0, 0, 0); const dist = camera.position.distanceTo(controls.target);
       const dirs = { front: [0, 0, 1], back: [0, 0, -1], left: [-1, 0, 0.0001], right: [1, 0, 0.0001], top: [0, 1, 0.0001], three: [0.6, 0.35, 1], hero: [0.45, 0.22, 1] };
-      const v = new V3(...dirs[name]).normalize().multiplyScalar(dist); camera.position.copy(controls.target).add(v); controls.update();
+      const v = new V3(...dirs[name]).normalize().multiplyScalar(dist), from = camera.position.clone().sub(controls.target), t0 = performance.now(), my = ++flyId;
+      // glide there along an arc instead of jumping
+      const step = () => { if (my !== flyId) return; const k = Math.min(1, (performance.now() - t0) / 650), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; const p = from.clone().lerp(v, e).setLength(THREE.MathUtils.lerp(from.length(), dist, e)); camera.position.copy(controls.target).add(p); controls.update(); redraw(); if (k < 1) requestAnimationFrame(step); };
+      step();
     },
-    zoom(k) { const v = camera.position.clone().sub(controls.target).multiplyScalar(k); const L = v.length(); if (L < controls.minDistance || L > controls.maxDistance) return; camera.position.copy(controls.target).add(v); controls.update(); },
-    turn(axis) { model.rotation[axis] += Math.PI / 2; },
+    zoom(k) { const v = camera.position.clone().sub(controls.target).multiplyScalar(k); const L = v.length(); if (L < controls.minDistance || L > controls.maxDistance) return; camera.position.copy(controls.target).add(v); controls.update(); redraw(); },
+    turn(axis) { model.rotation[axis] += Math.PI / 2; redraw(); },
     // still image at any size; mime: image/png, image/jpeg, image/webp
     async snapshot(size, mime, transparent) {
       const prevT = st.transparent; st.transparent = !!transparent && mime !== 'image/jpeg'; applyBg();

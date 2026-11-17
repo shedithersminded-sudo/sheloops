@@ -5,7 +5,7 @@ import { app, save, snapshot, emit } from './state.js';
 import { settings, saveSettings } from './store.js';
 import { openPlayerSettings } from './nowplaying.js';
 import { playIntro, introOn, setIntro } from './intro.js';
-import { FONTS_UI, applyFont, setLogo, removeLogo, logoURL, applyLogo } from './look.js';
+import { FONTS_UI, TEXT_WEIGHTS, applyFont, setLogo, removeLogo, logoURL, applyLogo } from './look.js';
 import { UIFX_PRESETS, applyUiFx } from './look.js';
 import { look, saveLook, applyLook, applyCursor, applyGlow, applyLayout, allThemes, currentTheme, THEME_KEYS, THEMES, derive, BUILT_IN_WORKSPACES, TOOL_NAMES, setBackgroundImage, resetCursor, trackColors, cursorImage } from './look.js';
 
@@ -45,7 +45,8 @@ function logoFontPanel() {
       el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: introOn(), onchange: e => { setIntro(e.target.checked); toast(e.target.checked ? 'The intro plays when SHELOOPS opens.' : 'Intro turned off.'); } }), 'Play the studio intro when SHELOOPS opens'),
       el('button', { onclick: () => playIntro() }, 'Play it now')),
     el('div', { class: 'insp-sub' }, 'Font', helpBtn('font')),
-    el('div', { class: 'fxlib' }, FONTS_UI.map(([f, n]) => el('button', { class: 'fontcard' + ((look.font || 'Fredoka') === f ? ' on' : ''), style: `font-family:"${f}", sans-serif`, onclick: () => { look.font = f; saveLook(); applyFont(); redraw(); } }, el('b', {}, f), el('small', {}, n)))));
+    el('div', { class: 'fxlib' }, FONTS_UI.map(([f, n]) => el('button', { class: 'fontcard' + ((look.font || 'Fredoka') === f ? ' on' : ''), style: `font-family:"${f}", sans-serif`, onclick: () => { look.font = f; saveLook(); applyFont(); redraw(); } }, el('b', {}, f), el('small', {}, n)))),
+    el('div', { class: 'insp-sub' }, 'Text thickness'), el('div', { class: 'fxlib' }, TEXT_WEIGHTS.map(([k, n]) => el('button', { class: 'chip' + ((look.textWeight || 'bold') === k ? ' on' : ''), onclick: () => { look.textWeight = k; saveLook(); applyFont(); redraw(); } }, n))));
 }
 // ---------- themes ----------
 function themesPanel() {

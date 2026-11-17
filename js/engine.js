@@ -1,6 +1,6 @@
 // Audio engine: graph, instruments, transport, recording, export.
 import { app, barDur, stepDur, songEnd, selTrack, emit, patData } from './state.js';
-import { settings, audioCache } from './store.js';
+import { settings, saveSettings, audioCache } from './store.js';
 import { clamp } from './util.js';
 import { PITCH_WORKLET, DENOISE_WORKLET, buildFx } from './fx.js';
 import { SCALES } from './beat.js';
@@ -189,7 +189,7 @@ export function resetNodes() {
   if (!E.g) return;
   for (const n of Object.values(E.g.nodes)) { n.pan.disconnect(); n.dest = null; }
   E.g.nodes = {};
-  if (E.mic) E.mic.mon.disconnect();
+  if (E.mic) E.mic.shOut.disconnect();
 }
 const audible = (t, list) => !t.mute && (!list.some(x => x.solo) || t.solo);
 function setP(p, v, g, instant) { if (instant) p.value = v; else p.setTargetAtTime(v, g.c.currentTime, 0.015); }
@@ -626,8 +626,13 @@ export async function openMic() {
   src.connect(gain); gain.connect(hp); hp.connect(body); body.connect(mud); mud.connect(pres); pres.connect(air); air.connect(notchIn); notchIn.connect(notchOut);
   notchOut.connect(gate); gate.connect(post);
   post.connect(an); post.connect(cap); cap.connect(sink); sink.connect(c.destination); post.connect(mon);
+  // squeal shield on what you hear (never on what is recorded): trims the ringing range, keeps the pitch moving very slightly so a howl cannot build up, and caps the level
+  const shHP = c.createBiquadFilter(), shLP = c.createBiquadFilter(), shDly = c.createDelay(0.05), shLfo = c.createOscillator(), shDep = c.createGain(), shLim = c.createDynamicsCompressor(), shOut = c.createGain();
+  shHP.type = 'highpass'; shLP.type = 'lowpass'; shDly.delayTime.value = 0.004; shLfo.frequency.value = 0.9; shLfo.connect(shDep); shDep.connect(shDly.delayTime); shLfo.start();
+  shLim.attack.value = 0.002; shLim.release.value = 0.12; shLim.knee.value = 0;
+  mon.connect(shHP); shHP.connect(shLP); shLP.connect(shDly); shDly.connect(shLim); shLim.connect(shOut);
   cap.port.onmessage = e => { if (rec) rec.chunks.push(e.data); };
-  E.mic = { stream, src, gain, an, cap, sink, mon, post, hp, body, mud, pres, air, notchIn, notchOut, gate, notches: [], dn: null, clips: 0 };
+  E.mic = { stream, src, gain, an, cap, sink, mon, post, hp, body, mud, pres, air, notchIn, notchOut, gate, notches: [], dn: null, clips: 0, shHP, shLP, shDly, shLfo, shDep, shLim, shOut };
   applyMicSettings();
   updateMonitor();
   startFeedbackGuard();
@@ -636,21 +641,37 @@ export async function openMic() {
 export function closeMic() {
   const m = E.mic; if (!m) return;
   m.stream.getTracks().forEach(t => t.stop());
-  for (const n of [m.src, m.gain, m.cap, m.sink, m.mon, m.post, m.hp, m.notchOut, m.gate]) n.disconnect();
+  for (const n of [m.src, m.gain, m.cap, m.sink, m.mon, m.post, m.hp, m.notchOut, m.gate, m.shOut]) n.disconnect(); try { m.shLfo.stop(); } catch { }
   E.mic = null;
 }
 export async function reopenMic() { const had = !!E.mic; closeMic(); if (had) await openMic(); }
 export function setInputGain(v) { settings.inputGain = v; if (E.mic) E.mic.gain.gain.value = v; }
 export function updateMonitor() {
   const m = E.mic; if (!m) return;
-  m.mon.disconnect();
+  m.shOut.disconnect();
   const t = app.P && selTrack(), M = micSettings();
+  applyShield();
   // with effects: through the track (its effects and reverb). Without: straight to the speakers, much less likely to ring.
-  if (t && settings.monitor) { m.mon.connect(M.monFx ? nodeFor(E.g, t, false).input : E.g.master); m.mon.gain.value = M.monVol * (M.speakers ? 0.5 : 1); }
+  if (t && settings.monitor) { m.shOut.connect(M.monFx ? nodeFor(E.g, t, false).input : E.g.master); m.mon.gain.value = monLevel(); }
   else m.mon.gain.value = 0;
 }
 // ---------- mic sound settings ----------
-const MIC_DEF = { lowcut: 80, body: 0, mud: 0, presence: 0, air: 0, gate: false, gateDb: -50, denoise: 0, monVol: 0.8, monFx: true, speakers: false, guard: true };
+const MIC_DEF = { lowcut: 80, body: 0, mud: 0, presence: 0, air: 0, gate: false, gateDb: -50, denoise: 0, monVol: 0.8, monFx: true, speakers: false, guard: true, shield: 'auto' };
+// Squeal shield levels for what you hear. Off: untouched. Auto: light, you will not notice it. Strong: for speakers or a room that keeps squealing.
+export const SHIELDS = { off: { hp: 20, lp: 20000, dep: 0, thr: 0, cap: 1.5 }, auto: { hp: 90, lp: 12000, dep: 0.00025, thr: -14, cap: 1.2 }, strong: { hp: 170, lp: 6500, dep: 0.0007, thr: -26, cap: 0.7 } };
+const monLevel = () => { const M = micSettings(), S = SHIELDS[M.shield] || SHIELDS.auto; return Math.min(M.monVol, S.cap) * (M.speakers ? 0.5 : 1); };
+function applyShield() {
+  const m = E.mic; if (!m) return; const S = SHIELDS[micSettings().shield] || SHIELDS.auto, t = E.ctx.currentTime;
+  m.shHP.frequency.setTargetAtTime(S.hp, t, 0.02); m.shLP.frequency.setTargetAtTime(S.lp, t, 0.02); m.shDep.gain.setTargetAtTime(S.dep, t, 0.05);
+  m.shLim.threshold.setTargetAtTime(S.thr, t, 0.02); m.shLim.ratio.value = S.thr ? 20 : 1;
+}
+// One button that sets everything up the safe way, and says what it did
+export async function fixSqueal() {
+  const M = micSettings(); M.shield = 'strong'; M.guard = true; M.gate = true; M.monVol = Math.min(M.monVol, 0.6); M.lowcut = Math.max(M.lowcut, 120);
+  settings.ec = true; settings.nr = true; saveSettings();
+  if (E.mic) { await reopenMic().catch(() => { }); } clearNotches(); applyMicSettings();
+  return ['Squeal shield: strong', 'Feedback guard: on', 'Echo cancel and noise suppression: on', 'Room gate: on', 'Hear myself volume: 60% or less', 'Low cut: 120 Hz or more'];
+}
 // always the same object (filled in place) so every panel edits the real settings
 export const micSettings = () => { const m = settings.mic ||= {}; for (const [k, v] of Object.entries(MIC_DEF)) if (m[k] === undefined) m[k] = v; return m; };
 export function applyMicSettings() {
@@ -668,7 +689,7 @@ export function applyMicSettings() {
 }
 export function clearNotches() { const m = E.mic; if (!m) return; m.notchIn.disconnect(); for (const n of m.notches) n.f.disconnect(); m.notches = []; m.notchIn.connect(m.notchOut); emit('feedback'); }
 // ---------- feedback guard: hears the howl and stops it ----------
-let guardTimer = null;
+let guardTimer = null, kills = [];
 const fBuf = new Float32Array(1024);
 function startFeedbackGuard() {
   clearInterval(guardTimer); let hits = 0, lastBin = -1;
@@ -682,7 +703,7 @@ function startFeedbackGuard() {
     // a howl is one loud, very narrow pitch that stays put
     if (pk > -32 && pk - mean > 38 && fBuf[pb - 3] < pk - 18 && fBuf[pb + 3] < pk - 18 && Math.abs(pb - lastBin) <= 1) hits++; else hits = Math.max(0, hits - 1);
     lastBin = pb;
-    if (hits >= 4) { hits = 0; killFeedback(pb * binHz); }
+    if (hits >= (micSettings().shield === 'strong' ? 2 : 3)) { hits = 0; killFeedback(pb * binHz); }
   }, 80);
 }
 function killFeedback(hz) {
@@ -694,7 +715,10 @@ function killFeedback(hz) {
     m.notchIn.disconnect(); let prev = m.notchIn; for (const x of m.notches) { x.f.disconnect(); prev.connect(x.f); prev = x.f; } prev.connect(m.notchOut);
   }
   // duck the monitor for a moment so the ringing dies down
-  const g = m.mon.gain, t = c.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value * 0.25, t); g.setTargetAtTime(micSettings().monVol * (micSettings().speakers ? 0.5 : 1) * (settings.monitor ? 1 : 0), t + 1.2, 0.4);
+  const g = m.mon.gain, t = c.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value * 0.15, t); g.setTargetAtTime(monLevel() * (settings.monitor ? 1 : 0), t + 1.2, 0.4);
+  // squealing again and again: turn the shield up by itself
+  const now = performance.now(); kills = kills.filter(k => now - k < 12000); kills.push(now);
+  const M = micSettings(); if (kills.length >= 2 && M.shield === 'auto') { M.shield = 'strong'; saveSettings(); applyShield(); g.setTargetAtTime(monLevel() * (settings.monitor ? 1 : 0), t + 1.2, 0.4); emit('shield', 'strong'); }
   emit('feedback', hz);
 }
 const tdBuf = new Float32Array(2048);
