@@ -169,6 +169,30 @@ function updatesPanel() {
   document.addEventListener('updatestate', () => { if (document.body.contains(box)) draw(); });
   return box;
 }
+// the current song as a CD: your picture printed on the disc, spinning. Click it to change the picture.
+async function songPicture(file) {
+  if (file.type === 'image/gif' && file.size < 4e6) return new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(file); }); // keeps GIFs moving
+  const img = await createImageBitmap(file), S = 720, c = document.createElement('canvas'); c.width = c.height = S;
+  const k = Math.max(S / img.width, S / img.height), w = img.width * k, h = img.height * k;
+  c.getContext('2d').drawImage(img, (S - w) / 2, (S - h) / 2, w, h);
+  return c.toDataURL('image/jpeg', 0.88);
+}
+function heroDisc(P) {
+  const spin = P.discSpin !== false;
+  const pick = async () => { const f = await pickFile('image/*'); if (!f) return; try { P.cover = await songPicture(f); P.coverDesign = null; save(); await flush(); emit('meta'); toast('Your picture is on the disc.'); renderHome(); } catch { toast('Could not use that picture.'); } };
+  const disc = el('button', { class: 'hdisc' + (P.cover ? '' : ' empty'), title: P.cover ? 'Click to change the picture' : 'Click to put a picture on your CD', onclick: pick },
+    el('span', { class: 'hdspin' },
+      P.cover ? el('img', { class: 'hdart', src: P.cover, alt: '', draggable: 'false' }) : el('span', { class: 'hdblank' }, el('b', {}, '+'), 'Add a picture'),
+      el('i', { class: 'hdgrain' })),
+    el('i', { class: 'hdshine' }), el('i', { class: 'hdhub' }), el('i', { class: 'hdhole' }));
+  return el('div', { class: 'herodisc' + (spin ? ' spin' : '') },
+    disc,
+    el('div', { class: 'hdbtns' },
+      el('button', { onclick: pick }, P.cover ? 'Change picture' : 'Add a picture'),
+      el('button', { onclick: () => { P.discSpin = !spin; save(); renderHome(); } }, spin ? 'Stop spinning' : 'Spin it'),
+      P.cover ? el('button', { onclick: () => { P.cover = null; save(); emit('meta'); renderHome(); } }, 'Remove') : null,
+      el('button', { onclick: () => go('art') }, 'Design a full cover')));
+}
 function heroLogo() {
   const box = el('span');
   import('./look.js').then(m => m.logoURL()).then(u => { if (u) box.replaceWith(el('img', { class: 'herologo', src: u, alt: 'logo', draggable: 'false', oncontextmenu: e => e.preventDefault() })); });
@@ -193,7 +217,7 @@ export async function renderHome() {
   const P = app.P;
   const home = el('div', { class: 'home' },
     el('div', { class: 'hero panel' },
-      P ? coverEl(P, 'cover big') : null,
+      P ? heroDisc(P) : null,
       heroLogo(),
       el('div', { class: 'hero-text' },
         el('small', {}, P ? 'Current song' : 'Welcome'), el('h1', { class: 'intro-h' }, introText(P ? P.name : "Let's make something")),

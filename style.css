@@ -1956,3 +1956,24 @@ button.rec { background: #ff2e4d; color: #fff; animation: fixPulse 1s infinite; 
 .smstep.done { color: var(--text); border-color: var(--led); } .smstep.done b { background: var(--led); color: var(--ledtext, #111); box-shadow: 0 0 8px var(--led); }
 .tagwave { width: 100%; height: 70px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.35); }
 .taghelp { border: 1px dashed var(--line); border-radius: 10px; padding: 8px 12px; } .taghelp summary { cursor: pointer; font-weight: 700; } .taghelp li { margin: 4px 0; color: var(--dim); }
+
+/* ===== Home: the current song as a spinning CD ===== */
+.herodisc { display: grid; justify-items: center; gap: 8px; }
+.hdisc { position: relative; width: 168px; height: 168px; padding: 0; border-radius: 50%; border: 0; background: radial-gradient(circle, #d9dde3 0 18%, #aeb4bd 19%, #e9ecf0 60%, #c3c8cf 100%); box-shadow: 0 10px 30px -8px rgba(0,0,0,.8), 0 0 26px -8px var(--led); overflow: hidden; cursor: pointer; transition: transform .25s; }
+.hdisc:hover { transform: scale(1.04) rotate(-2deg); }
+.hdspin { position: absolute; inset: 3%; border-radius: 50%; overflow: hidden; display: grid; place-items: center; }
+.herodisc.spin .hdspin { animation: hdRot 7s linear infinite; }
+.herodisc.spin .hdisc:hover .hdspin { animation-duration: 2.2s; }
+@keyframes hdRot { to { transform: rotate(360deg); } }
+.hdart { width: 100%; height: 100%; object-fit: cover; filter: saturate(1.08) contrast(1.04); }
+.hdblank { display: grid; place-items: center; gap: 2px; color: #333; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; background: conic-gradient(from 30deg, #f2c6de, #c6e2f2, #d6f2c6, #f2eac6, #f2c6de); width: 100%; height: 100%; align-content: center; }
+.hdblank b { font-size: 30px; line-height: 1; }
+.hdgrain { position: absolute; inset: 0; border-radius: 50%; background: repeating-radial-gradient(circle, rgba(255,255,255,.06) 0 1px, transparent 1px 3px); mix-blend-mode: overlay; }
+/* printed-on look: the light catches the disc and a rainbow sweeps across */
+.hdshine { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; background: conic-gradient(from 200deg, transparent 0 10%, rgba(255,255,255,.35) 14%, transparent 20% 52%, rgba(255,120,220,.18) 56%, rgba(120,220,255,.2) 60%, transparent 66% 100%); mix-blend-mode: screen; animation: hdShine 9s linear infinite; }
+@keyframes hdShine { to { transform: rotate(-360deg); } }
+.hdhub { position: absolute; left: 50%; top: 50%; width: 30%; height: 30%; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, transparent 0 40%, rgba(230,236,242,.75) 41% 62%, rgba(255,255,255,.25) 63% 66%, rgba(200,206,214,.5) 67% 100%); box-shadow: 0 0 0 1px rgba(255,255,255,.25); }
+.hdhole { position: absolute; left: 50%; top: 50%; width: 12%; height: 12%; transform: translate(-50%, -50%); border-radius: 50%; background: var(--panel, #111); box-shadow: inset 0 1px 3px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.35); }
+.hdbtns { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; max-width: 220px; }
+.hdbtns button { padding: 2px 8px; font-size: 11px; }
+@media (prefers-reduced-motion: reduce) { .herodisc.spin .hdspin, .hdshine { animation: none; } }
