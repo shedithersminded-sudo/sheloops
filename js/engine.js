@@ -615,19 +615,28 @@ export async function openMic() {
     echoCancellation: settings.ec, noiseSuppression: settings.nr, autoGainControl: settings.agc,
   } });
   const c = E.ctx;
-  const src = c.createMediaStreamSource(stream), gain = c.createGain(), an = c.createAnalyser(), mon = c.createGain(), sink = c.createGain();
+  const src = c.createMediaStreamSource(stream), gain = c.createGain(), an = c.createAnalyser(), mon = c.createGain(), sink = c.createGain(), post = c.createGain();
   gain.gain.value = settings.inputGain; an.fftSize = 2048; mon.gain.value = 0; sink.gain.value = 0;
   const cap = new AudioWorkletNode(c, 'cap', { channelCount: settings.mono ? 1 : 2, channelCountMode: 'explicit' });
-  src.connect(gain); gain.connect(an); gain.connect(cap); cap.connect(sink); sink.connect(c.destination); gain.connect(mon);
+  // mic cleanup chain: low cut, EQ, feedback notches, noise remover, gate. What you record and hear is the cleaned voice.
+  const hp = c.createBiquadFilter(), body = c.createBiquadFilter(), mud = c.createBiquadFilter(), pres = c.createBiquadFilter(), air = c.createBiquadFilter();
+  hp.type = 'highpass'; hp.Q.value = 0.707; body.type = 'lowshelf'; body.frequency.value = 180; mud.type = 'peaking'; mud.frequency.value = 350; mud.Q.value = 1;
+  pres.type = 'peaking'; pres.frequency.value = 3200; pres.Q.value = 0.8; air.type = 'highshelf'; air.frequency.value = 10000;
+  const notchIn = c.createGain(), notchOut = c.createGain(), gate = new AudioWorkletNode(c, 'gate', { outputChannelCount: [settings.mono ? 1 : 2] });
+  src.connect(gain); gain.connect(hp); hp.connect(body); body.connect(mud); mud.connect(pres); pres.connect(air); air.connect(notchIn); notchIn.connect(notchOut);
+  notchOut.connect(gate); gate.connect(post);
+  post.connect(an); post.connect(cap); cap.connect(sink); sink.connect(c.destination); post.connect(mon);
   cap.port.onmessage = e => { if (rec) rec.chunks.push(e.data); };
-  E.mic = { stream, src, gain, an, cap, sink, mon, clips: 0 };
+  E.mic = { stream, src, gain, an, cap, sink, mon, post, hp, body, mud, pres, air, notchIn, notchOut, gate, notches: [], dn: null, clips: 0 };
+  applyMicSettings();
   updateMonitor();
+  startFeedbackGuard();
   return E.mic;
 }
 export function closeMic() {
   const m = E.mic; if (!m) return;
   m.stream.getTracks().forEach(t => t.stop());
-  for (const n of [m.src, m.gain, m.cap, m.sink, m.mon]) n.disconnect();
+  for (const n of [m.src, m.gain, m.cap, m.sink, m.mon, m.post, m.hp, m.notchOut, m.gate]) n.disconnect();
   E.mic = null;
 }
 export async function reopenMic() { const had = !!E.mic; closeMic(); if (had) await openMic(); }
@@ -635,9 +644,58 @@ export function setInputGain(v) { settings.inputGain = v; if (E.mic) E.mic.gain.
 export function updateMonitor() {
   const m = E.mic; if (!m) return;
   m.mon.disconnect();
-  const t = app.P && selTrack();
-  if (t && settings.monitor) { m.mon.connect(nodeFor(E.g, t, false).input); m.mon.gain.value = 1; }
+  const t = app.P && selTrack(), M = micSettings();
+  // with effects: through the track (its effects and reverb). Without: straight to the speakers, much less likely to ring.
+  if (t && settings.monitor) { m.mon.connect(M.monFx ? nodeFor(E.g, t, false).input : E.g.master); m.mon.gain.value = M.monVol * (M.speakers ? 0.5 : 1); }
   else m.mon.gain.value = 0;
+}
+// ---------- mic sound settings ----------
+const MIC_DEF = { lowcut: 80, body: 0, mud: 0, presence: 0, air: 0, gate: false, gateDb: -50, denoise: 0, monVol: 0.8, monFx: true, speakers: false, guard: true };
+// always the same object (filled in place) so every panel edits the real settings
+export const micSettings = () => { const m = settings.mic ||= {}; for (const [k, v] of Object.entries(MIC_DEF)) if (m[k] === undefined) m[k] = v; return m; };
+export function applyMicSettings() {
+  const m = E.mic; if (!m) return; const M = micSettings(), c = E.ctx, t = c.currentTime;
+  m.hp.frequency.setTargetAtTime(M.lowcut, t, 0.02); m.body.gain.setTargetAtTime(M.body, t, 0.02); m.mud.gain.setTargetAtTime(M.mud, t, 0.02);
+  m.pres.gain.setTargetAtTime(M.presence, t, 0.02); m.air.gain.setTargetAtTime(M.air, t, 0.02);
+  m.gate.parameters.get('on').value = M.gate ? 1 : 0; m.gate.parameters.get('threshold').value = M.gateDb;
+  // room noise remover goes in only when it is turned up (it adds a tiny delay, which recording makes up for)
+  const want = M.denoise > 0.01;
+  if (want && !m.dn) { m.notchOut.disconnect(); m.dn = new AudioWorkletNode(c, 'denoise', { outputChannelCount: [2], processorOptions: { profile: null } }); m.notchOut.connect(m.dn); m.dn.connect(m.gate); }
+  if (!want && m.dn) { m.notchOut.disconnect(); m.dn.disconnect(); m.dn = null; m.notchOut.connect(m.gate); }
+  if (m.dn) m.dn.parameters.get('amount').value = M.denoise;
+  E.micDelay = m.dn ? 1024 / c.sampleRate : 0;
+  updateMonitor();
+}
+export function clearNotches() { const m = E.mic; if (!m) return; m.notchIn.disconnect(); for (const n of m.notches) n.f.disconnect(); m.notches = []; m.notchIn.connect(m.notchOut); emit('feedback'); }
+// ---------- feedback guard: hears the howl and stops it ----------
+let guardTimer = null;
+const fBuf = new Float32Array(1024);
+function startFeedbackGuard() {
+  clearInterval(guardTimer); let hits = 0, lastBin = -1;
+  guardTimer = setInterval(() => {
+    const m = E.mic, g = E.g; if (!m || !g || !g.analyser || !micSettings().guard || !(settings.monitor || rec)) { hits = 0; return; }
+    const an = g.analyser; an.getFloatFrequencyData(fBuf);
+    const binHz = E.ctx.sampleRate / an.fftSize, lo = Math.floor(400 / binHz), hi = Math.min(fBuf.length - 1, Math.floor(9000 / binHz));
+    let pk = -Infinity, pb = 0, sum = 0, n = 0;
+    for (let i = lo; i <= hi; i++) { const v = fBuf[i]; if (v > pk) { pk = v; pb = i; } sum += v; n++; }
+    const mean = sum / n;
+    // a howl is one loud, very narrow pitch that stays put
+    if (pk > -32 && pk - mean > 38 && fBuf[pb - 3] < pk - 18 && fBuf[pb + 3] < pk - 18 && Math.abs(pb - lastBin) <= 1) hits++; else hits = Math.max(0, hits - 1);
+    lastBin = pb;
+    if (hits >= 4) { hits = 0; killFeedback(pb * binHz); }
+  }, 80);
+}
+function killFeedback(hz) {
+  const m = E.mic, c = E.ctx; if (!m) return;
+  if (!m.notches.some(n => Math.abs(n.hz - hz) / hz < 0.04)) {
+    if (m.notches.length >= 6) { const old = m.notches.shift(); old.f.disconnect(); }
+    const f = c.createBiquadFilter(); f.type = 'notch'; f.frequency.value = hz; f.Q.value = 18;
+    m.notches.push({ hz, f });
+    m.notchIn.disconnect(); let prev = m.notchIn; for (const x of m.notches) { x.f.disconnect(); prev.connect(x.f); prev = x.f; } prev.connect(m.notchOut);
+  }
+  // duck the monitor for a moment so the ringing dies down
+  const g = m.mon.gain, t = c.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value * 0.25, t); g.setTargetAtTime(micSettings().monVol * (micSettings().speakers ? 0.5 : 1) * (settings.monitor ? 1 : 0), t + 1.2, 0.4);
+  emit('feedback', hz);
 }
 const tdBuf = new Float32Array(2048);
 export function peakOf(an) {
@@ -676,7 +734,7 @@ export function finishRecord() {
   if (!rec) return;
   const r = rec; rec = null;
   E.mic.cap.port.postMessage({ rec: false });
-  const c = E.ctx, sr = c.sampleRate, lat = latency();
+  const c = E.ctx, sr = c.sampleRate, lat = latency() + (E.micDelay || 0);
   const to = Math.min(r.to, currentPos());
   const from = r.from;
   emit('transport');
@@ -756,7 +814,7 @@ export function encodeWav(buf) {
 
 // Record the mic between two audio-clock times (used by the pad machine for voice loops that stay in time).
 export async function captureMic(from, to, onState) {
-  const m = await openMic(), c = E.ctx, sr = c.sampleRate, lat = latency(), chunks = [];
+  const m = await openMic(), c = E.ctx, sr = c.sampleRate, lat = latency() + (E.micDelay || 0), chunks = [];
   const prev = m.cap.port.onmessage;
   m.cap.port.onmessage = e => { if (e.data && e.data.t >= from - 0.2) chunks.push(e.data); if (prev) prev(e); };
   m.cap.port.postMessage({ rec: true });

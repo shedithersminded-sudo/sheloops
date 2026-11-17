@@ -1720,3 +1720,21 @@ html.fxm-still .reveal { opacity: 1; transform: none; }
 @keyframes runStreak { 0% { opacity: 0; transform: translateX(10px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateX(-14px); } }
 .brand:hover .runner { animation-duration: .22s; } .brand:hover .streak { animation-duration: .45s; }
 html.fxm-still .runlogo .runner, html.fxm-still .runlogo .streak { animation: none !important; }
+/* ===== mic sound ===== */
+.modal:has(.micwrap) { width: min(780px, calc(100vw - 24px)); }
+.micwrap { width: 100%; min-width: 0; }
+.micpanel .fxtop, .micpanel .fxlib { flex-wrap: wrap; } .micpanel .fxtop button { white-space: normal; text-align: left; }
+.micsect { min-width: 0; }
+.micpanel { display: grid; gap: 12px; }
+.micsect { display: grid; gap: 8px; padding: 10px 12px; border-radius: 8px; background: var(--well); border: 1px solid var(--line); }
+.micsect-t { display: flex; align-items: center; gap: 6px; font: 400 15px var(--label); letter-spacing: .14em; color: var(--led); text-shadow: 0 0 8px var(--glow); text-transform: uppercase; }
+.micmeter { --l: 0; --g: .2; position: relative; height: 22px; border-radius: 4px; background: #0a0a0d; box-shadow: inset 0 0 8px #000; overflow: hidden; }
+.micmeter .lvl { position: absolute; inset: 0 auto 0 0; width: calc(var(--l) * 100%); background: linear-gradient(90deg, #2bd97a 0 60%, #ffd84a 80%, #ff3b3b 95%); background-size: calc(100% / max(var(--l), .01)) 100%; box-shadow: 0 0 12px #2bd97a88; transition: width .05s; }
+.micmeter .gateline { position: absolute; top: 0; bottom: 0; left: calc(var(--g) * 100%); width: 2px; background: #fff8; display: none; }
+.micmeter.gated .gateline { display: block; }
+.micmeter .micdb { position: absolute; right: 8px; top: 3px; font: 600 11px var(--mono); color: #fff; text-shadow: 0 0 4px #000; }
+.micinfo { display: grid; gap: 2px; align-content: center; max-width: 260px; } .micinfo small { font-size: 11px; color: var(--dim); } .micinfo b { font: 400 22px var(--display); color: var(--led); }
+.fbstatus { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); }
+.fbled { width: 9px; height: 9px; border-radius: 50%; background: #555; flex: none; } .fbled.on { background: var(--green); box-shadow: 0 0 10px var(--green); animation: ledPulse 1.6s infinite; }
+.micbtn { white-space: nowrap; }
+.micpage { margin-top: 12px; padding: 12px; }

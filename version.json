@@ -1,18 +1,28 @@
 {
-  "version": "2.1.0",
+  "version": "2.2.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Home rebuilt: it no longer repeats. A tabbed welcome (Make it yours, Simple or Advanced, Start a style, Lettering), Your song step by step (a path that lights up as you finish each step and tells you where to go next), and Explore everything by category, revealed as you scroll.",
-    "Choose the font for every title (12 lettering styles), and titles now float with scattered letters.",
-    "New animated SHELOOPS runner logo. Switch back to your own picture or GIF in Appearance.",
-    "GIFs now move on cover art, on the CD player disc, on DJ record labels, and as your logo or background.",
-    "DJ visuals: 6 space looks (Hyperspace, Nebula, Galaxy, Planet, Black hole, Dancers) and a space backdrop with twinkling stars behind any look. Live buttons sit right under the visuals.",
-    "DJ sampler organized into Hype and FX rows with colored pads, and hover-to-hear when picking sounds.",
-    "Fixed: changing the feel (Calm studio, Party and so on) no longer makes scrolling text race or crawl.",
-    "New sounds: Get Lost and Starlight Pop starters, crystal bell and star pluck instruments, and Lost in Space, Starlight, Dance Floor Echo and Stargazer voice effects."
+    "New Mic sound panel (🎙 Mic sound in the Studio toolbar, and on the Mic setup page): live level meter, room noise reading, low cut, room noise remover, a gate that sets itself (Measure my room), and a mic EQ with presets like Close to the mic, Laptop or phone mic, and Noisy room.",
+    "Feedback guard: hears the high squeal and cuts exactly that pitch, and turns your monitor down for a moment. On by default.",
+    "Hearing yourself: monitor volume, with effects or dry (safer on speakers), and an I am on speakers mode that turns on echo cancelling.",
+    "Your mic is cleaned before it is recorded, and recordings stay in time even with the noise remover on."
   ],
   "history": [
+    {
+      "version": "2.1.0",
+      "date": "2026-11-16",
+      "notes": [
+        "Home rebuilt: it no longer repeats. A tabbed welcome (Make it yours, Simple or Advanced, Start a style, Lettering), Your song step by step (a path that lights up as you finish each step and tells you where to go next), and Explore everything by category, revealed as you scroll.",
+        "Choose the font for every title (12 lettering styles), and titles now float with scattered letters.",
+        "New animated SHELOOPS runner logo. Switch back to your own picture or GIF in Appearance.",
+        "GIFs now move on cover art, on the CD player disc, on DJ record labels, and as your logo or background.",
+        "DJ visuals: 6 space looks (Hyperspace, Nebula, Galaxy, Planet, Black hole, Dancers) and a space backdrop with twinkling stars behind any look. Live buttons sit right under the visuals.",
+        "DJ sampler organized into Hype and FX rows with colored pads, and hover-to-hear when picking sounds.",
+        "Fixed: changing the feel (Calm studio, Party and so on) no longer makes scrolling text race or crawl.",
+        "New sounds: Get Lost and Starlight Pop starters, crystal bell and star pluck instruments, and Lost in Space, Starlight, Dance Floor Echo and Stargazer voice effects."
+      ]
+    },
     {
       "version": "2.0.0",
       "date": "2026-11-16",

@@ -7,6 +7,7 @@ import { E, ensureCtx, openMic, reopenMic, setInputGain, peakOf, rmsOf, testReco
 import { importBeatFile } from './studio.js';
 import { U, check, whatsNew, install } from './update.js';
 import { exportSongFile, exportEverything, openSheloopsFile } from './exporter.js';
+import { micPanel } from './micui.js';
 import { look, saveLook, applyLook, allThemes, applyGlow, UIFX_PRESETS, applyUiFx, derive, HEAD_FONTS, applyHeadFont } from './look.js';
 import { STARTERS } from './state.js';
 
@@ -294,7 +295,9 @@ export function renderMic() {
     wiz > 0 ? el('button', { onclick: () => { wiz--; renderMic(); } }, 'Back') : el('span'),
     wiz < STEPS.length - 1 ? el('button', { class: 'hot', onclick: () => { wiz++; renderMic(); } }, 'Next') :
       el('button', { class: 'hot', onclick: () => { settings.wizardDone = true; saveSettings(); toast('Mic setup saved.'); go(app.P ? 'studio' : 'home'); } }, 'Finish'));
-  view.append(el('div', { class: 'wizard panel' }, el('h1', {}, 'Mic setup'), nav, body, foot));
+  const micBox = el('div', { class: 'panel micpage' }, el('div', { class: 'insp-sub' }, 'Mic sound: clean up, EQ and feedback'), el('div'));
+  const drawMic = () => micBox.lastChild.replaceWith(el('div', {}, micPanel(drawMic)));
+  view.append(el('div', { class: 'wizard panel' }, el('h1', {}, 'Mic setup'), nav, body, foot), micBox); drawMic();
   [stepConnect, stepDevices, stepLevel, stepNoise, stepPhones, stepTest][wiz](body);
 }
 function para(...t) { return t.map(x => el('p', {}, x)); }

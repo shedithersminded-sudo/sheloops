@@ -57,8 +57,8 @@ export const THEME_KEYS = [['bg', 'Background'], ['panel', 'Panels'], ['nav', 'M
 // ---------- stored look ----------
 const KEY = 'loopden.look';
 const DEFAULT_LAYOUT = { inspPos: 'bottom', inspSize: 340, editbar: true, masterbar: true, compact: false,
-  toolbar: ['tostart', 'play', 'record', 'lcd', 'bpm', 'click', 'countin', 'loop', 'punch', 'monitor', 'meter', 'automation'], hidden: [] };
-export const TOOL_NAMES = { tostart: 'Back to start', play: 'Play', record: 'Record', lcd: 'Time display', bpm: 'BPM', click: 'Click', countin: 'Count in', loop: 'Loop', punch: 'Punch', monitor: 'Monitor', meter: 'Mic meter', automation: 'Automation' };
+  toolbar: ['tostart', 'play', 'record', 'lcd', 'bpm', 'click', 'countin', 'loop', 'punch', 'monitor', 'meter', 'mic', 'automation'], hidden: [] };
+export const TOOL_NAMES = { tostart: 'Back to start', play: 'Play', record: 'Record', lcd: 'Time display', bpm: 'BPM', click: 'Click', countin: 'Count in', loop: 'Loop', punch: 'Punch', monitor: 'Monitor', meter: 'Mic meter', mic: 'Mic sound', automation: 'Automation' };
 export const look = Object.assign({
   theme: 'midnight', themes: [], wave: '',
   bg: { type: 'theme', c1: '#0e0e10', c2: '#2a1030', angle: 135, anim: 'aurora', dim: 0.35, blur: 0, hasImage: false },
