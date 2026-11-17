@@ -109,7 +109,15 @@ export function openAddAudio(files = null) {
       pick,
       el('div', { class: 'aaor' }, el('span', {}, 'or paste a link')),
       el('div', { class: 'aalink' }, url, fetchBtn),
-      el('div', { class: 'explain', style: 'display:block' }, el('b', {}, 'Got a beat from YouTube? '), 'Most producers put a download link in the video description (BeatStars, Google Drive, their website). Download it there, check what the producer allows (free for non-profit, free with credit, or bought), then add the file here. Streaming links themselves cannot be used.'));
+      el('div', { class: 'linkhelp' },
+        el('b', {}, 'Which links work?'),
+        el('ul', {},
+          el('li', { class: 'ok' }, 'Direct links to an audio file, usually ending in .mp3, .wav, .m4a or .ogg.'),
+          el('li', { class: 'ok' }, 'Google Drive, Dropbox and GitHub share links. They are turned into the real download link for you.'),
+          el('li', { class: 'ok' }, 'Press Enter or Use this link.'),
+          el('li', { class: 'no' }, 'YouTube, Spotify, SoundCloud, TikTok and Instagram links cannot be used.')),
+        el('p', {}, 'Some sites do not let other apps download their files, including some Google Drive files. If a link does not work, a message says why. Then download the file and press Choose audio from my device.'),
+        el('p', {}, el('b', {}, 'Got a beat from YouTube? '), 'Producers usually put a download link in the video description (BeatStars, Google Drive, their website). Check what they allow (free for non-profit, free with credit, or bought), then add the file here.')));
   }
   close = modal('Add audio', body);
 }

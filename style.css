@@ -2044,3 +2044,7 @@ button.rec { background: #ff2e4d; color: #fff; animation: fixPulse 1s infinite; 
 .modal-body button, .modal-body p, .modal-body .explain { white-space: normal; overflow-wrap: anywhere; }
 .modal-body input:not([type=checkbox]):not([type=range]) { max-width: 100%; box-sizing: border-box; }
 .aalink input { min-width: 0; }
+
+.linkhelp { display: grid; gap: 6px; margin-top: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.03); font-size: 12px; line-height: 1.45; color: var(--dim); }
+.linkhelp > b { color: var(--text); } .linkhelp ul { margin: 0; padding-left: 4px; list-style: none; display: grid; gap: 4px; } .linkhelp p { margin: 0; }
+.linkhelp li::before { content: '✓'; color: var(--green, #4cd964); font-weight: 800; margin-right: 8px; } .linkhelp li.no::before { content: '✕'; color: #ff5a6e; }

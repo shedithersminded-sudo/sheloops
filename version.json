@@ -1,13 +1,20 @@
 {
-  "version": "2.7.2",
+  "version": "2.7.3",
   "date": "2026-11-17",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Pop-up windows fit the screen with no sideways scrolling",
-    "Custom text colors stay readable",
-    "Paste a link works better: Google Drive, Dropbox and GitHub share links, press Enter to use it, and clear messages when a site blocks it"
+    "Add audio now explains which links work, which do not, and what to do if a link is blocked"
   ],
   "history": [
+    {
+      "version": "2.7.2",
+      "date": "2026-11-17",
+      "notes": [
+        "Pop-up windows fit the screen with no sideways scrolling",
+        "Custom text colors stay readable",
+        "Paste a link works better: Google Drive, Dropbox and GitHub share links, press Enter to use it, and clear messages when a site blocks it"
+      ]
+    },
     {
       "version": "2.7.1",
       "date": "2026-11-17",
