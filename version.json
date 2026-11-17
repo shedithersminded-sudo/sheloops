@@ -1,17 +1,25 @@
 {
-  "version": "1.8.0",
+  "version": "1.8.1",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "DJ booth remastered: a real club light rig with haze, volumetric beams from moving heads, lasers, an LED wall visualizer, blinders, strobe, fog and floor reflections, all on the beat. Full screen light show.",
-    "Light desk: 12 scenes, 8 movements, beat-synced speed, fixtures, spread, beam width, haze, bloom, grain, 6 laser shows, 6 LED wall shows, color change timing, and an Auto show.",
-    "Realistic decks: turntables with aluminium platters, strobe dots, tonearm and real vinyl (black, colored, clear, splatter, picture disc), or CDJs with a screen in the jog wheel.",
-    "Club mixer: Color FX knob per channel (Filter, Space, Dub echo, Noise, Crush) and a Beat FX unit with 12 effects, beat timing and A, B or master. 8-pad sampler.",
-    "Deck tricks: beat jump, reverse, vinyl brake, spinback, half to 16 beat loops. 10 transitions now include Roll out and Noise sweep.",
-    "Booth materials: matte black, brushed aluminium, studio white, carbon, walnut and smoked glass, plus your own LED color and keys.",
-    "New top menu: pages grouped into Create, Finish, Design, Library and Help, each explaining what it is for. Glowing labels, animated menus, and a Simple or Advanced explainer."
+    "Fixed: the cover art editor was squashed into a thin strip. DJ booth and pad machine styles no longer touch other pages.",
+    "Fixed: beat maker pattern buttons, the Studio time display and a Studio button are back to their normal look."
   ],
   "history": [
+    {
+      "version": "1.8.0",
+      "date": "2026-11-16",
+      "notes": [
+        "DJ booth remastered: a real club light rig with haze, volumetric beams from moving heads, lasers, an LED wall visualizer, blinders, strobe, fog and floor reflections, all on the beat. Full screen light show.",
+        "Light desk: 12 scenes, 8 movements, beat-synced speed, fixtures, spread, beam width, haze, bloom, grain, 6 laser shows, 6 LED wall shows, color change timing, and an Auto show.",
+        "Realistic decks: turntables with aluminium platters, strobe dots, tonearm and real vinyl (black, colored, clear, splatter, picture disc), or CDJs with a screen in the jog wheel.",
+        "Club mixer: Color FX knob per channel (Filter, Space, Dub echo, Noise, Crush) and a Beat FX unit with 12 effects, beat timing and A, B or master. 8-pad sampler.",
+        "Deck tricks: beat jump, reverse, vinyl brake, spinback, half to 16 beat loops. 10 transitions now include Roll out and Noise sweep.",
+        "Booth materials: matte black, brushed aluminium, studio white, carbon, walnut and smoked glass, plus your own LED color and keys.",
+        "New top menu: pages grouped into Create, Finish, Design, Library and Help, each explaining what it is for. Glowing labels, animated menus, and a Simple or Advanced explainer."
+      ]
+    },
     {
       "version": "1.7.0",
       "date": "2026-11-16",
