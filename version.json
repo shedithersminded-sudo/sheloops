@@ -1,11 +1,19 @@
 {
-  "version": "2.8.3",
+  "version": "2.9.0",
   "date": "2026-11-17",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "SHELOOPS now updates itself. When a new version is out, it loads every new file and reloads once."
+    "Full studio now opens in the new Producer layout: folders on the left, timeline in the middle, track panel on the right, mixer at the bottom, all on one screen.",
+    "Switch back to the old stacked look with Layout: Classic at the top of the Full studio."
   ],
   "history": [
+    {
+      "version": "2.8.3",
+      "date": "2026-11-17",
+      "notes": [
+        "SHELOOPS now updates itself. When a new version is out, it loads every new file and reloads once."
+      ]
+    },
     {
       "version": "2.8.2",
       "date": "2026-11-17",

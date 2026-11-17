@@ -209,7 +209,19 @@ export function renderStudio() {
   const dawCtx = { rerender: () => renderStudio(), lanes: () => renderLanes(), addSound: (id, t, at) => addSoundClip(id, t, at), addBeat: () => fileIn.click(), go: v => emit('goto:' + v) };
   // every section can be dragged by its grip and folded away (saved per user)
   const wrap = (id, title, node) => el('div', { class: 'stpanel', 'data-panel': id, 'data-title': title }, node);
-  root.append(el('div', { class: 'gmode gmode-full' }, el('button', { onclick: () => { settings.studioMode = 'guide'; saveSettings(); renderStudio(); } }, 'Guided'), el('button', { class: 'on' }, 'Full studio'), el('small', {}, 'Guided shows one step at a time.')),
+  const lay = settings.studioLayout || 'producer', setLay = v => { settings.studioLayout = v; saveSettings(); renderStudio(); };
+  const modeBar = el('div', { class: 'gmode gmode-full' }, el('button', { onclick: () => { settings.studioMode = 'guide'; saveSettings(); renderStudio(); } }, 'Guided'), el('button', { class: 'on' }, 'Full studio'),
+    el('span', { class: 'laypick' }, el('small', {}, 'Layout'),
+      el('button', { class: 'chip' + (lay === 'producer' ? ' on' : ''), title: 'Folders on the left, timeline in the middle, track panel on the right, mixer at the bottom. Fills the screen.', onclick: () => setLay('producer') }, 'Producer'),
+      el('button', { class: 'chip' + (lay === 'classic' ? ' on' : ''), title: 'Sections stacked top to bottom. Drag them to reorder.', onclick: () => setLay('classic') }, 'Classic')));
+  if (lay === 'producer') {
+    // one screen, like a desk: tools on top, folders left, timeline center, track panel right, mixer bottom
+    root.classList.add('prod');
+    root.append(modeBar, el('div', { class: 'prodtop' }, tb, eb),
+      el('div', { class: 'prodbody' }, browserPanel(dawCtx), scroller, insp), mixerStrip(dawCtx));
+    view.append(root);
+  } else {
+  root.append(modeBar,
     wrap('tb', 'Transport', tb), wrap('eb', 'Edit tools', eb), wrap('tl', 'Timeline', el('div', { class: 'daw' }, el('div', { class: 'tlrow' }, browserPanel(dawCtx), scroller), mixerStrip(dawCtx))), wrap('in', 'Track panel', insp));
   view.append(root);
   makeMovable(root, 'studio', { onChange: order => {
@@ -220,6 +232,7 @@ export function renderStudio() {
     root.style.gridTemplateColumns = right ? 'minmax(0, 1fr) var(--insp-size)' : 'minmax(0, 1fr)';
     for (const id of order) { const w = root.querySelector(`[data-panel="${id}"]`); if (w) w.style.gridArea = id; }
   } });
+  }
 
   // drag and drop beat files
   root.addEventListener('dragover', e => {
