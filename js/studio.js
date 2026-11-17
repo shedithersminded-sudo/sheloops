@@ -2,6 +2,7 @@
 import { makeMovable } from './movable.js';
 import { keyOf } from './keys.js';
 import { renderGuide } from './studioguide.js';
+import { browserPanel, mixerStrip } from './studiobrowser.js';
 import { FX } from './fx.js';
 import { openMicPanel, clickPicker } from './micui.js';
 import { $, el, uid, clamp, pct, panFmt, fmtTime, toast, knob, toggle, download, safeName, confirmBox, modal, cssVar } from './util.js';
@@ -205,16 +206,17 @@ export function renderStudio() {
   );
   scroller = el('div', { class: 'tl-scroll' });
   const insp = el('div', { class: 'panel inspector', id: 'inspector' });
+  const dawCtx = { rerender: () => renderStudio(), lanes: () => renderLanes(), addSound: (id, t, at) => addSoundClip(id, t, at), addBeat: () => fileIn.click(), go: v => emit('goto:' + v) };
   // every section can be dragged by its grip and folded away (saved per user)
   const wrap = (id, title, node) => el('div', { class: 'stpanel', 'data-panel': id, 'data-title': title }, node);
   root.append(el('div', { class: 'gmode gmode-full' }, el('button', { onclick: () => { settings.studioMode = 'guide'; saveSettings(); renderStudio(); } }, 'Guided'), el('button', { class: 'on' }, 'Full studio'), el('small', {}, 'Guided shows one step at a time.')),
-    wrap('tb', 'Transport', tb), wrap('eb', 'Edit tools', eb), wrap('tl', 'Timeline', scroller), wrap('in', 'Track panel', insp));
+    wrap('tb', 'Transport', tb), wrap('eb', 'Edit tools', eb), wrap('tl', 'Timeline', el('div', { class: 'daw' }, el('div', { class: 'tlrow' }, browserPanel(dawCtx), scroller), mixerStrip(dawCtx))), wrap('in', 'Track panel', insp));
   view.append(root);
   makeMovable(root, 'studio', { onChange: order => {
     const right = look.layout.inspPos === 'right', fold = id => root.querySelector(`[data-panel="${id}"]`)?.classList.contains('folded');
     const list = right ? order.filter(x => x !== 'in') : order;
     root.style.gridTemplateAreas = list.map(id => right && id === 'tl' ? '"tl in"' : right ? `"${id} ${id}"` : `"${id}"`).join(' ');
-    root.style.gridTemplateRows = list.map(id => id === 'tl' && !fold('tl') ? 'minmax(0, 1fr)' : 'auto').join(' ');
+    root.style.gridTemplateRows = list.map(id => id === 'tl' && !fold('tl') ? 'minmax(520px, 1fr)' : 'auto').join(' ');
     root.style.gridTemplateColumns = right ? 'minmax(0, 1fr) var(--insp-size)' : 'minmax(0, 1fr)';
     for (const id of order) { const w = root.querySelector(`[data-panel="${id}"]`); if (w) w.style.gridArea = id; }
   } });
