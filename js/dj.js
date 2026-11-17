@@ -621,3 +621,6 @@ addEventListener('keydown', e => {
     strobe: () => held.strobe = true, blinder: () => held.blinder = true, blackout: () => held.blackout = true, rec: () => toggleRec() })[act]();
 });
 addEventListener('keyup', e => { if (app.view !== 'dj') return; const k = e.key.toLowerCase(), K = DJ.keys; if (k === K.strobe) held.strobe = false; if (k === K.blinder) held.blinder = false; if (k === K.blackout) held.blackout = false; });
+
+// used by "drop anywhere": open the booth and put a file on a deck
+export async function djLoadFile(file, deck) { await addFiles([file], deck); }

@@ -1,12 +1,21 @@
 {
-  "version": "1.8.1",
+  "version": "1.9.0",
   "date": "2026-11-16",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Fixed: the cover art editor was squashed into a thin strip. DJ booth and pad machine styles no longer touch other pages.",
-    "Fixed: beat maker pattern buttons, the Studio time display and a Studio button are back to their normal look."
+    "Drop anywhere: drag audio files onto any page and a dock slides up. Let go on Studio (rap or sing over it), DJ deck A or B, a pad, or My sounds.",
+    "New + Audio button at the top: pick audio from your device or paste a direct link to an MP3 or WAV, then choose where it goes.",
+    "Dropping audio on empty space now opens the chooser instead of playing the file in the browser."
   ],
   "history": [
+    {
+      "version": "1.8.1",
+      "date": "2026-11-16",
+      "notes": [
+        "Fixed: the cover art editor was squashed into a thin strip. DJ booth and pad machine styles no longer touch other pages.",
+        "Fixed: beat maker pattern buttons, the Studio time display and a Studio button are back to their normal look."
+      ]
+    },
     {
       "version": "1.8.0",
       "date": "2026-11-16",

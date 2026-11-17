@@ -1458,3 +1458,27 @@ html:not(.tglow) .glowdemo { text-shadow: none; }
 .modeswitch button { font: 400 13px var(--label); letter-spacing: .12em; }
 .modeswitch button.on { text-shadow: 0 0 8px currentColor; }
 @media (prefers-reduced-motion: reduce) { #nav .megamenu, .mmitem, #nav .navbtn.on::after { animation: none !important; } }
+/* ===== drop anywhere ===== */
+.dropdock { position: fixed; left: 50%; bottom: 18px; z-index: 90; width: min(980px, calc(100vw - 32px)); padding: 12px; border-radius: 10px; display: grid; gap: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent); backdrop-filter: blur(16px); border: 1px solid var(--led); box-shadow: 0 30px 80px -20px #000, 0 0 40px -12px var(--led);
+  transform: translate(-50%, 140%); opacity: 0; transition: transform .28s cubic-bezier(.2,.9,.3,1.2), opacity .2s; pointer-events: none; }
+.dropdock.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.ddtitle { display: flex; align-items: baseline; gap: 12px; }
+.ddtitle b { font: 400 20px var(--display); color: var(--led); text-shadow: 0 0 14px var(--glow); }
+.ddtitle small { font: 600 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.ddzones { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+@media (max-width: 760px) { .ddzones { grid-template-columns: 1fr 1fr; } }
+.ddzone { padding: 16px 12px; border-radius: 8px; border: 2px dashed color-mix(in srgb, var(--led) 45%, var(--line)); display: grid; gap: 4px; text-align: center; transition: transform .15s, background .15s, box-shadow .15s, border-color .15s; }
+.ddzone b { font: 400 16px var(--label); letter-spacing: .1em; } .ddzone small { font-size: 11px; color: var(--dim); }
+.ddzone.over { border-style: solid; border-color: var(--led); background: color-mix(in srgb, var(--led) 18%, transparent); box-shadow: 0 0 30px -6px var(--led); transform: translateY(-4px) scale(1.03); }
+.ddzone.over b { color: #fff; text-shadow: 0 0 10px var(--led); }
+#nav .addaudiobtn { border: 1px solid color-mix(in srgb, var(--led) 40%, transparent); }
+.addaudio { display: grid; gap: 10px; min-width: min(520px, 80vw); }
+.addaudio .big { padding: 12px; font-size: 14px; }
+.aaor { display: flex; align-items: center; gap: 10px; color: var(--dim); font: 600 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.aaor::before, .aaor::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.aalink { display: flex; gap: 6px; } .aalink input { flex: 1; }
+.addaudio-targets { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.aatarget { display: grid; gap: 3px; text-align: left; padding: 12px; animation: cardIn .3s ease both; }
+.aatarget b { font: 400 15px var(--label); letter-spacing: .1em; } .aatarget small { color: var(--dim); font-size: 11px; }
+.aatarget:hover b { color: var(--led); text-shadow: 0 0 8px var(--glow); }

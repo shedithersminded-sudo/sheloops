@@ -1,5 +1,6 @@
 import { renderPads } from './pads.js';
 import { renderDJ } from './dj.js';
+import { openAddAudio } from './dropanywhere.js';
 import { $, el, toast, knob, select, pct, cssVar } from './util.js';
 import { helpBtn } from './help.js';
 import { app, on, emit, save, flush, newProject, openProject, newBeatTrack, STARTERS } from './state.js';
@@ -83,6 +84,7 @@ function nav() {
     P ? el('div', { class: 'songchip', title: 'Your current song. Click to see all your projects.', onclick: () => goto('projects') },
       P.cover ? el('img', { src: P.cover, alt: '' }) : el('span', { class: 'blank' }, P.name.slice(0, 2).toUpperCase()),
       el('span', {}, P.name)) : null,
+    el('button', { class: 'navbtn addaudiobtn', title: 'Add a beat, song or sound from your device or a link. You can also drag audio onto any page.', onclick: () => openAddAudio() }, '+ Audio'),
     el('button', { class: 'navbtn exportbtn', title: 'Export songs, beats, tracks or everything', onclick: openExport }, 'Export'),
     el('span', { class: 'withhelp modewrap' },
       el('div', { class: 'modeswitch', role: 'group' },

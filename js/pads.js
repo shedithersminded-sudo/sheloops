@@ -466,3 +466,16 @@ addEventListener('keyup', e => {
 });
 export const padsPlaying = () => L.playing;
 export function stopPads() { if (L.playing) stopLoop(); }
+
+// used by "drop anywhere": save a file to My sounds and put it on the first empty pad (or the selected one)
+export async function padLoadFile(file) {
+  const c = await ensureCtx(), buf = await c.decodeAudioData(await file.arrayBuffer());
+  const id = 's' + uid(), name = file.name.replace(/\.[^.]+$/, '');
+  await saveAudio(id, buf);
+  await db.put('sounds', id, { id, name, folder: 'Dropped in', fav: false, kind: buf.duration < 2.5 ? 'one-shot' : 'loop', dur: buf.duration, bpm: null, added: Date.now() });
+  await loadSounds();
+  let i = bank().findIndex(p => p.kind === 'empty'); if (i < 0) i = PADS.sel;
+  Object.assign(bank()[i], { kind: 'sample', sample: id, name, hold: buf.duration > 4 });
+  PADS.sel = i; savePads();
+  return { pad: i + 1, bank: PADS.bank };
+}
