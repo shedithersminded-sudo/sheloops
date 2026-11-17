@@ -1,6 +1,6 @@
 // SHELOOPS offline helper. Network first (so updates arrive right away), saved copy when offline.
 // release.py bumps VERSION so installed apps notice new files.
-const VERSION = '2.8.1';
+const VERSION = '2.8.2';
 const CACHE = 'sheloops-' + VERSION;
 
 self.addEventListener('install', e => {
@@ -17,7 +17,7 @@ self.addEventListener('fetch', e => {
   if (url.pathname.endsWith('version.json')) return; // always ask the network for the version
   const same = url.origin === self.location.origin, fonts = /fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
   if (!same && !fonts) return;
-  e.respondWith(fetch(req).then(res => {
+  e.respondWith(fetch(req, same ? { cache: 'no-cache' } : undefined).then(res => {
     if (res && (res.ok || res.type === 'opaque')) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
     return res;
   }).catch(() => caches.match(req).then(r => r || caches.match('index.html'))));
