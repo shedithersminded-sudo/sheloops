@@ -74,6 +74,33 @@ function lfo(c, rate, amount, target) {
   return { o, g };
 }
 
+// clean compressor node with the same knobs as the browser one (threshold, ratio, attack, release, knee)
+export function makeComp(c) {
+  const n = new AudioWorkletNode(c, 'comp', { outputChannelCount: [2] });
+  for (const k of ['threshold', 'ratio', 'attack', 'release', 'knee', 'makeup']) n[k] = n.parameters.get(k);
+  return n;
+}
+// Studio reverb space: a short gap, early wall reflections, then a smooth tail that gets darker as it fades, like a real room.
+export function makeIR(c, dur, o = {}) {
+  const sr = c.sampleRate, pre = Math.floor(sr * (o.pre ?? 0.012)), len = pre + Math.floor(sr * Math.max(0.2, dur)), b = c.createBuffer(2, len, sr);
+  const bright = o.bright ?? 0.85, dark = o.dark ?? 0.12, fade = Math.floor(sr * 0.012), hpA = Math.exp(-2 * Math.PI * 120 / sr);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = b.getChannelData(ch), n = len - pre;
+    let y = 0, hx = 0, hy = 0;
+    for (let k = 0; k < n; k++) {
+      const t = k / n, env = Math.exp(-6.9 * t) * (k < fade ? k / fade : 1);
+      const a = bright + (dark - bright) * Math.sqrt(t);          // the tail loses its highs over time
+      y += a * ((Math.random() * 2 - 1) - y);
+      const v = y * env; hy = hpA * (hy + v - hx); hx = v;         // keep low rumble out of the tail
+      d[pre + k] = hy;
+    }
+    // early reflections: a few clear bounces off the walls, different left and right
+    for (let r = 0; r < 7; r++) { const at = pre + Math.floor(sr * (0.004 + Math.random() * 0.05)), g = (0.5 - r * 0.05) * (Math.random() < 0.5 ? -1 : 1); if (at < len) d[at] += g; }
+    let pk = 0; for (let k = 0; k < len; k++) pk = Math.max(pk, Math.abs(d[k]));
+    if (pk > 0) for (let k = 0; k < len; k++) d[k] *= 0.7 / pk;
+  }
+  return b;
+}
 export function buildFx(c, f) {
   const B = BUILD[f.type]; return B(c, f);
 }
@@ -85,35 +112,34 @@ const BUILD = {
   },
   eq(c) {
     const lc = c.createBiquadFilter(), body = c.createBiquadFilter(), mud = c.createBiquadFilter(), pres = c.createBiquadFilter(), air = c.createBiquadFilter(), hc = c.createBiquadFilter();
-    lc.type = 'highpass'; lc.Q.value = 0.707;
+    lc.type = 'highpass'; lc.Q.value = -3.01;
     body.type = 'lowshelf'; body.frequency.value = 180;
     mud.type = 'peaking'; mud.frequency.value = 350; mud.Q.value = 1;
     pres.type = 'peaking'; pres.frequency.value = 3200; pres.Q.value = 0.8;
     air.type = 'highshelf'; air.frequency.value = 10000;
-    hc.type = 'lowpass'; hc.Q.value = 0.707;
+    hc.type = 'lowpass'; hc.Q.value = -3.01;
     lc.connect(body); body.connect(mud); mud.connect(pres); pres.connect(air); air.connect(hc);
     return { in: lc, out: hc, set(p, _, i) { sp(c, lc.frequency, p.lowcut, i); sp(c, body.gain, p.body, i); sp(c, mud.gain, p.mud, i); sp(c, pres.gain, p.presence, i); sp(c, air.gain, p.air, i); sp(c, hc.frequency, p.hicut, i); } };
   },
   comp(c) {
-    const k = c.createDynamicsCompressor(), mk = c.createGain(); k.knee.value = 6; k.connect(mk);
+    const k = makeComp(c), mk = c.createGain(); k.knee.value = 6; k.connect(mk);
     return { in: k, out: mk, set(p, _, i) { sp(c, k.threshold, p.thresh, i); sp(c, k.ratio, p.ratio, i); k.attack.value = p.attack; k.release.value = p.release; sp(c, mk.gain, Math.pow(10, p.makeup / 20), i); } };
   },
   deess(c) {
     // Linkwitz-Riley split: the high band gets compressed hard, then the bands are summed back.
     const input = c.createGain(), out = c.createGain();
     const lp1 = c.createBiquadFilter(), lp2 = c.createBiquadFilter(), hp1 = c.createBiquadFilter(), hp2 = c.createBiquadFilter();
-    for (const f of [lp1, lp2]) { f.type = 'lowpass'; f.Q.value = 0.707; }
-    for (const f of [hp1, hp2]) { f.type = 'highpass'; f.Q.value = 0.707; }
-    const k = c.createDynamicsCompressor(); k.ratio.value = 12; k.attack.value = 0.001; k.release.value = 0.06; k.knee.value = 3;
+    for (const f of [lp1, lp2]) { f.type = 'lowpass'; f.Q.value = -3.01; }
+    for (const f of [hp1, hp2]) { f.type = 'highpass'; f.Q.value = -3.01; }
+    const k = makeComp(c); k.ratio.value = 8; k.attack.value = 0.0008; k.release.value = 0.07; k.knee.value = 4;
     input.connect(lp1); lp1.connect(lp2); lp2.connect(out);
     input.connect(hp1); hp1.connect(hp2); hp2.connect(k); k.connect(out);
     return { in: input, out, set(p, _, i) { for (const f of [lp1, lp2, hp1, hp2]) sp(c, f.frequency, p.freq, i); sp(c, k.threshold, -12 - p.amount * 38, i); } };
   },
   limiter(c) {
-    const pre = c.createGain(), k = c.createDynamicsCompressor(), post = c.createGain();
-    k.ratio.value = 20; k.knee.value = 0; k.attack.value = 0.001; k.release.value = 0.08;
-    pre.connect(k); k.connect(post);
-    return { in: pre, out: post, set(p, _, i) { sp(c, pre.gain, Math.pow(10, p.drive / 20), i); sp(c, k.threshold, p.ceiling - 2, i); sp(c, post.gain, Math.pow(10, 1.5 / 20), i); } };
+    const pre = c.createGain(), k = new AudioWorkletNode(c, 'limit', { outputChannelCount: [2] });
+    pre.connect(k);
+    return { in: pre, out: k, set(p, _, i) { sp(c, pre.gain, Math.pow(10, p.drive / 20), i); sp(c, k.parameters.get('ceiling'), p.ceiling, i); } };
   },
   sat(c) {
     const w = wetDry(c), sh = c.createWaveShaper(); sh.oversample = '4x';
@@ -126,12 +152,13 @@ const BUILD = {
     sh.oversample = '4x'; tone.type = 'lowpass'; lvl.gain.value = 0.6;
     w.input.connect(sh); sh.connect(tone); tone.connect(lvl); lvl.connect(w.wet);
     let last = -1;
-    return { in: w.input, out: w.out, set(p, _, i) { if (p.drive !== last) { sh.curve = hardCurve(2 + p.drive * 60); last = p.drive; } sp(c, tone.frequency, p.tone, i); w.mix(p.mix, i); } };
+    return { in: w.input, out: w.out, set(p, _, i) { if (p.drive !== last) { sh.curve = hardCurve(2 + p.drive * 60); last = p.drive; } sp(c, lvl.gain, 0.6 / (1 + p.drive * 5), i); sp(c, tone.frequency, p.tone, i); w.mix(p.mix, i); } };
   },
   ring(c) {
     const w = wetDry(c), rm = c.createGain(); rm.gain.value = 0;
     const o = c.createOscillator(); o.type = 'sine'; o.connect(rm.gain); o.start();
-    w.input.connect(rm); rm.connect(w.wet);
+    const rmk = c.createGain(); rmk.gain.value = 1.41; // ring mod halves the power, this keeps the level even
+    w.input.connect(rm); rm.connect(rmk); rmk.connect(w.wet);
     return { in: w.input, out: w.out, set(p, _, i) { sp(c, o.frequency, p.freq, i); w.mix(p.mix, i); }, stop() { o.stop(); } };
   },
   chorus(c) {
@@ -226,7 +253,7 @@ const BUILD = {
     ps.parameters.get('mode').value = 1; lp.type = 'lowpass'; lp.frequency.value = 9000; fb.gain.value = 0.35;
     w.input.connect(cv); cv.connect(lp); lp.connect(w.wet); lp.connect(ps); ps.connect(fb); fb.connect(cv); let last = -1;
     return { in: w.input, out: w.out, set(p, _, i) {
-      if (p.size !== last) { const len = Math.floor(c.sampleRate * p.size), b = c.createBuffer(2, len, c.sampleRate); for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let k = 0; k < len; k++) d[k] = (Math.random() * 2 - 1) * Math.pow(1 - k / len, 2) * 0.6; } cv.buffer = b; last = p.size; }
+      if (p.size !== last) { const b = makeIR(c, p.size, { pre: 0.02, dark: 0.2 }); cv.buffer = b; last = p.size; }
       ps.parameters.get('semis').value = p.pitch; sp(c, w.dry.gain, 1, i); sp(c, w.wet.gain, p.mix, i); } };
   },
   tape(c) {
@@ -262,8 +289,8 @@ const BUILD = {
     }, stop() { o.stop(); } };
   },
   delay(c) {
-    const w = wetDry(c), d = c.createDelay(2), fb = c.createGain(), tone = c.createBiquadFilter(); tone.type = 'lowpass';
-    w.input.connect(d); d.connect(tone); tone.connect(fb); fb.connect(d); tone.connect(w.wet);
+    const w = wetDry(c), d = c.createDelay(2), fb = c.createGain(), tone = c.createBiquadFilter(), lo = c.createBiquadFilter(); tone.type = 'lowpass'; lo.type = 'highpass'; lo.frequency.value = 160; lo.Q.value = 0.6;
+    w.input.connect(d); d.connect(lo); lo.connect(tone); tone.connect(fb); fb.connect(d); tone.connect(w.wet);
     return { in: w.input, out: w.out, set(p, _, i) { sp(c, d.delayTime, p.time, i); sp(c, fb.gain, p.feedback, i); sp(c, tone.frequency, p.tone, i); sp(c, w.dry.gain, 1, i); sp(c, w.wet.gain, p.mix, i); } };
   },
   room(c) {
@@ -271,7 +298,7 @@ const BUILD = {
     w.input.connect(cv); cv.connect(tone); tone.connect(w.wet);
     let last = -1;
     return { in: w.input, out: w.out, set(p, _, i) {
-      if (p.size !== last) { const len = Math.floor(c.sampleRate * p.size), b = c.createBuffer(2, len, c.sampleRate); for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let k = 0; k < len; k++) d[k] = (Math.random() * 2 - 1) * Math.pow(1 - k / len, 2.5); } cv.buffer = b; last = p.size; }
+      if (p.size !== last) { const b = makeIR(c, p.size, { pre: 0.012 }); cv.buffer = b; last = p.size; }
       sp(c, tone.frequency, p.tone, i); sp(c, w.dry.gain, 1, i); sp(c, w.wet.gain, p.mix, i); } };
   },
   tune(c) {

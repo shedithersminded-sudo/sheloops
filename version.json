@@ -1,15 +1,25 @@
 {
-  "version": "2.11.0",
+  "version": "2.12.0",
   "date": "2026-11-20",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Fixed not hearing yourself: after a reload the mic now opens on your first click, and In your ears shows a live meter or a Start my mic button.",
-    "New On my mic now bar: see every effect on your voice in order. Click one to switch it off, x to take it off, or Clear all.",
-    "Exports are now 24-bit WAV at your recording rate for studio quality.",
-    "Track names and volume no longer overlap. Studio sections have clear Hide and Open headers, and the track panel can be hidden.",
-    "New button shapes: Pill, Soft, Leaf or Square in Appearance. Pill is the new default."
+    "Sound quality pass: new studio compressor that never turns up your room hiss. The old one secretly boosted quiet noise up to 16 dB, mostly in the De-esser.",
+    "Limiter effect is now a true limiter that never goes past its ceiling.",
+    "New reverb: a real room sound with early reflections and a tail that gets darker as it fades. Echo repeats stay clean instead of muddy.",
+    "Fixed filters that had a small hidden bump. Distortion and Robot keep an even volume."
   ],
   "history": [
+    {
+      "version": "2.11.0",
+      "date": "2026-11-20",
+      "notes": [
+        "Fixed not hearing yourself: after a reload the mic now opens on your first click, and In your ears shows a live meter or a Start my mic button.",
+        "New On my mic now bar: see every effect on your voice in order. Click one to switch it off, x to take it off, or Clear all.",
+        "Exports are now 24-bit WAV at your recording rate for studio quality.",
+        "Track names and volume no longer overlap. Studio sections have clear Hide and Open headers, and the track panel can be hidden.",
+        "New button shapes: Pill, Soft, Leaf or Square in Appearance. Pill is the new default."
+      ]
+    },
     {
       "version": "2.10.0",
       "date": "2026-11-20",

@@ -2,7 +2,7 @@
 import { app, barDur, stepDur, songEnd, selTrack, emit, patData } from './state.js';
 import { settings, saveSettings, audioCache } from './store.js';
 import { clamp } from './util.js';
-import { PITCH_WORKLET, DENOISE_WORKLET, buildFx } from './fx.js';
+import { PITCH_WORKLET, DENOISE_WORKLET, buildFx, makeComp, makeIR } from './fx.js';
 import { SCALES } from './beat.js';
 import { playString, playExtra, EXTRA_ENGINES, playPerc, PERC, isString } from './instruments.js';
 
@@ -67,7 +67,32 @@ class Limit extends AudioWorkletProcessor {
     return true;
   }
 }
-registerProcessor('limit', Limit);` + PITCH_WORKLET + DENOISE_WORKLET;
+registerProcessor('limit', Limit);
+// Studio compressor: soft knee, smooth attack and release, linked stereo. Unlike the browser one it adds no hidden volume, so quiet hiss is never turned up.
+class Comp extends AudioWorkletProcessor {
+  static get parameterDescriptors() { return [{ name: 'threshold', defaultValue: -18 }, { name: 'ratio', defaultValue: 4 }, { name: 'attack', defaultValue: 0.005 }, { name: 'release', defaultValue: 0.15 }, { name: 'knee', defaultValue: 6 }, { name: 'makeup', defaultValue: 0 }]; }
+  constructor() { super(); this.gr = 0; this.env = 0; }
+  process(ins, outs, P) {
+    const i = ins[0], o = outs[0]; if (!o || !o.length) return true;
+    const n = o[0].length;
+    if (!i || !i.length) { for (let c = 0; c < o.length; c++) o[c].fill(0); return true; }
+    const T = P.threshold[0], R = Math.max(1, P.ratio[0]), K = Math.max(0, P.knee[0]), mk = Math.pow(10, P.makeup[0] / 20);
+    const at = Math.exp(-1 / (Math.max(0.0002, P.attack[0]) * sampleRate)), rl = Math.exp(-1 / (Math.max(0.005, P.release[0]) * sampleRate)), pk = Math.exp(-1 / (0.002 * sampleRate));
+    for (let s = 0; s < n; s++) {
+      let m = 0; for (let c = 0; c < i.length; c++) { const v = Math.abs(i[c][s]); if (v > m) m = v; }
+      this.env = m > this.env ? m : this.env * pk + m * (1 - pk);
+      const x = this.env > 1e-6 ? 20 * Math.log10(this.env) : -120, d = x - T;
+      let g = 0;
+      if (R > 1) { if (K > 0 && 2 * Math.abs(d) <= K) g = (1 / R - 1) * (d + K / 2) * (d + K / 2) / (2 * K); else if (d > 0) g = d / R - d; }
+      this.gr = g < this.gr ? at * this.gr + (1 - at) * g : rl * this.gr + (1 - rl) * g;
+      const lin = Math.pow(10, this.gr / 20) * mk;
+      for (let c = 0; c < o.length; c++) o[c][s] = (i[c] || i[0])[s] * lin;
+    }
+    return true;
+  }
+}
+registerProcessor('comp', Comp);
+` + PITCH_WORKLET + DENOISE_WORKLET;
 export const workletURL = URL.createObjectURL(new Blob([WORKLET], { type: 'text/javascript' }));
 
 export const E = { ctx: null, g: null, mic: null, ready: null };
@@ -87,14 +112,7 @@ export function ensureCtx() {
 export const latency = () => E.ctx ? (E.ctx.outputLatency || 0) + (E.ctx.baseLatency || 0) : 0;
 
 // ---------- graph ----------
-export function makeImpulse(c, dur) {
-  const len = Math.floor(c.sampleRate * dur), b = c.createBuffer(2, len, c.sampleRate);
-  for (let ch = 0; ch < 2; ch++) {
-    const d = b.getChannelData(ch);
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
-  }
-  return b;
-}
+export function makeImpulse(c, dur) { return makeIR(c, dur, { pre: 0.015 }); }
 export const MASTER_DEFAULTS = { on: false, style: '', lowcut: 25, bass: 0, warmth: 0, clarity: 0, air: 0, harsh: 0, glue: 0, width: 1, loud: 0, ceiling: -1, match: 0 };
 export function masterOf(P) {
   const m = P.master.chain ||= {};
@@ -107,12 +125,12 @@ function buildMasterChain(c) {
   const inp = c.createGain(), out = c.createGain(), dry = c.createGain(), wet = c.createGain();
   inp.connect(dry); dry.connect(out); wet.connect(out);
   const lc = c.createBiquadFilter(), bass = c.createBiquadFilter(), clar = c.createBiquadFilter(), air = c.createBiquadFilter();
-  lc.type = 'highpass'; lc.Q.value = 0.707;
+  lc.type = 'highpass'; lc.Q.value = -3.01;
   bass.type = 'lowshelf'; bass.frequency.value = 110;
   clar.type = 'peaking'; clar.frequency.value = 3000; clar.Q.value = 0.7;
   air.type = 'highshelf'; air.frequency.value = 11000;
   const harsh = buildFx(c, { type: 'deess' }), sat = buildFx(c, { type: 'sat' });
-  const glue = c.createDynamicsCompressor(), glueMk = c.createGain();
+  const glue = makeComp(c), glueMk = c.createGain();
   glue.attack.value = 0.02; glue.release.value = 0.25; glue.knee.value = 8;
   // mid/side width
   const spl = c.createChannelSplitter(2), mrg = c.createChannelMerger(2);
@@ -639,7 +657,7 @@ export async function openMic() {
   const cap = new AudioWorkletNode(c, 'cap', { channelCount: settings.mono ? 1 : 2, channelCountMode: 'explicit' });
   // mic cleanup chain: low cut, EQ, feedback notches, noise remover, gate. What you record and hear is the cleaned voice.
   const hp = c.createBiquadFilter(), body = c.createBiquadFilter(), mud = c.createBiquadFilter(), pres = c.createBiquadFilter(), air = c.createBiquadFilter();
-  hp.type = 'highpass'; hp.Q.value = 0.707; body.type = 'lowshelf'; body.frequency.value = 180; mud.type = 'peaking'; mud.frequency.value = 350; mud.Q.value = 1;
+  hp.type = 'highpass'; hp.Q.value = -3.01; body.type = 'lowshelf'; body.frequency.value = 180; mud.type = 'peaking'; mud.frequency.value = 350; mud.Q.value = 1;
   pres.type = 'peaking'; pres.frequency.value = 3200; pres.Q.value = 0.8; air.type = 'highshelf'; air.frequency.value = 10000;
   const notchIn = c.createGain(), notchOut = c.createGain(), gate = new AudioWorkletNode(c, 'gate', { outputChannelCount: [settings.mono ? 1 : 2] });
   const hum = [1, 2, 3, 4].map(() => { const f = c.createBiquadFilter(); f.type = 'allpass'; f.Q.value = 18; return f; });
@@ -647,7 +665,7 @@ export async function openMic() {
   notchOut.connect(gate); gate.connect(post);
   post.connect(an); post.connect(cap); cap.connect(sink); sink.connect(c.destination); post.connect(mon);
   // squeal shield on what you hear (never on what is recorded): trims the ringing range, keeps the pitch moving very slightly so a howl cannot build up, and caps the level
-  const shHP = c.createBiquadFilter(), shLP = c.createBiquadFilter(), shDly = c.createDelay(0.05), shLfo = c.createOscillator(), shDep = c.createGain(), shLim = c.createDynamicsCompressor(), shOut = c.createGain();
+  const shHP = c.createBiquadFilter(), shLP = c.createBiquadFilter(), shDly = c.createDelay(0.05), shLfo = c.createOscillator(), shDep = c.createGain(), shLim = makeComp(c), shOut = c.createGain();
   shHP.type = 'highpass'; shLP.type = 'lowpass'; shDly.delayTime.value = 0.004; shLfo.frequency.value = 0.9; shLfo.connect(shDep); shDep.connect(shDly.delayTime); shLfo.start();
   shLim.attack.value = 0.002; shLim.release.value = 0.12; shLim.knee.value = 0;
   mon.connect(shHP); shHP.connect(shLP); shLP.connect(shDly); shDly.connect(shLim); shLim.connect(shOut);
