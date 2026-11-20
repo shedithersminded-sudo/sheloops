@@ -1,11 +1,19 @@
 {
-  "version": "2.13.3",
+  "version": "2.14.0",
   "date": "2026-11-20",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Fixed a ch ch ch crackle you could hear as soon as the page loaded: Vinyl dust (in styles like Tape Dust and Dusty Sample) played all the time. Now it only crackles while sound is playing, like a real record."
+    "New mic meter: drag it anywhere by its top bar, fold it into a small tab, and press the half circle button to switch looks: Level + trail, Wave, Frequencies or Pulse ring. It shows a dB scale, your loudest moment, how often you hit red, and Soft, Good, Loud or Too loud.",
+    "Silence check across the whole app: with every effect on every track, nothing makes a sound until you play. Hearing yourself now only starts on the recording pages, never on Home."
   ],
   "history": [
+    {
+      "version": "2.13.3",
+      "date": "2026-11-20",
+      "notes": [
+        "Fixed a ch ch ch crackle you could hear as soon as the page loaded: Vinyl dust (in styles like Tape Dust and Dusty Sample) played all the time. Now it only crackles while sound is playing, like a real record."
+      ]
+    },
     {
       "version": "2.13.2",
       "date": "2026-11-20",

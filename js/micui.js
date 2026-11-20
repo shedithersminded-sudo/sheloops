@@ -136,34 +136,100 @@ export function clickPicker() {
     el('input', { type: 'range', min: 0, max: 1, step: 0.01, value: settings.clickVol ?? 0.6, title: 'Click volume', oninput: e => { settings.clickVol = +e.target.value; saveSettings(); } }),
     el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!settings.metro, onchange: e => { settings.metro = e.target.checked; saveSettings(); } }), 'On'));
 }
+// Mic meter: a small panel on the side of the screen that shows what your mic is doing.
+// Drag it by its top bar, fold it to a small tab, and pick how it looks. Its place and look are saved.
+export const DOCK_STYLES = [['tower', 'Level + trail'], ['scope', 'Wave'], ['spectrum', 'Frequencies'], ['ring', 'Pulse ring']];
 export function mountMicDock() {
-  const cv = el('canvas', { width: 44, height: 220 }), lab = el('b', {}, 'MIC'), dbt = el('small', {}, '');
-  const dock = el('div', { class: 'micdock', title: 'Your mic level. Aim for the yellow when you sing loud. Red means too loud.' }, lab, cv, dbt);
+  const D = settings.micDock ||= { style: 'tower', fold: false, x: null, y: null };
+  const W = 64, H = 240, cv = el('canvas', { width: W * 2, height: H * 2 });
+  const lab = el('b', { class: 'mdlab' }, 'MIC'), stat = el('small', { class: 'mdstat' }, ''), pkEl = el('small', { class: 'mdpk' }, '');
+  const styleBtn = el('button', { class: 'mdbtn', title: 'Change how the meter looks' }, '◐');
+  const foldBtn = el('button', { class: 'mdbtn', title: 'Fold the meter' }, '–');
+  const head = el('div', { class: 'mdhead', title: 'Drag to move' }, el('i', { class: 'mdgrip' }), lab, styleBtn, foldBtn);
+  const body = el('div', { class: 'mdbody' }, cv, el('div', { class: 'mdread' }, stat, pkEl));
+  const tab = el('button', { class: 'mdtab', title: 'Open the mic meter' }, el('i', { class: 'mdled' }), 'MIC');
+  const dock = el('div', { class: 'micdock2' }, head, body, tab);
   document.body.append(dock);
-  const hist = new Float32Array(110); let hp = 0, hold = 0, holdT = 0, clipT = 0;
-  const g = cv.getContext('2d'), W = 44, H = 220;
+  const place = () => {
+    dock.classList.toggle('fold', !!D.fold);
+    if (D.x == null) { dock.style.left = ''; dock.style.top = ''; dock.style.right = '8px'; dock.style.bottom = '90px'; }
+    else { const r = dock.getBoundingClientRect(), x = Math.min(Math.max(4, D.x), innerWidth - r.width - 4), y = Math.min(Math.max(4, D.y), innerHeight - r.height - 4); dock.style.right = ''; dock.style.bottom = ''; dock.style.left = x + 'px'; dock.style.top = y + 'px'; }
+  };
+  const keep = () => saveSettings();
+  foldBtn.onclick = e => { e.stopPropagation(); D.fold = true; keep(); place(); };
+  tab.onclick = () => { if (tab.dataset.moved) { delete tab.dataset.moved; return; } D.fold = false; keep(); place(); };
+  styleBtn.onclick = e => { e.stopPropagation(); const i = DOCK_STYLES.findIndex(x => x[0] === D.style); D.style = DOCK_STYLES[(i + 1) % DOCK_STYLES.length][0]; keep(); toast('Mic meter: ' + DOCK_STYLES.find(x => x[0] === D.style)[1]); };
+  // drag by the top bar or the folded tab
+  const drag = (handle) => handle.addEventListener('pointerdown', e => {
+    if (e.target.closest('.mdbtn')) return;
+    const r = dock.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top, sx = e.clientX, sy = e.clientY; let moved = false;
+    try { handle.setPointerCapture(e.pointerId); } catch { }
+    const mv = ev => { if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 4) return; moved = true; D.x = ev.clientX - ox; D.y = ev.clientY - oy; place(); };
+    const up = () => { handle.removeEventListener('pointermove', mv); handle.removeEventListener('pointerup', up); if (moved) { keep(); if (handle === tab) tab.dataset.moved = '1'; } };
+    handle.addEventListener('pointermove', mv); handle.addEventListener('pointerup', up);
+  });
+  drag(head); drag(tab);
+  addEventListener('resize', place);
+  place();
+
+  const g = cv.getContext('2d'); g.scale(2, 2);
+  const hist = new Float32Array(120); let hp = 0, hold = 0, holdT = 0, clipT = 0, clips = 0, wasClip = false;
+  const td = new Float32Array(2048), fd = new Uint8Array(1024);
+  const col = l => l > 0.9 ? '#ff3b5c' : l > 0.78 ? '#ff8c42' : l > 0.6 ? '#ffd23f' : '#3ddc84';
+  const grad = () => { const gr = g.createLinearGradient(0, H, 0, 0); gr.addColorStop(0, '#3ddc84'); gr.addColorStop(0.6, '#ffd23f'); gr.addColorStop(0.85, '#ff8c42'); gr.addColorStop(1, '#ff3b5c'); return gr; };
+  const scale = () => { g.fillStyle = 'rgba(255,255,255,.35)'; g.font = '8px sans-serif'; for (const d of [0, -6, -12, -24, -40, -60]) { const y = H - ((d + 60) / 60) * H; g.fillRect(0, Math.min(H - 1, Math.max(0, y)), 4, 1); if (d > -60) g.fillText(String(d), 5, Math.min(H - 2, Math.max(8, y + 3))); } };
   const loop = () => {
     const m = E.mic, on = !!m && E.ctx && E.ctx.state === 'running';
     dock.classList.toggle('on', on);
-    if (on) {
-      const pk = peakOf(m.an), d = pk > 0 ? 20 * Math.log10(pk) : -90, lv = Math.max(0, Math.min(1, (d + 60) / 60)), now = performance.now();
-      if (lv > hold || now - holdT > 1200) { hold = lv; holdT = now; }
-      if (pk > 0.98) clipT = now;
+    if (on && !D.fold) {
+      const now = performance.now(), an = m.an;
+      an.getFloatTimeDomainData(td);
+      let pk = 0, sq = 0; for (let i = 0; i < td.length; i++) { const v = Math.abs(td[i]); if (v > pk) pk = v; sq += td[i] * td[i]; }
+      const rms = Math.sqrt(sq / td.length), dP = pk > 0 ? 20 * Math.log10(pk) : -90, dR = rms > 0 ? 20 * Math.log10(rms) : -90;
+      const lv = Math.max(0, Math.min(1, (dP + 60) / 60)), lr = Math.max(0, Math.min(1, (dR + 60) / 60));
+      if (lv > hold || now - holdT > 1500) { hold = lv; holdT = now; }
+      const isClip = pk > 0.98; if (isClip && !wasClip) { clips++; clipT = now; } wasClip = isClip;
       hist[hp++ % hist.length] = lv;
       const rec = !!(window.__shRec && window.__shRec());
-      lab.textContent = rec ? 'REC' : 'MIC'; dock.classList.toggle('rec', rec); dock.classList.toggle('clip', now - clipT < 1500);
-      dbt.textContent = d > -89 ? Math.round(d) + '' : '-';
+      lab.textContent = rec ? 'REC' : settings.monitor ? 'HEAR' : 'MIC';
+      dock.classList.toggle('rec', rec); dock.classList.toggle('clip', now - clipT < 1500);
+      stat.textContent = dP < -55 ? 'Quiet' : dP > -1 ? 'Too loud' : dP > -6 ? 'Loud' : dP > -24 ? 'Good' : 'Soft';
+      pkEl.textContent = (dP > -89 ? Math.round(dP) : '-') + ' dB' + (clips ? ' · ' + clips + ' red' : '');
       g.clearRect(0, 0, W, H);
-      const grad = g.createLinearGradient(0, H, 0, 0); grad.addColorStop(0, '#3ddc84'); grad.addColorStop(0.7, '#ffd23f'); grad.addColorStop(0.9, '#ff8c42'); grad.addColorStop(1, '#ff3b5c');
-      // left: the level bar with a peak line
-      g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(2, 0, 14, H);
-      g.fillStyle = grad; g.fillRect(2, H - lv * H, 14, lv * H);
-      g.fillStyle = '#fff'; g.fillRect(2, H - hold * H - 1, 14, 2);
-      // right: your voice over the last few seconds, moving up
-      g.fillStyle = grad;
-      for (let i = 0; i < hist.length; i++) { const v = hist[(hp + i) % hist.length], y = i * 2, w = v * 24; g.globalAlpha = 0.35 + 0.65 * (i / hist.length); g.fillRect(31 - w / 2, y, Math.max(1, w), 2); }
-      g.globalAlpha = 1;
-    }
+      if (D.style === 'tower') {
+        g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(14, 0, 12, H);
+        g.fillStyle = grad(); g.fillRect(14, H - lv * H, 12, lv * H);
+        g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(14, H - lr * H, 12, 2);
+        g.fillStyle = '#fff'; g.fillRect(14, H - hold * H - 1, 12, 2);
+        g.fillStyle = grad();
+        for (let i = 0; i < hist.length; i++) { const v = hist[(hp + i) % hist.length], y = i * (H / hist.length), w = v * 30; g.globalAlpha = 0.25 + 0.75 * (i / hist.length); g.fillRect(46 - w / 2, y, Math.max(1, w), H / hist.length + 0.5); }
+        g.globalAlpha = 1; scale();
+      } else if (D.style === 'scope') {
+        g.strokeStyle = col(lv); g.lineWidth = 1.5; g.shadowColor = col(lv); g.shadowBlur = 6; g.beginPath();
+        for (let y = 0; y < H; y++) { const v = td[Math.floor(y / H * td.length)], x = W / 2 + v * (W / 2 - 4) * 2.5; y ? g.lineTo(x, y) : g.moveTo(x, y); }
+        g.stroke(); g.shadowBlur = 0; g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(W / 2, 0, 1, H);
+      } else if (D.style === 'spectrum') {
+        an.getByteFrequencyData(fd);
+        const bands = 32, nyq = E.ctx.sampleRate / 2;
+        for (let b = 0; b < bands; b++) {
+          const f0 = 40 * Math.pow(400, b / bands), f1 = 40 * Math.pow(400, (b + 1) / bands), k0 = Math.floor(f0 / nyq * fd.length), k1 = Math.max(k0 + 1, Math.floor(f1 / nyq * fd.length));
+          let mx = 0; for (let k = k0; k < k1 && k < fd.length; k++) mx = Math.max(mx, fd[k]);
+          const v = mx / 255, y = H - (b + 1) * (H / bands), w = v * (W - 6);
+          g.fillStyle = col(v); g.globalAlpha = 0.35 + 0.65 * v; g.fillRect(3, y + 1, w, H / bands - 2);
+        }
+        g.globalAlpha = 1; g.fillStyle = 'rgba(255,255,255,.4)'; g.font = '8px sans-serif'; g.fillText('lows', 3, H - 2); g.fillText('highs', 3, 9);
+      } else {
+        const cx = W / 2, cy = H / 2 - 20, r0 = 14;
+        g.fillStyle = 'rgba(255,255,255,.05)'; g.beginPath(); g.arc(cx, cy, 28, 0, 7); g.fill();
+        g.strokeStyle = col(lv); g.lineWidth = 2; g.shadowColor = col(lv); g.shadowBlur = 10; g.beginPath();
+        for (let a = 0; a <= 64; a++) { const v = Math.abs(td[a * 31 % td.length]), r = r0 + v * 60 * (0.5 + lv); const an2 = a / 64 * Math.PI * 2; const x = cx + Math.cos(an2) * Math.min(29, r), y = cy + Math.sin(an2) * Math.min(29, r); a ? g.lineTo(x, y) : g.moveTo(x, y); }
+        g.closePath(); g.stroke(); g.shadowBlur = 0;
+        g.fillStyle = grad(); g.fillRect(8, H - 70, W - 16, 6); g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(8 + lv * (W - 16), H - 70, (1 - lv) * (W - 16), 6);
+        g.fillStyle = '#fff'; g.fillRect(8 + hold * (W - 16) - 1, H - 72, 2, 10);
+        for (let i = 0; i < 40; i++) { const v = hist[(hp - 40 + i + hist.length) % hist.length]; g.fillStyle = col(v); g.globalAlpha = 0.3 + 0.7 * (i / 40); g.fillRect(8 + i * ((W - 16) / 40), H - 8 - v * 50, (W - 16) / 40 - 0.5, v * 50); }
+        g.globalAlpha = 1;
+      }
+    } else if (on) { tab.querySelector('.mdled').style.opacity = String(0.3 + 0.7 * Math.min(1, peakOf(m.an) * 3)); }
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);

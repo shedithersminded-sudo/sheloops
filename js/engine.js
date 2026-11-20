@@ -683,7 +683,8 @@ export async function openMic() {
   return E.mic;
 }
 // after a reload the switch can say On while the mic is still closed. The first click anywhere opens it again.
-addEventListener('pointerdown', () => { if (settings.monitor && !E.mic && E.ready !== undefined) openMic().catch(() => { }); else if (E.ctx && E.ctx.state === 'suspended' && settings.monitor) E.ctx.resume(); }, true);
+const REC_VIEWS = ['studio', 'beat', 'pads', 'mic'];
+addEventListener('pointerdown', () => { if (!settings.monitor || !REC_VIEWS.includes(app.view)) return; if (!E.mic) openMic().catch(() => { }); else if (E.ctx && E.ctx.state === 'suspended') E.ctx.resume(); }, true);
 export const micLive = () => !!E.mic && E.ctx && E.ctx.state === 'running';
 export function closeMic() {
   const m = E.mic; if (!m) return;
