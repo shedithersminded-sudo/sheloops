@@ -2115,3 +2115,54 @@ button.bitem { cursor: pointer; }
 .staticbox { margin-bottom: 8px; } .staticbox > div { margin-top: 6px; }
 .staticout ul { margin: 4px 0 6px; padding-left: 18px; } .staticout .okl li::marker { content: '\2713  '; color: var(--led); }
 .statictips summary { cursor: pointer; font-weight: 700; margin-top: 6px; } .statictips ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+
+/* ===== hearing yourself: live status ===== */
+.vnlive { display: flex; align-items: center; gap: 8px; margin-top: 6px; min-height: 26px; }
+.vnlive small { color: var(--dim); font-size: 11px; }
+.vnmeter { width: 90px; height: 8px; border-radius: 99px; background: linear-gradient(90deg, var(--led) calc(var(--l) * 100%), rgba(255,255,255,.08) 0); box-shadow: 0 0 8px -2px var(--led); }
+
+/* ===== On my mic now ===== */
+.stackbar { margin: 8px 0; padding: 10px 12px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--led) 45%, var(--line)); background: linear-gradient(180deg, color-mix(in srgb, var(--led) 8%, var(--panel)), var(--panel)); box-shadow: 0 0 22px -12px var(--led); display: grid; gap: 8px; position: sticky; top: 0; z-index: 4; }
+.stackbar.byp { border-style: dashed; opacity: .85; }
+.stkhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stkhead > b { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--led); text-shadow: 0 0 8px var(--glow, transparent); }
+.stkhead small { color: var(--dim); font-size: 11px; }
+.stkrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.stkstyle { padding: 4px 12px; border-radius: 99px; background: var(--led); color: var(--ledtext, #111); font-weight: 800; font-size: 12px; }
+.stk { display: inline-flex; align-items: stretch; border-radius: 99px; border: 1px solid var(--line2, var(--line)); background: rgba(255,255,255,.04); overflow: hidden; }
+.stk .stkname { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 4px 10px; font-size: 12px; border-radius: 0; text-transform: none; }
+.stk .stkx { border: 0; border-left: 1px solid var(--line); background: none; padding: 0 9px; border-radius: 0; color: var(--dim); }
+.stk .stkx:hover { color: #ff5a6e; background: rgba(255,90,110,.12); }
+.stkled { width: 8px; height: 8px; border-radius: 50%; background: var(--led); box-shadow: 0 0 8px var(--led); }
+.stk.off { opacity: .55; } .stk.off .stkled { background: #555; box-shadow: none; } .stk.off .stkname { text-decoration: line-through; }
+.stknum { font-size: 10px; color: var(--dim); }
+.stkarrow { width: 10px; height: 2px; background: var(--line2, var(--line)); }
+
+/* ===== track headers: no more overlapping words ===== */
+.head .hrow2 { flex-wrap: wrap; gap: 2px 6px; }
+.head .hrow2 .tag { flex: 1 1 100%; overflow: hidden; text-overflow: ellipsis; font-size: 10px; line-height: 1.2; }
+.head .hrow2 .knob { flex: 1 1 100%; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.head .hrow2 .knob input { flex: 1; width: auto; min-width: 0; }
+.head .hrow1 .tname { min-width: 0; flex: 1; }
+.head > .knob { display: flex; align-items: center; gap: 6px; } .head > .knob input { flex: 1; width: auto; min-width: 0; }
+
+/* ===== sections open and close: a real header on every studio section ===== */
+.studio .mvpanel:not(.folded) > .mvbar, .studio .mvpanel.folded > .mvbar { position: static; opacity: 1; transform: none; width: 100%; box-sizing: border-box; padding: 6px 10px; margin: 0 0 4px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--led) 30%, var(--line)); background: color-mix(in srgb, var(--led) 6%, var(--panel)); cursor: pointer; }
+.studio .mvpanel > .mvbar .mvtitle { flex: 1; font-size: 12px; color: var(--text); letter-spacing: .1em; text-transform: uppercase; font-weight: 800; }
+.studio .mvpanel > .mvbar .mvfold { padding: 2px 12px; font-size: 11px; }
+.studio .mvpanel > .mvbar .mvfold::after { content: ' Hide'; } .studio .mvpanel.folded > .mvbar .mvfold::after { content: ' Open'; }
+.prodbody.noinsp { grid-template-columns: 236px minmax(0, 1fr) 30px; }
+.prodbody.noinsp:has(.sbrowser.shut) { grid-template-columns: 30px minmax(0, 1fr) 30px; }
+.inrail { border-radius: 10px; }
+.inclose { margin-left: auto; }
+
+/* ===== button shapes (pick one in Appearance) ===== */
+:root { --br: 999px; }
+:root[data-bs="soft"] { --br: 10px; } :root[data-bs="square"] { --br: 3px; } :root[data-bs="leaf"] { --br: 14px 3px 14px 3px; }
+button, select, input[type=number], .tname, .textin, .exporter input, .chip { border-radius: var(--br); }
+button.sq { border-radius: 50%; }
+:root[data-bs="square"] button.sq { border-radius: 3px; }
+button { transition: box-shadow .15s, border-color .15s, background-color .15s, transform .1s; }
+button:hover:not(:disabled) { box-shadow: 0 0 14px -6px var(--led); }
+button.hot { box-shadow: 0 0 16px -6px var(--led), inset 0 1px 0 rgba(255,255,255,.35); }
+.shapepick .shp-pill { border-radius: 999px; } .shapepick .shp-soft { border-radius: 10px; } .shapepick .shp-leaf { border-radius: 14px 3px 14px 3px; } .shapepick .shp-square { border-radius: 3px; }

@@ -658,6 +658,9 @@ export async function openMic() {
   startFeedbackGuard();
   return E.mic;
 }
+// after a reload the switch can say On while the mic is still closed. The first click anywhere opens it again.
+addEventListener('pointerdown', () => { if (settings.monitor && !E.mic && E.ready !== undefined) openMic().catch(() => { }); else if (E.ctx && E.ctx.state === 'suspended' && settings.monitor) E.ctx.resume(); }, true);
+export const micLive = () => !!E.mic && E.ctx && E.ctx.state === 'running';
 export function closeMic() {
   const m = E.mic; if (!m) return;
   m.stream.getTracks().forEach(t => t.stop());
@@ -734,7 +737,7 @@ export async function fixStatic(r) {
   if (r.floor > -50) {
     found.push('Your room or mic is noisy (about ' + Math.round(r.floor) + ' dB when quiet).');
     if (!settings.nr) { settings.nr = true; reopen = true; did.push('Browser noise suppression: on'); }
-    M.gate = true; M.gateDb = Math.round(Math.min(-25, r.floor + 8)); did.push('Room gate: on, closes below ' + M.gateDb + ' dB');
+    M.gate = true; M.gateDb = Math.round(Math.min(-42, r.floor + 6)); did.push('Room gate: on, closes below ' + M.gateDb + ' dB');
     if (settings.inputGain > 2) { settings.inputGain = 1.5; did.push('Input: 150% (a very high input makes hiss louder)'); }
   }
   if (settings.agc) { settings.agc = false; reopen = true; found.push('Auto volume was on. It turns up the hiss whenever you stop singing.'); did.push('Auto volume: off'); }
@@ -868,7 +871,7 @@ export async function testTone(pan) {
 
 // ---------- export ----------
 export async function renderSong(only = null, bypassMaster = false) {
-  const P = app.P, end = songEnd(), sr = 44100, tail = 2.5;
+  const P = app.P, end = songEnd(), sr = Math.max(44100, (E.ctx && E.ctx.sampleRate) || 48000), tail = 2.5; // render at your recording rate, no resampling
   const oc = new OfflineAudioContext(2, Math.ceil((end + tail) * sr), sr);
   await oc.audioWorklet.addModule(workletURL);
   const g = buildGraph(oc, false);
@@ -882,17 +885,22 @@ export async function renderSong(only = null, bypassMaster = false) {
   }
   return oc.startRendering();
 }
-export function encodeWav(buf) {
-  const ch = buf.numberOfChannels, len = buf.length, sr = buf.sampleRate;
-  const dv = new DataView(new ArrayBuffer(44 + len * ch * 2));
+// studio quality WAV: 24-bit by default. 16-bit gets a light dither so quiet fades stay smooth, not grainy.
+export function encodeWav(buf, bits = 24) {
+  const ch = buf.numberOfChannels, len = buf.length, sr = buf.sampleRate, B = bits / 8, size = len * ch * B;
+  const dv = new DataView(new ArrayBuffer(44 + size));
   const w = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
-  w(0, 'RIFF'); dv.setUint32(4, 36 + len * ch * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  w(0, 'RIFF'); dv.setUint32(4, 36 + size, true); w(8, 'WAVE'); w(12, 'fmt ');
   dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, ch, true);
-  dv.setUint32(24, sr, true); dv.setUint32(28, sr * ch * 2, true); dv.setUint16(32, ch * 2, true); dv.setUint16(34, 16, true);
-  w(36, 'data'); dv.setUint32(40, len * ch * 2, true);
+  dv.setUint32(24, sr, true); dv.setUint32(28, sr * ch * B, true); dv.setUint16(32, ch * B, true); dv.setUint16(34, bits, true);
+  w(36, 'data'); dv.setUint32(40, size, true);
   const data = []; for (let c = 0; c < ch; c++) data.push(buf.getChannelData(c));
   let o = 44;
-  for (let i = 0; i < len; i++) for (let c = 0; c < ch; c++) { const s = clamp(data[c][i], -1, 1); dv.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); o += 2; }
+  if (bits === 16) {
+    for (let i = 0; i < len; i++) for (let c = 0; c < ch; c++) { const d = (Math.random() - Math.random()) / 32768; const v = clamp(data[c][i] + d, -1, 1); dv.setInt16(o, Math.round(v < 0 ? v * 0x8000 : v * 0x7fff), true); o += 2; }
+  } else {
+    for (let i = 0; i < len; i++) for (let c = 0; c < ch; c++) { const v = clamp(data[c][i], -1, 1), x = Math.round(v < 0 ? v * 0x800000 : v * 0x7fffff); dv.setUint8(o, x & 255); dv.setUint8(o + 1, (x >> 8) & 255); dv.setUint8(o + 2, (x >> 16) & 255); o += 3; }
+  }
   return new Blob([dv], { type: 'audio/wav' });
 }
 

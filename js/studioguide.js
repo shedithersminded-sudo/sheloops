@@ -7,7 +7,7 @@ import { E, T, ensureCtx, openMic, play, stop, nodeFor, micSettings, applyMicSet
 import { knob, select } from './util.js';
 import { settings, saveSettings } from './store.js';
 import { micPanel } from './micui.js';
-import { presetsTab, previewBar, setRerender } from './fxui.js';
+import { presetsTab, previewBar, setRerender, stackBar } from './fxui.js';
 import { fixTab } from './fixvoice.js';
 
 const STEPS = [
@@ -125,6 +125,7 @@ function soundStep(t, api) {
       el('div', { class: 'fxlib' }, tab('style', 'Vocal styles and effects'), tab('fix', 'Check my voice for problems'))),
     previewBar(t),
     echoCard(t),
+    stackBar(t, () => api.rerender()),
     el('div', { class: 'gcard' }, mode === 'fix' ? fixTab(t, () => api.rerender()) : presetsTab(t)));
 }
 

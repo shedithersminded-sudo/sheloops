@@ -9,7 +9,7 @@ import { $, el, uid, clamp, pct, panFmt, fmtTime, toast, knob, toggle, download,
 import { helpBtn } from './help.js';
 import { app, barDur, songEnd, selTrack, save, snapshot, undo, redo, emit, newVocalTrack } from './state.js';
 import { settings, saveSettings, saveAudio, saveAudioFile, audioCache } from './store.js';
-import { fxTab, presetsTab, buildTab, previewBar, setRerender, addFx } from './fxui.js';
+import { fxTab, presetsTab, buildTab, previewBar, setRerender, addFx, stackBar } from './fxui.js';
 import { arrSlots, arrGet, arrCycle } from './beat.js';
 import { fixTab } from './fixvoice.js';
 import { look, arrangeToolbar, inspectorGrip } from './look.js';
@@ -218,7 +218,9 @@ export function renderStudio() {
     // one screen, like a desk: tools on top, folders left, timeline center, track panel right, mixer bottom
     root.classList.add('prod');
     root.append(modeBar, el('div', { class: 'prodtop' }, tb, eb),
-      el('div', { class: 'prodbody' }, browserPanel(dawCtx), scroller, insp), mixerStrip(dawCtx));
+      el('div', { class: 'prodbody' + (settings.hideInsp ? ' noinsp' : '') }, browserPanel(dawCtx), scroller,
+        settings.hideInsp ? el('button', { class: 'brail inrail', title: 'Show the track panel', onclick: () => { settings.hideInsp = false; saveSettings(); renderStudio(); } }, el('span', {}, 'Track panel')) : insp), mixerStrip(dawCtx));
+    if (!settings.hideInsp) insp.dataset.closable = '1';
     view.append(root);
   } else {
   root.append(modeBar,
@@ -434,6 +436,7 @@ async function deleteTrack(t) {
 }
 
 // ---------- inspector ----------
+const inspClose = () => el('button', { class: 'chip inclose', title: 'Hide the track panel to give the timeline more room', onclick: () => { settings.hideInsp = true; saveSettings(); renderStudio(); } }, 'Hide panel');
 export function renderInspector() {
   const box = $('#inspector'); if (!box) return;
   box.innerHTML = '';
@@ -481,6 +484,15 @@ export function renderInspector() {
     const M = micSettings(), fx = (t.fx || []).filter(f => f.on !== false), go = k => { settings.inspTab = k; saveSettings(); renderInspector(); };
     const stop = (n, label, value, k, cls = '') => el('button', { class: 'vnstop ' + cls + (tab === k ? ' on' : ''), onclick: () => k && go(k) }, el('span', { class: 'vnnum' }, n), el('small', {}, label), el('b', {}, value));
     const hearV = !settings.monitor ? 'Nothing' : M.monFx ? 'Voice + effects' : 'Plain voice';
+    const live = el('div', { class: 'vnlive' });
+    const paint = () => {
+      if (!live.isConnected) return;
+      if (!settings.monitor) live.replaceChildren(el('small', {}, 'You hear nothing from your mic. Pick Plain or + Effects.'));
+      else if (!E.mic || E.ctx.state !== 'running') live.replaceChildren(el('button', { class: 'hot', onclick: async () => { try { await openMic(); await E.ctx.resume(); applyMicSettings(); toast('Mic on. You should hear yourself now.'); } catch { toast('No mic access. Allow the mic in your browser.'); } paint(); } }, 'Start my mic'), el('small', {}, 'Your mic is not open yet.'));
+      else { const pk = peakOf(E.mic.an), d = pk > 0 ? 20 * Math.log10(pk) : -90; live.replaceChildren(el('i', { class: 'vnmeter', style: `--l:${Math.max(0, Math.min(1, (d + 60) / 60)).toFixed(2)}` }), el('small', {}, d > -50 ? 'Hearing you' : 'Mic open. Say something.')); }
+      setTimeout(() => requestAnimationFrame(paint), 120);
+    };
+    requestAnimationFrame(paint);
     return el('div', { class: 'voicenow' },
       stop(1, 'Style', (t.layers || []).length ? t.layers.map(l => l.name || l.pid.replace(/^b:/, '')).join(' + ') : fx.length ? 'My own mix' : 'None yet', 'presets'),
       el('i', { class: 'vnarrow' }),
@@ -490,12 +502,13 @@ export function renderInspector() {
       el('i', { class: 'vnarrow' }),
       el('div', { class: 'vnstop hear' }, el('span', { class: 'vnnum' }, 4), el('small', {}, 'In your ears'), el('b', {}, hearV),
         el('div', { class: 'vnbtns' }, ...[['off', 'Off'], ['dry', 'Plain'], ['fx', '+ Effects']].map(([k, n]) => el('button', { class: 'chip' + ((!settings.monitor ? 'off' : M.monFx ? 'fx' : 'dry') === k ? ' on' : ''), onclick: async () => { settings.monitor = k !== 'off'; M.monFx = k === 'fx'; saveSettings(); if (settings.monitor) { try { await openMic(); } catch { toast('No mic access.'); } } applyMicSettings(); renderInspector(); } }, n)),
-          el('button', { class: 'chip', title: 'Squeal shield and mic settings', onclick: () => openMicPanel() }, 'Shield: ' + (M.sh ? 'custom' : M.shield || 'auto')))));
+          el('button', { class: 'chip', title: 'Squeal shield and mic settings', onclick: () => openMicPanel() }, 'Shield: ' + (M.sh ? 'custom' : M.shield || 'auto'))), live));
   };
   box.append(...[
-    el('div', { class: 'insp-title', style: `--c:${t.color}` }, el('b', {}, t.name), el('span', { class: 'tag' }, t.kind === 'file' ? 'beat file' : 'vocal track'),
+    el('div', { class: 'insp-title', style: `--c:${t.color}` }, el('b', {}, t.name), el('span', { class: 'tag' }, t.kind === 'file' ? 'beat file' : 'vocal track'), (settings.studioLayout || 'producer') === 'producer' && (settings.studioMode || 'guide') === 'full' ? inspClose() : null,
       el('div', { class: 'itabs' }, tabBtn('mix', 'Mix & takes'), tabBtn('fix', 'Fix my voice'), tabBtn('presets', 'Vocal presets'), settings.simple ? null : tabBtn('fx', `Effects (${(t.fx || []).length})`), settings.simple ? null : tabBtn('build', 'Build my sound'))),
     voiceNow(),
+    t.kind === 'file' ? null : stackBar(t, () => { renderInspector(); renderLanes(); }),
     previewBar(t),
     el('div', { class: 'explain tabexplain' }, el('b', {}, 'What this tab does: '), TAB_EXPLAIN[tab] || ''),
     content,

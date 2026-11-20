@@ -172,7 +172,10 @@ export function applyUiFx() {
 }
 // ---------- font ----------
 export const FONTS_UI = [['Comfortaa', 'SHELOOPS look (default)'], ['Fredoka', 'Round and friendly'], ['Baloo 2', 'Bubbly and bold'], ['Nunito', 'Soft and clean'], ['Quicksand', 'Light and airy'], ['Space Grotesk', 'Modern and simple'], ['Cascadia Mono', 'Studio code look (original)']];
+export const BTN_SHAPES = [['pill', 'Pill'], ['soft', 'Soft'], ['leaf', 'Leaf'], ['square', 'Square']];
+export function applyShape() { document.documentElement.dataset.bs = look.btnShape || 'pill'; }
 export function applyFont() {
+  applyShape();
   const f = look.font || 'Comfortaa', mono = f === 'Cascadia Mono';
   document.documentElement.style.setProperty('--font', mono ? '"Cascadia Mono", Consolas, monospace' : `"${f}", "Nunito", system-ui, sans-serif`);
   document.documentElement.style.setProperty('--tw', { regular: 400, bold: 700, heavy: 800 }[look.textWeight || 'bold'] || 700);

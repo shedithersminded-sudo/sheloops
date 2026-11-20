@@ -1,13 +1,24 @@
 {
-  "version": "2.10.0",
+  "version": "2.11.0",
   "date": "2026-11-20",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "New Find and fix my static button in Mic setup: stay quiet 3 seconds and it finds hiss, hum, Bluetooth mics, red levels and crackles, then fixes what it can.",
-    "New Hum remover for electric buzz, and Audio mode: Smooth for fewer crackles with effects. Smooth is now the default.",
-    "Noise remover no longer makes a watery, chirpy static. Recording uses less computer power."
+    "Fixed not hearing yourself: after a reload the mic now opens on your first click, and In your ears shows a live meter or a Start my mic button.",
+    "New On my mic now bar: see every effect on your voice in order. Click one to switch it off, x to take it off, or Clear all.",
+    "Exports are now 24-bit WAV at your recording rate for studio quality.",
+    "Track names and volume no longer overlap. Studio sections have clear Hide and Open headers, and the track panel can be hidden.",
+    "New button shapes: Pill, Soft, Leaf or Square in Appearance. Pill is the new default."
   ],
   "history": [
+    {
+      "version": "2.10.0",
+      "date": "2026-11-20",
+      "notes": [
+        "New Find and fix my static button in Mic setup: stay quiet 3 seconds and it finds hiss, hum, Bluetooth mics, red levels and crackles, then fixes what it can.",
+        "New Hum remover for electric buzz, and Audio mode: Smooth for fewer crackles with effects. Smooth is now the default.",
+        "Noise remover no longer makes a watery, chirpy static. Recording uses less computer power."
+      ]
+    },
     {
       "version": "2.9.0",
       "date": "2026-11-17",

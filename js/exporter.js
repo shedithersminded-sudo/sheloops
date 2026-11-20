@@ -109,7 +109,7 @@ export function openExport() {
   let name = P ? (P.artist ? P.artist + ' - ' : '') + P.name : 'my-sheloops';
   let fmt = 'wav';
   const nameIn = el('input', { value: name, oninput: e => name = e.target.value, spellcheck: 'false' });
-  const fmtSel = el('div', { class: 'seg' }, [['wav', 'WAV (best quality)'], ['mp3', 'MP3 (small, for sharing)']].map(([v, l]) => {
+  const fmtSel = el('div', { class: 'seg' }, [['wav', 'WAV 24-bit (studio quality)'], ['mp3', 'MP3 (small, for sharing)']].map(([v, l]) => {
     const b = el('button', { class: v === fmt ? 'on' : '', disabled: v === 'mp3' && !hasMp3, onclick: () => { fmt = v; for (const x of fmtSel.children) x.classList.toggle('on', x === b); } }, l); return b; }));
   const audioOut = async (buf, suffix = '') => {
     const n = fileName(name) + suffix;

@@ -143,6 +143,23 @@ export function fxTab(t) {
       t.fx.length ? el('button', { onclick: async () => { if (await confirmBox('Remove effects', `Remove all effects from ${t.name}?`, 'Remove')) { snapshot(); t.fx = []; t.layers = []; t.layerBase = null; save(); applyMix(); rerender(); } } }, 'Remove all') : null),
     lib, chain);
 }
+export function stackBar(t, rr) {
+  const re = rr || rerender, fx = t.fx || [], on = fx.filter(f => f.on !== false).length;
+  const chip = (f, i) => el('span', { class: 'stk' + (f.on === false ? ' off' : '') },
+    el('button', { class: 'stkname', title: f.on === false ? 'Off. Click to turn it back on.' : 'On. Click to turn it off.', onclick: () => { f.on = f.on === false; save(); applyMix(); re(); } },
+      el('i', { class: 'stkled' }), el('span', { class: 'stknum' }, i + 1), (FX[f.type] || {}).name || f.type),
+    el('button', { class: 'stkx', title: 'Take it off', onclick: () => { snapshot(); t.fx.splice(i, 1); if (!t.fx.length) { t.presetName = null; t.layers = []; t.layerBase = null; } save(); applyMix(); re(); toast(((FX[f.type] || {}).name || 'Effect') + ' taken off. Ctrl + Z brings it back.'); } }, '×'));
+  return el('div', { class: 'stackbar' + (t.fxBypass ? ' byp' : '') },
+    el('div', { class: 'stkhead' },
+      el('b', {}, 'On my mic now'),
+      el('small', {}, !fx.length ? 'Nothing. Your voice is plain.' : t.fxBypass ? 'All effects are switched off. You hear your plain voice.' : on + ' of ' + fx.length + ' effects on, in this order. Click one to switch it off or on. × takes it off.'),
+      el('span', { class: 'spacer' }),
+      fx.length ? el('button', { class: 'chip', onclick: () => { t.fxBypass = !t.fxBypass; applyMix(); save(); re(); } }, t.fxBypass ? 'Turn all back on' : 'Turn all off') : null,
+      fx.length ? el('button', { class: 'chip danger', onclick: () => { snapshot(); t.fx = []; t.layers = []; t.layerBase = null; t.presetName = null; t.fxBypass = false; save(); applyMix(); re(); toast('All effects taken off. Ctrl + Z brings them back.'); } }, 'Clear all') : null),
+    fx.length || t.presetName ? el('div', { class: 'stkrow' },
+      t.presetName ? el('span', { class: 'stkstyle' }, 'Style: ' + t.presetName) : null,
+      ...fx.flatMap((f, i) => [i ? el('i', { class: 'stkarrow' }) : null, chip(f, i)]).filter(Boolean)) : null);
+}
 export function addFx(t, type) {
   snapshot(); t.fx ||= []; t.fx.push(newFx(type)); save(); applyMix(); rerender();
   toast(`${FX[type].name} added to ${t.name}.`);
