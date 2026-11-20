@@ -240,7 +240,13 @@ const BUILD = {
     const hb = c.createBuffer(2, c.sampleRate * 2, c.sampleRate); for (let ch = 0; ch < 2; ch++) { const d = hb.getChannelData(ch); for (let k = 0; k < d.length; k++) d[k] = Math.random() * 2 - 1; }
     const cr = c.createBufferSource(), hs = c.createBufferSource(), cg = c.createGain(), hg = c.createGain(), tone = c.createBiquadFilter();
     cr.buffer = b; hs.buffer = hb; cr.loop = hs.loop = true; tone.type = 'lowpass';
-    input.connect(out); cr.connect(cg); hs.connect(hg); cg.connect(tone); hg.connect(tone); tone.connect(out); cr.start(); hs.start();
+    // the crackle follows your sound, like a real record: it plays while there is audio and fades away in silence
+    const det = c.createWaveShaper(), sm = c.createBiquadFilter(), sw = c.createWaveShaper(), vca = c.createGain();
+    { const a = new Float32Array(1025); for (let k = 0; k < 1025; k++) a[k] = Math.abs(k / 512 - 1); det.curve = a; }
+    { const a = new Float32Array(1025); for (let k = 0; k < 1025; k++) a[k] = Math.tanh(Math.max(0, k / 512 - 1) * 40); sw.curve = a; }
+    sm.type = 'lowpass'; sm.frequency.value = 4; sm.Q.value = -3.01; vca.gain.value = 0;
+    input.connect(det); det.connect(sm); sm.connect(sw); sw.connect(vca.gain);
+    input.connect(out); cr.connect(cg); hs.connect(hg); cg.connect(tone); hg.connect(tone); tone.connect(vca); vca.connect(out); cr.start(); hs.start();
     return { in: input, out, set(p, _, i) { sp(c, cg.gain, p.crackle * 0.5, i); sp(c, hg.gain, p.hiss * 0.025, i); sp(c, tone.frequency, p.tone, i); }, stop() { cr.stop(); hs.stop(); } };
   },
   exciter(c) {

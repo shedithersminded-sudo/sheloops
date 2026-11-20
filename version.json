@@ -1,11 +1,18 @@
 {
-  "version": "2.13.2",
+  "version": "2.13.3",
   "date": "2026-11-20",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Brave users: the mic page now explains how to turn Brave Shields off for SHELOOPS, since Shields can add noise to audio on purpose."
+    "Fixed a ch ch ch crackle you could hear as soon as the page loaded: Vinyl dust (in styles like Tape Dust and Dusty Sample) played all the time. Now it only crackles while sound is playing, like a real record."
   ],
   "history": [
+    {
+      "version": "2.13.2",
+      "date": "2026-11-20",
+      "notes": [
+        "Brave users: the mic page now explains how to turn Brave Shields off for SHELOOPS, since Shields can add noise to audio on purpose."
+      ]
+    },
     {
       "version": "2.13.1",
       "date": "2026-11-20",
