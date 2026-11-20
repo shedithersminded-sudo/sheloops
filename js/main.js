@@ -26,6 +26,10 @@ import { renderArt, artKey } from './artui.js';
 import { renderPlayer, playerTick } from './player.js';
 import { nowPlayingTick } from './nowplaying.js';
 import { initUpdates } from './update.js';
+import { mountMicDock } from './micui.js';
+import { recState } from './engine.js';
+window.__shRec = () => recState();
+mountMicDock();
 import { renderHome, renderProjects, renderMic, renderLearn, createSong } from './pages.js';
 
 setDecoder(async ab => (await ensureCtx()).decodeAudioData(ab));

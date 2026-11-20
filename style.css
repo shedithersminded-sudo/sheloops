@@ -2166,3 +2166,15 @@ button { transition: box-shadow .15s, border-color .15s, background-color .15s, 
 button:hover:not(:disabled) { box-shadow: 0 0 14px -6px var(--led); }
 button.hot { box-shadow: 0 0 16px -6px var(--led), inset 0 1px 0 rgba(255,255,255,.35); }
 .shapepick .shp-pill { border-radius: 999px; } .shapepick .shp-soft { border-radius: 10px; } .shapepick .shp-leaf { border-radius: 14px 3px 14px 3px; } .shapepick .shp-square { border-radius: 3px; }
+
+/* ===== tall mic meter on the right edge ===== */
+.micdock { position: fixed; right: 6px; top: 50%; transform: translate(140%, -50%); z-index: 50; display: grid; justify-items: center; gap: 4px; padding: 8px 6px; border-radius: 16px; background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid color-mix(in srgb, var(--led) 40%, var(--line)); box-shadow: 0 0 20px -8px var(--led); transition: transform .3s; pointer-events: none; }
+.micdock.on { transform: translate(0, -50%); }
+.micdock b { font-size: 10px; letter-spacing: .14em; color: var(--led); }
+.micdock.rec b { color: #ff3b5c; text-shadow: 0 0 8px #ff3b5c; animation: recPulse 1s ease-in-out infinite; }
+.micdock.rec { border-color: #ff3b5c; box-shadow: 0 0 22px -6px #ff3b5c; }
+.micdock.clip { border-color: #ff3b5c; }
+.micdock small { font-size: 10px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.micdock canvas { width: 44px; height: 220px; }
+@keyframes recPulse { 50% { opacity: .4; } }
+@media (max-width: 700px) { .micdock canvas { height: 140px; } }

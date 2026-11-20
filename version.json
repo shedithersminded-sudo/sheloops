@@ -1,14 +1,23 @@
 {
-  "version": "2.12.0",
+  "version": "2.13.0",
   "date": "2026-11-20",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Sound quality pass: new studio compressor that never turns up your room hiss. The old one secretly boosted quiet noise up to 16 dB, mostly in the De-esser.",
-    "Limiter effect is now a true limiter that never goes past its ceiling.",
-    "New reverb: a real room sound with early reflections and a tail that gets darker as it fades. Echo repeats stay clean instead of muddy.",
-    "Fixed filters that had a small hidden bump. Distortion and Robot keep an even volume."
+    "Fixed your voice cutting in and out: call-style echo cancel and noise suppression are now off on headphones, the room gate no longer flutters, and the squeal guard listens only to your mic, not the beat.",
+    "Fix my squeal and Find and fix my static no longer turn on settings that chop singing.",
+    "New tall mic meter on the right edge: shows your level, a peak line and your voice over the last few seconds. Turns red with REC while recording."
   ],
   "history": [
+    {
+      "version": "2.12.0",
+      "date": "2026-11-20",
+      "notes": [
+        "Sound quality pass: new studio compressor that never turns up your room hiss. The old one secretly boosted quiet noise up to 16 dB, mostly in the De-esser.",
+        "Limiter effect is now a true limiter that never goes past its ceiling.",
+        "New reverb: a real room sound with early reflections and a tail that gets darker as it fades. Echo repeats stay clean instead of muddy.",
+        "Fixed filters that had a small hidden bump. Distortion and Robot keep an even volume."
+      ]
+    },
     {
       "version": "2.11.0",
       "date": "2026-11-20",

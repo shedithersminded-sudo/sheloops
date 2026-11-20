@@ -135,6 +135,38 @@ export function clickPicker() {
     el('input', { type: 'range', min: 0, max: 1, step: 0.01, value: settings.clickVol ?? 0.6, title: 'Click volume', oninput: e => { settings.clickVol = +e.target.value; saveSettings(); } }),
     el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!settings.metro, onchange: e => { settings.metro = e.target.checked; saveSettings(); } }), 'On'));
 }
+export function mountMicDock() {
+  const cv = el('canvas', { width: 44, height: 220 }), lab = el('b', {}, 'MIC'), dbt = el('small', {}, '');
+  const dock = el('div', { class: 'micdock', title: 'Your mic level. Aim for the yellow when you sing loud. Red means too loud.' }, lab, cv, dbt);
+  document.body.append(dock);
+  const hist = new Float32Array(110); let hp = 0, hold = 0, holdT = 0, clipT = 0;
+  const g = cv.getContext('2d'), W = 44, H = 220;
+  const loop = () => {
+    const m = E.mic, on = !!m && E.ctx && E.ctx.state === 'running';
+    dock.classList.toggle('on', on);
+    if (on) {
+      const pk = peakOf(m.an), d = pk > 0 ? 20 * Math.log10(pk) : -90, lv = Math.max(0, Math.min(1, (d + 60) / 60)), now = performance.now();
+      if (lv > hold || now - holdT > 1200) { hold = lv; holdT = now; }
+      if (pk > 0.98) clipT = now;
+      hist[hp++ % hist.length] = lv;
+      const rec = !!(window.__shRec && window.__shRec());
+      lab.textContent = rec ? 'REC' : 'MIC'; dock.classList.toggle('rec', rec); dock.classList.toggle('clip', now - clipT < 1500);
+      dbt.textContent = d > -89 ? Math.round(d) + '' : '-';
+      g.clearRect(0, 0, W, H);
+      const grad = g.createLinearGradient(0, H, 0, 0); grad.addColorStop(0, '#3ddc84'); grad.addColorStop(0.7, '#ffd23f'); grad.addColorStop(0.9, '#ff8c42'); grad.addColorStop(1, '#ff3b5c');
+      // left: the level bar with a peak line
+      g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(2, 0, 14, H);
+      g.fillStyle = grad; g.fillRect(2, H - lv * H, 14, lv * H);
+      g.fillStyle = '#fff'; g.fillRect(2, H - hold * H - 1, 14, 2);
+      // right: your voice over the last few seconds, moving up
+      g.fillStyle = grad;
+      for (let i = 0; i < hist.length; i++) { const v = hist[(hp + i) % hist.length], y = i * 2, w = v * 24; g.globalAlpha = 0.35 + 0.65 * (i / hist.length); g.fillRect(31 - w / 2, y, Math.max(1, w), 2); }
+      g.globalAlpha = 1;
+    }
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
 export function openMicPanel() {
   let close; const wrap = el('div', { class: 'micwrap' });
   const draw = () => wrap.replaceChildren(micPanel(draw));

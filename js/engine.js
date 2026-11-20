@@ -709,10 +709,10 @@ function applyShield() {
 }
 // One button that sets everything up the safe way, and says what it did
 export async function fixSqueal() {
-  const M = micSettings(); M.shield = 'strong'; delete M.sh; M.guard = true; M.monVol = Math.min(M.monVol, 0.7); M.lowcut = Math.max(M.lowcut, 100);
-  settings.ec = true; settings.nr = true; saveSettings();
+  const M = micSettings(); M.shield = 'strong'; delete M.sh; M.guard = true; M.monVol = Math.min(M.monVol, 0.7); M.lowcut = Math.max(M.lowcut, 100); M.gate = false;
+  settings.ec = !!M.speakers; settings.nr = false; settings.agc = false; saveSettings();
   if (E.mic) { await reopenMic().catch(() => { }); } clearNotches(); applyMicSettings();
-  return ['Squeal shield: strong (you can fine tune it)', 'Feedback guard: on', 'Echo cancel and noise suppression: on', 'Hear myself volume: 70% or less', 'Low cut: 100 Hz or more', 'Your effects stay on'];
+  return ['Squeal shield: strong (you can fine tune it)', 'Feedback guard: on', M.speakers ? 'Echo cancel: on (you are on speakers)' : 'Call-style echo cancel and noise suppression: off (they chop singing in and out)', 'Room gate: off (no more cutting in and out)', 'Hear myself volume: 70% or less', 'Low cut: 100 Hz or more', 'Your effects stay on'];
 }
 // always the same object (filled in place) so every panel edits the real settings
 export const micSettings = () => { const m = settings.mic ||= {}; for (const [k, v] of Object.entries(MIC_DEF)) if (m[k] === undefined) m[k] = v; return m; };
@@ -754,8 +754,7 @@ export async function fixStatic(r) {
   if (r.hum) { found.push('A ' + r.hum + ' Hz electric buzz (hum). It often comes from a charger, a cable, or a USB hub.'); M.hum = r.hum; did.push('Hum remover: on at ' + r.hum + ' Hz'); }
   if (r.floor > -50) {
     found.push('Your room or mic is noisy (about ' + Math.round(r.floor) + ' dB when quiet).');
-    if (!settings.nr) { settings.nr = true; reopen = true; did.push('Browser noise suppression: on'); }
-    M.gate = true; M.gateDb = Math.round(Math.min(-42, r.floor + 6)); did.push('Room gate: on, closes below ' + M.gateDb + ' dB');
+    if (M.denoise < 0.25) { M.denoise = 0.3; did.push('Noise remover: 30% (smooth, made for singing)'); }
     if (settings.inputGain > 2) { settings.inputGain = 1.5; did.push('Input: 150% (a very high input makes hiss louder)'); }
   }
   if (settings.agc) { settings.agc = false; reopen = true; found.push('Auto volume was on. It turns up the hiss whenever you stop singing.'); did.push('Auto volume: off'); }
@@ -776,7 +775,7 @@ function startFeedbackGuard() {
   clearInterval(guardTimer); let hits = 0, lastBin = -1;
   guardTimer = setInterval(() => {
     const m = E.mic, g = E.g; if (!m || !g || !g.analyser || !micSettings().guard || !(settings.monitor || rec)) { hits = 0; return; }
-    const an = g.analyser; an.getFloatFrequencyData(fBuf);
+    const an = m.an; if (an.fftSize !== 2048) return; an.getFloatFrequencyData(fBuf);
     const binHz = E.ctx.sampleRate / an.fftSize, lo = Math.floor(400 / binHz), hi = Math.min(fBuf.length - 1, Math.floor(9000 / binHz));
     let pk = -Infinity, pb = 0, sum = 0, n = 0;
     for (let i = lo; i <= hi; i++) { const v = fBuf[i]; if (v > pk) { pk = v; pb = i; } sum += v; n++; }
@@ -784,7 +783,7 @@ function startFeedbackGuard() {
     // a howl is one loud, very narrow pitch that stays put
     if (pk > -32 && pk - mean > 38 && fBuf[pb - 3] < pk - 18 && fBuf[pb + 3] < pk - 18 && Math.abs(pb - lastBin) <= 1) hits++; else hits = Math.max(0, hits - 1);
     lastBin = pb;
-    if (hits >= (micSettings().shield === 'strong' ? 2 : 3)) { hits = 0; killFeedback(pb * binHz); }
+    if (hits >= (micSettings().shield === 'strong' ? 4 : 6)) { hits = 0; killFeedback(pb * binHz); }
   }, 80);
 }
 function killFeedback(hz) {
@@ -796,7 +795,7 @@ function killFeedback(hz) {
     m.notchIn.disconnect(); let prev = m.notchIn; for (const x of m.notches) { x.f.disconnect(); prev.connect(x.f); prev = x.f; } prev.connect(m.notchOut);
   }
   // duck the monitor for a moment so the ringing dies down
-  const g = m.mon.gain, t = c.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value * 0.15, t); g.setTargetAtTime(monLevel() * (settings.monitor ? 1 : 0), t + 1.2, 0.4);
+  const g = m.mon.gain, t = c.currentTime; g.cancelScheduledValues(t); g.setTargetAtTime(monLevel() * 0.4 * (settings.monitor ? 1 : 0), t, 0.05); g.setTargetAtTime(monLevel() * (settings.monitor ? 1 : 0), t + 0.8, 0.5);
   // squealing again and again: turn the shield up by itself
   const now = performance.now(); kills = kills.filter(k => now - k < 12000); kills.push(now);
   const M = micSettings(); if (kills.length >= 2 && M.shield === 'auto') { M.shield = 'strong'; saveSettings(); applyShield(); g.setTargetAtTime(monLevel() * (settings.monitor ? 1 : 0), t + 1.2, 0.4); emit('shield', 'strong'); }

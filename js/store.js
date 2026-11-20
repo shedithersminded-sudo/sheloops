@@ -87,5 +87,6 @@ const DEFAULTS = {
   countIn: true, metro: true, snap: true, zoom: 40, lastProject: null, wizardDone: false,
 };
 export const settings = { ...DEFAULTS, ...(JSON.parse(localStorage.getItem('loopden.settings') || '{}')) };
+if (!settings.callFix) { settings.callFix = 1; const M = settings.mic || {}; if (!M.speakers) { settings.ec = false; settings.nr = false; settings.agc = false; } if (M.gate && M.gateDb > -55) M.gate = false; localStorage.setItem('loopden.settings', JSON.stringify(settings)); }
 if (!settings.latV) { settings.latV = 1; if (settings.latency === 'interactive') settings.latency = 'balanced'; localStorage.setItem('loopden.settings', JSON.stringify(settings)); }
 export function saveSettings() { localStorage.setItem('loopden.settings', JSON.stringify(settings)); }
