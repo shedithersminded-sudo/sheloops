@@ -348,11 +348,11 @@ class Denoise extends AudioWorkletProcessor {
         if (this.frames < 10) this.noise[k] = this.frames === 1 ? mag : Math.min(nz, mag) * 0.5 + nz * 0.5;
         else if (mag < nz * 2) this.noise[k] = nz * 0.97 + mag * 0.03; else this.noise[k] = nz * 1.002;
       }
-      const sub = this.noise[k] * (1 + 2 * amount);
+      const sub = this.noise[k] * (1 + 1.2 * amount);
       let gt = mag > 1e-9 ? Math.max(0, 1 - sub / mag) : 0;
-      gt = Math.max(gt, Math.pow(10, -amount * 1.5)); // floor: up to -30 dB at full amount
-      const gp = this.g[k]; this.g[k] = gt > gp ? gp + (gt - gp) * 0.6 : gp + (gt - gp) * 0.25;
-      const gg = this.g[k];
+      gt = Math.max(gt, Math.pow(10, -amount * 1.1)); // floor: up to -22 dB at full amount, so the room never turns to chirps
+      const gp = this.g[k]; this.g[k] = gt > gp ? gp + (gt - gp) * 0.5 : gp + (gt - gp) * 0.08;
+      const gg = k > 0 && k < B - 1 ? (this.g[k - 1] + this.g[k] * 2 + this.g[k + 1]) / 4 : this.g[k];
       re[k] *= gg; im[k] *= gg;
       if (k > 0 && k < N / 2) { re[N - k] = re[k]; im[N - k] = -im[k]; }
     }

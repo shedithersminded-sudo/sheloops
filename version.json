@@ -1,12 +1,21 @@
 {
-  "version": "2.9.0",
-  "date": "2026-11-17",
+  "version": "2.10.0",
+  "date": "2026-11-20",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Full studio now opens in the new Producer layout: folders on the left, timeline in the middle, track panel on the right, mixer at the bottom, all on one screen.",
-    "Switch back to the old stacked look with Layout: Classic at the top of the Full studio."
+    "New Find and fix my static button in Mic setup: stay quiet 3 seconds and it finds hiss, hum, Bluetooth mics, red levels and crackles, then fixes what it can.",
+    "New Hum remover for electric buzz, and Audio mode: Smooth for fewer crackles with effects. Smooth is now the default.",
+    "Noise remover no longer makes a watery, chirpy static. Recording uses less computer power."
   ],
   "history": [
+    {
+      "version": "2.9.0",
+      "date": "2026-11-17",
+      "notes": [
+        "Full studio now opens in the new Producer layout: folders on the left, timeline in the middle, track panel on the right, mixer at the bottom, all on one screen.",
+        "Switch back to the old stacked look with Layout: Classic at the top of the Full studio."
+      ]
+    },
     {
       "version": "2.8.3",
       "date": "2026-11-17",

@@ -8,10 +8,16 @@ import { playString, playExtra, EXTRA_ENGINES, playPerc, PERC, isString } from '
 
 const WORKLET = `
 class Cap extends AudioWorkletProcessor {
-  constructor() { super(); this.on = false; this.port.onmessage = e => { this.on = e.data.rec; }; }
+  constructor() { super(); this.on = false; this.b = null; this.port.onmessage = e => { this.on = e.data.rec; if (!this.on) this.flush(); }; }
+  flush() { const b = this.b; this.b = null; if (b && b.n) this.port.postMessage({ t: b.t, d: b.d.map(c => c.slice(0, b.n)) }); }
   process(inputs) {
     const i = inputs[0];
-    if (this.on && i && i[0]) this.port.postMessage({ t: currentTime, d: i.map(c => c.slice(0)) });
+    if (this.on && i && i[0]) {
+      const n = i[0].length;
+      if (!this.b || this.b.d.length !== i.length) { this.flush(); this.b = { t: currentTime, n: 0, d: i.map(() => new Float32Array(512)) }; }
+      const b = this.b; for (let c = 0; c < i.length; c++) b.d[c].set(i[c], b.n); b.n += n;
+      if (b.n + n > 512) this.flush();
+    }
     return true;
   }
 }
@@ -636,7 +642,8 @@ export async function openMic() {
   hp.type = 'highpass'; hp.Q.value = 0.707; body.type = 'lowshelf'; body.frequency.value = 180; mud.type = 'peaking'; mud.frequency.value = 350; mud.Q.value = 1;
   pres.type = 'peaking'; pres.frequency.value = 3200; pres.Q.value = 0.8; air.type = 'highshelf'; air.frequency.value = 10000;
   const notchIn = c.createGain(), notchOut = c.createGain(), gate = new AudioWorkletNode(c, 'gate', { outputChannelCount: [settings.mono ? 1 : 2] });
-  src.connect(gain); gain.connect(hp); hp.connect(body); body.connect(mud); mud.connect(pres); pres.connect(air); air.connect(notchIn); notchIn.connect(notchOut);
+  const hum = [1, 2, 3, 4].map(() => { const f = c.createBiquadFilter(); f.type = 'allpass'; f.Q.value = 18; return f; });
+  src.connect(gain); gain.connect(hp); hp.connect(hum[0]); hum[0].connect(hum[1]); hum[1].connect(hum[2]); hum[2].connect(hum[3]); hum[3].connect(body); body.connect(mud); mud.connect(pres); pres.connect(air); air.connect(notchIn); notchIn.connect(notchOut);
   notchOut.connect(gate); gate.connect(post);
   post.connect(an); post.connect(cap); cap.connect(sink); sink.connect(c.destination); post.connect(mon);
   // squeal shield on what you hear (never on what is recorded): trims the ringing range, keeps the pitch moving very slightly so a howl cannot build up, and caps the level
@@ -645,7 +652,7 @@ export async function openMic() {
   shLim.attack.value = 0.002; shLim.release.value = 0.12; shLim.knee.value = 0;
   mon.connect(shHP); shHP.connect(shLP); shLP.connect(shDly); shDly.connect(shLim); shLim.connect(shOut);
   cap.port.onmessage = e => { if (rec) rec.chunks.push(e.data); };
-  E.mic = { stream, src, gain, an, cap, sink, mon, post, hp, body, mud, pres, air, notchIn, notchOut, gate, notches: [], dn: null, clips: 0, shHP, shLP, shDly, shLfo, shDep, shLim, shOut };
+  E.mic = { hum, stream, src, gain, an, cap, sink, mon, post, hp, body, mud, pres, air, notchIn, notchOut, gate, notches: [], dn: null, clips: 0, shHP, shLP, shDly, shLfo, shDep, shLim, shOut };
   applyMicSettings();
   updateMonitor();
   startFeedbackGuard();
@@ -669,7 +676,7 @@ export function updateMonitor() {
   else m.mon.gain.value = 0;
 }
 // ---------- mic sound settings ----------
-const MIC_DEF = { lowcut: 80, body: 0, mud: 0, presence: 0, air: 0, gate: false, gateDb: -50, denoise: 0, monVol: 0.8, monFx: true, speakers: false, guard: true, shield: 'auto' };
+const MIC_DEF = { hum: 'off', lowcut: 80, body: 0, mud: 0, presence: 0, air: 0, gate: false, gateDb: -50, denoise: 0, monVol: 0.8, monFx: true, speakers: false, guard: true, shield: 'auto' };
 // Squeal shield levels for what you hear. Off: untouched. Auto: light, you will not notice it. Strong: for speakers or a room that keeps squealing.
 export const SHIELDS = { off: { hp: 20, lp: 20000, dep: 0, thr: 0, cap: 1.5 }, auto: { hp: 70, lp: 15000, dep: 0, thr: -8, cap: 1.2 }, strong: { hp: 130, lp: 9500, dep: 0.00012, thr: -16, cap: 0.85 } };
 export const shieldNow = () => { const M = micSettings(); return { ...(SHIELDS[M.shield] || SHIELDS.auto), ...(M.sh || {}) }; };
@@ -692,6 +699,7 @@ export function applyMicSettings() {
   const m = E.mic; if (!m) return; const M = micSettings(), c = E.ctx, t = c.currentTime;
   m.hp.frequency.setTargetAtTime(M.lowcut, t, 0.02); m.body.gain.setTargetAtTime(M.body, t, 0.02); m.mud.gain.setTargetAtTime(M.mud, t, 0.02);
   m.pres.gain.setTargetAtTime(M.presence, t, 0.02); m.air.gain.setTargetAtTime(M.air, t, 0.02);
+  m.hum.forEach((f, i) => { const hz = +M.hum || 0; f.type = hz ? 'notch' : 'allpass'; f.frequency.value = hz ? hz * (i + 1) : 1000; });
   m.gate.parameters.get('on').value = M.gate ? 1 : 0; m.gate.parameters.get('threshold').value = M.gateDb;
   // room noise remover goes in only when it is turned up (it adds a tiny delay, which recording makes up for)
   const want = M.denoise > 0.01;
@@ -700,6 +708,44 @@ export function applyMicSettings() {
   if (m.dn) m.dn.parameters.get('amount').value = M.denoise;
   E.micDelay = m.dn ? 1024 / c.sampleRate : 0;
   updateMonitor();
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+// static check: listens to the room for 3 seconds and finds the cause
+export async function checkStatic() {
+  const m = await openMic(), c = E.ctx, an = c.createAnalyser(); an.fftSize = 16384; an.smoothingTimeConstant = 0; m.gain.connect(an);
+  const td = new Float32Array(an.fftSize), fd = new Float32Array(an.frequencyBinCount), acc = new Float64Array(fd.length), rms = []; let n = 0;
+  const t0 = performance.now();
+  while (performance.now() - t0 < 3000) { await sleep(150); an.getFloatTimeDomainData(td); let s = 0; for (const v of td) s += v * v; rms.push(10 * Math.log10(s / td.length + 1e-12)); an.getFloatFrequencyData(fd); for (let k = 0; k < fd.length; k++) acc[k] += fd[k]; n++; }
+  m.gain.disconnect(an);
+  const bin = c.sampleRate / an.fftSize, lv = hz => { const k = Math.round(hz / bin); let mx = -200; for (let j = k - 1; j <= k + 1; j++) mx = Math.max(mx, acc[j] / n); return mx; };
+  const around = hz => { const v = []; for (let d = 6; d <= 14; d += 2) v.push(lv(hz - d), lv(hz + d)); v.sort((a, b) => a - b); return v[v.length >> 1]; };
+  const score = base => [1, 2, 3, 4].reduce((s, h) => s + Math.max(0, lv(base * h) - around(base * h)), 0) / 4;
+  const s50 = score(50), s60 = score(60);
+  rms.sort((a, b) => a - b);
+  const tr = m.stream.getAudioTracks()[0], st = tr.getSettings ? tr.getSettings() : {}, label = tr.label || '';
+  return { floor: rms[rms.length >> 1], hum: Math.max(s50, s60) > 8 ? (s50 > s60 ? '50' : '60') : null, humDb: Math.max(s50, s60), label, rate: st.sampleRate || 0,
+    bt: /bluetooth|hands-free|handsfree|headset|airpods|buds|\bwh-|\bwf-/i.test(label) || (st.sampleRate > 0 && st.sampleRate <= 24000), clips: m.clips || 0 };
+}
+// fixes what can be fixed, and says plainly what it found and what it changed
+export async function fixStatic(r) {
+  const M = micSettings(), found = [], did = []; let reopen = false, reload = false;
+  if (r.bt) found.push('Your mic looks like a Bluetooth headset (' + (r.label || 'wireless') + '). Bluetooth mics send low quality sound that crackles and buzzes. Use a wired mic, wired headphones, or your computer mic. The app cannot fix this one.');
+  if (r.hum) { found.push('A ' + r.hum + ' Hz electric buzz (hum). It often comes from a charger, a cable, or a USB hub.'); M.hum = r.hum; did.push('Hum remover: on at ' + r.hum + ' Hz'); }
+  if (r.floor > -50) {
+    found.push('Your room or mic is noisy (about ' + Math.round(r.floor) + ' dB when quiet).');
+    if (!settings.nr) { settings.nr = true; reopen = true; did.push('Browser noise suppression: on'); }
+    M.gate = true; M.gateDb = Math.round(Math.min(-25, r.floor + 8)); did.push('Room gate: on, closes below ' + M.gateDb + ' dB');
+    if (settings.inputGain > 2) { settings.inputGain = 1.5; did.push('Input: 150% (a very high input makes hiss louder)'); }
+  }
+  if (settings.agc) { settings.agc = false; reopen = true; found.push('Auto volume was on. It turns up the hiss whenever you stop singing.'); did.push('Auto volume: off'); }
+  if (M.denoise > 0.35) { found.push('Noise remover was at ' + Math.round(M.denoise * 100) + '%. That high, it makes a watery, chirpy static.'); M.denoise = 0.3; did.push('Noise remover: 30%'); }
+  if (r.clips) { found.push('Your mic went into the red. That sounds like crackle or buzz.'); settings.inputGain = Math.max(0.3, settings.inputGain * 0.7); if (E.mic) E.mic.clips = 0; did.push('Input: ' + Math.round(settings.inputGain * 100) + '%'); }
+  if (M.lowcut < 80) { M.lowcut = 90; did.push('Low cut: 90 Hz (removes rumble)'); }
+  if (settings.latency === 'interactive') { settings.latency = 'balanced'; reload = true; found.push('Audio was on the lowest delay. With effects on, a busy computer cannot keep up and it crackles.'); did.push('Audio mode: Smooth (needs one reload)'); }
+  saveSettings();
+  if (E.mic) { E.mic.gain.gain.value = settings.inputGain; if (reopen) await reopenMic().catch(() => { }); }
+  applyMicSettings();
+  return { found, did, reload };
 }
 export function clearNotches() { const m = E.mic; if (!m) return; m.notchIn.disconnect(); for (const n of m.notches) n.f.disconnect(); m.notches = []; m.notchIn.connect(m.notchOut); emit('feedback'); }
 // ---------- feedback guard: hears the howl and stops it ----------

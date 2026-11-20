@@ -83,8 +83,9 @@ export async function cleanupAudio() {
 // ---- settings ----
 const DEFAULTS = {
   simple: true, inputId: '', outputId: '', mono: true, inputGain: 1, monitor: false,
-  nr: false, agc: false, ec: false, latency: 'interactive', sampleRate: 0,
+  nr: false, agc: false, ec: false, latency: 'balanced', sampleRate: 0,
   countIn: true, metro: true, snap: true, zoom: 40, lastProject: null, wizardDone: false,
 };
 export const settings = { ...DEFAULTS, ...(JSON.parse(localStorage.getItem('loopden.settings') || '{}')) };
+if (!settings.latV) { settings.latV = 1; if (settings.latency === 'interactive') settings.latency = 'balanced'; localStorage.setItem('loopden.settings', JSON.stringify(settings)); }
 export function saveSettings() { localStorage.setItem('loopden.settings', JSON.stringify(settings)); }

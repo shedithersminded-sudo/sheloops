@@ -2111,3 +2111,7 @@ button.bitem { cursor: pointer; }
 .studio.prod > .mixstrip { flex: 0 0 auto; }
 @media (max-width: 1100px) { .studio.prod { height: auto; } .prodbody { grid-template-columns: 1fr; } .prodbody > .tl-scroll { min-height: 360px; } .prodbody > .sbrowser { max-height: 260px; } }
 .studio.prod { height: calc(100vh - 175px); }
+
+.staticbox { margin-bottom: 8px; } .staticbox > div { margin-top: 6px; }
+.staticout ul { margin: 4px 0 6px; padding-left: 18px; } .staticout .okl li::marker { content: '\2713  '; color: var(--led); }
+.statictips summary { cursor: pointer; font-weight: 700; margin-top: 6px; } .statictips ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }

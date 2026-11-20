@@ -3,7 +3,7 @@ import { el, toast, knob, modal } from './util.js';
 import { helpBtn } from './help.js';
 import { on } from './state.js';
 import { CLICKS, click, ensureCtx, shieldNow, SHIELDS } from './engine.js';
-import { E, openMic, reopenMic, setInputGain, micSettings, applyMicSettings, clearNotches, updateMonitor, peakOf, rmsOf, fixSqueal } from './engine.js';
+import { E, openMic, reopenMic, setInputGain, micSettings, applyMicSettings, clearNotches, updateMonitor, peakOf, rmsOf, fixSqueal, checkStatic, fixStatic } from './engine.js';
 import { settings, saveSettings } from './store.js';
 
 export const MIC_PRESETS = {
@@ -12,7 +12,7 @@ export const MIC_PRESETS = {
   'Laptop or phone mic': { lowcut: 150, body: 1, mud: -4, presence: 3, air: 2 },
   'Bright and clear': { lowcut: 100, body: 0, mud: -2, presence: 3, air: 4 },
   'Warm': { lowcut: 70, body: 2, mud: -1, presence: -1, air: -1 },
-  'Noisy room': { lowcut: 160, body: -2, mud: -3, presence: 2, air: -2, gate: true, denoise: 0.55 },
+  'Noisy room': { lowcut: 160, body: -2, mud: -3, presence: 2, air: -2, gate: true, denoise: 0.3 },
 };
 const db = v => (v <= 0.00001 ? -90 : 20 * Math.log10(v));
 export function micPanel(rerender) {
@@ -41,6 +41,7 @@ export function micPanel(rerender) {
   const presetOn = n => Object.entries(MIC_PRESETS[n]).every(([k, v]) => M[k] === v);
   const sect = (title, help, ...kids) => el('div', { class: 'micsect' }, el('div', { class: 'micsect-t' }, title, help ? helpBtn(help) : null), ...kids);
   return el('div', { class: 'micpanel' },
+    staticBox(rerender),
     el('div', { class: 'explain squealbox', style: 'display:block' }, el('b', {}, 'Hear a high squeal? '), 'That is feedback: your speakers going back into your mic, round and round. Press the button and SHELOOPS sets everything up the safe way. Headphones fix it best.', el('div', {}, fixButton(rerender))),
     sect('Level', 'micLevel', meter,
       el('div', { class: 'knobrow' }, knob('Input', 0.1, 4, 0.01, settings.inputGain, v => setInputGain(v), v => Math.round(v * 100) + '%', null, 'dial'),
@@ -51,7 +52,11 @@ export function micPanel(rerender) {
         knob('Noise remover', 0, 1, 0.01, M.denoise, v => set('denoise', v), v => v < 0.01 ? 'off' : Math.round(v * 100) + '%', null, 'dial'),
         knob('Gate', -80, -20, 1, M.gateDb, v => set('gateDb', v), v => v + ' dB', null, 'dial')),
       el('div', { class: 'fxtop' }, el('button', { class: 'tog' + (M.gate ? ' on' : ''), onclick: e => { set('gate', !M.gate); e.target.classList.toggle('on', M.gate); e.target.textContent = M.gate ? 'Gate ON' : 'Gate OFF'; } }, M.gate ? 'Gate ON' : 'Gate OFF'),
-        el('button', { class: 'hot', onclick: e => measure(e.target) }, 'Measure my room (2 seconds of quiet)'))),
+        el('button', { class: 'hot', onclick: e => measure(e.target) }, 'Measure my room (2 seconds of quiet)')),
+      el('div', { class: 'fxlib' }, el('small', { class: 'hint' }, 'Hum remover (for buzz):'),
+        ...[['off', 'Off'], ['60', '60 Hz (US, Canada)'], ['50', '50 Hz (UK, Europe, most others)']].map(([k, n]) => el('button', { class: 'chip' + (M.hum === k ? ' on' : ''), onclick: () => { set('hum', k); rerender(); } }, n))),
+      el('div', { class: 'fxlib' }, el('small', { class: 'hint' }, 'Audio mode:'),
+        ...[['interactive', 'Lowest delay'], ['balanced', 'Smooth (fewer crackles)'], ['playback', 'Smoothest']].map(([k, n]) => el('button', { class: 'chip' + (settings.latency === k ? ' on' : ''), onclick: () => { settings.latency = k; saveSettings(); toast('Reloading to switch the audio mode...'); setTimeout(() => location.reload(), 900); } }, n)))),
     sect('Mic EQ', 'micEq',
       el('div', { class: 'fxlib' }, ...Object.keys(MIC_PRESETS).map(n => el('button', { class: 'chip' + (presetOn(n) ? ' on' : ''), onclick: () => { Object.assign(M, MIC_PRESETS[n]); saveSettings(); applyMicSettings(); rerender(); toast(`Mic: ${n}.`); } }, n))),
       el('div', { class: 'knobrow' },
@@ -71,6 +76,34 @@ export function micPanel(rerender) {
       el('div', { class: 'fxtop' }, el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!settings.ec, onchange: async e => { settings.ec = e.target.checked; saveSettings(); await reopenMic().catch(() => { }); } }), 'Echo cancel'),
         el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: !!settings.nr, onchange: async e => { settings.nr = e.target.checked; saveSettings(); await reopenMic().catch(() => { }); } }), 'Browser noise suppression'))),
     sect('Feedback guard', 'feedbackGuard', el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: M.guard, onchange: e => { set('guard', e.target.checked); showFb(); } }), 'Stop the squeal automatically'), fb));
+}
+// Static, hiss or buzz: listens for 3 seconds, finds the cause, fixes what it can, and shows how to fix the rest
+export function staticBox(rerender) {
+  const out = el('div', { class: 'staticout' });
+  const btn = el('button', { class: 'hot', onclick: async () => {
+    btn.disabled = true; btn.textContent = 'Stay quiet for 3 seconds...';
+    try {
+      const r = await checkStatic(), res = await fixStatic(r);
+      out.replaceChildren(...[
+        res.found.length ? el('div', {}, el('b', {}, 'What I found'), el('ul', {}, ...res.found.map(x => el('li', {}, x)))) : el('p', {}, 'Your mic sounds clean right now. If the static only comes with effects on, see the tips below.'),
+        res.did.length ? el('div', {}, el('b', {}, 'What I changed'), el('ul', { class: 'okl' }, ...res.did.map(x => el('li', {}, x)))) : null,
+        res.reload ? el('button', { class: 'hot', onclick: () => location.reload() }, 'Reload to finish') : null].filter(Boolean));
+    } catch { out.replaceChildren(el('p', {}, 'No mic access. Allow the mic in your browser and try again.')); }
+    btn.disabled = false; btn.textContent = 'Check again';
+  } }, 'Find and fix my static');
+  const tip = (b, t) => el('li', {}, el('b', {}, b + ' '), t);
+  return el('div', { class: 'explain staticbox', style: 'display:block' },
+    el('b', {}, 'Static, hiss or buzz? '), 'Press the button and stay quiet. SHELOOPS listens to your room, finds what causes it, and fixes what it can.',
+    el('div', {}, btn), out,
+    el('details', { class: 'statictips' }, el('summary', {}, 'How to fix it by hand'),
+      el('ul', {},
+        tip('Bluetooth headset?', 'Its mic is low quality and crackles. Use wired headphones, a wired mic, or your computer mic.'),
+        tip('Buzz that changes when you touch the laptop?', 'Unplug the charger, or plug the mic straight into the computer instead of a hub. Then turn on the Hum remover.'),
+        tip('Crackles only with effects?', 'Your computer is too busy. Pick Audio mode: Smooth, close other tabs, and use fewer effects at once.'),
+        tip('Level in the red?', 'Turn Input down until the bar only reaches the yellow when you sing loud.'),
+        tip('Hiss between words?', 'Turn on the Gate and press Measure my room. Keep the Noise remover around 30%. Higher sounds watery.'),
+        tip('Loud effects make it worse?', 'Distortion, Lo-fi and heavy compression turn the hiss up too. Use the gate, or lower the effect.'),
+        tip('Still there?', 'Move the mic away from the computer fan, and record a 5 second test to hear it plain.'))));
 }
 // Squeal shield: protects what you hear, with or without effects. Your recording is never changed by it.
 export const SHIELD_INFO = { off: ['Off', 'Nothing added. Only for good headphones.'], auto: ['Auto', 'Light protection you will not notice. Turns itself up to Strong if a squeal keeps coming back.'], strong: ['Strong', 'For speakers or a room that keeps squealing. Trims the sharp highs, keeps your voice moving a tiny bit so a howl cannot build, and keeps the volume in check.'] };
