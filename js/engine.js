@@ -756,6 +756,7 @@ export async function checkStatic() {
 // fixes what can be fixed, and says plainly what it found and what it changed
 export async function fixStatic(r) {
   const M = micSettings(), found = [], did = []; let reopen = false, reload = false;
+  if (navigator.brave) found.push('You are on Brave. Turn Brave Shields off for this site (lion icon in the address bar), then reload. Shields can add noise to audio on purpose.');
   if (r.bt) found.push('Your mic looks like a Bluetooth headset (' + (r.label || 'wireless') + '). Bluetooth mics send low quality sound that crackles and buzzes. Use a wired mic, wired headphones, or your computer mic. The app cannot fix this one.');
   if (r.hum) { found.push('A ' + r.hum + ' Hz electric buzz (hum). It often comes from a charger, a cable, or a USB hub.'); M.hum = r.hum; did.push('Hum remover: on at ' + r.hum + ' Hz'); }
   if (r.floor > -50) {

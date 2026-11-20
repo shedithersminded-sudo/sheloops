@@ -1,11 +1,18 @@
 {
-  "version": "2.13.1",
+  "version": "2.13.2",
   "date": "2026-11-20",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "The room gate and every track noise gate are now smooth: they gently turn down room sound and can never chop a soft note or make your voice stutter."
+    "Brave users: the mic page now explains how to turn Brave Shields off for SHELOOPS, since Shields can add noise to audio on purpose."
   ],
   "history": [
+    {
+      "version": "2.13.1",
+      "date": "2026-11-20",
+      "notes": [
+        "The room gate and every track noise gate are now smooth: they gently turn down room sound and can never chop a soft note or make your voice stutter."
+      ]
+    },
     {
       "version": "2.13.0",
       "date": "2026-11-20",

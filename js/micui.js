@@ -94,6 +94,7 @@ export function staticBox(rerender) {
   const tip = (b, t) => el('li', {}, el('b', {}, b + ' '), t);
   return el('div', { class: 'explain staticbox', style: 'display:block' },
     el('b', {}, 'Static, hiss or buzz? '), 'Press the button and stay quiet. SHELOOPS listens to your room, finds what causes it, and fixes what it can.',
+    navigator.brave ? el('div', { class: 'bravenote' }, el('b', {}, 'You are using Brave. '), 'Brave Shields can blur sound on purpose to stop tracking, which can add noise and break the mic meters. Click the lion icon in the address bar, then turn Shields down (off) for this site, and reload. Your projects stay safe.') : null,
     el('div', {}, btn), out,
     el('details', { class: 'statictips' }, el('summary', {}, 'How to fix it by hand'),
       el('ul', {},

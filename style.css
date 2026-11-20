@@ -2178,3 +2178,6 @@ button.hot { box-shadow: 0 0 16px -6px var(--led), inset 0 1px 0 rgba(255,255,25
 .micdock canvas { width: 44px; height: 220px; }
 @keyframes recPulse { 50% { opacity: .4; } }
 @media (max-width: 700px) { .micdock canvas { height: 140px; } }
+
+.bravenote { margin-top: 8px; padding: 8px 12px; border-radius: 12px; border: 1px solid #fb542b; background: rgba(251,84,43,.1); font-size: 12px; line-height: 1.45; }
+.bravenote b { color: #fb542b; }
