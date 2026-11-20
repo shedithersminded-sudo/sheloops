@@ -22,22 +22,28 @@ class Cap extends AudioWorkletProcessor {
   }
 }
 registerProcessor('cap', Cap);
+// Smooth room gate (a gentle expander): sound below the line is turned down little by little, never chopped off.
+// It follows the level smoothly, holds open between words, and the most it ever lowers is 18 dB, so soft notes never stutter.
 class Gate extends AudioWorkletProcessor {
   static get parameterDescriptors() { return [{ name: 'threshold', defaultValue: -50 }, { name: 'on', defaultValue: 0 }]; }
-  constructor() { super(); this.env = 0; this.g = 1; this.hold = 0; this.open = true; }
+  constructor() { super(); this.ms = 0; this.gdb = 0; this.hold = 0; }
   process(ins, outs, p) {
     const i = ins[0], o = outs[0];
-    if (!i || !i.length) return true;
-    const on = p.on[0] > 0.5, th = Math.pow(10, p.threshold[0] / 20), n = o[0].length, holdN = sampleRate * 0.18;
+    if (!o || !o.length) return true;
+    const n = o[0].length;
+    if (!i || !i.length) { for (let c = 0; c < o.length; c++) o[c].fill(0); return true; }
+    const on = p.on[0] > 0.5, T = p.threshold[0], holdN = sampleRate * 0.25;
+    const det = Math.exp(-1 / (0.012 * sampleRate)), att = Math.exp(-1 / (0.002 * sampleRate)), rel = Math.exp(-1 / (0.15 * sampleRate));
     for (let s = 0; s < n; s++) {
       let m = 0;
-      for (let c = 0; c < i.length; c++) { const v = Math.abs(i[c][s]); if (v > m) m = v; }
-      this.env = m > this.env ? m : this.env * 0.9996;
-      // opens above the line, stays open a moment, and only closes well below it (no fluttering)
-      if (this.env > th) { this.open = true; this.hold = holdN; } else if (this.env < th * 0.5) { if (this.hold > 0) this.hold--; else this.open = false; }
-      const target = (!on || this.open) ? 1 : 0.06;
-      this.g += (target - this.g) * (target > this.g ? 0.012 : 0.0003);
-      for (let c = 0; c < o.length; c++) o[c][s] = (i[c] || i[0])[s] * this.g;
+      for (let c = 0; c < i.length; c++) { const v = i[c][s]; m += v * v; }
+      this.ms = det * this.ms + (1 - det) * (m / i.length);
+      const lv = this.ms > 1e-12 ? 10 * Math.log10(this.ms) + 3 : -120;
+      let tg = 0;
+      if (on) { if (lv > T) this.hold = holdN; else if (this.hold > 0) this.hold--; else tg = Math.max(-18, (lv - T) * 1.5); }
+      this.gdb = tg > this.gdb ? att * this.gdb + (1 - att) * tg : rel * this.gdb + (1 - rel) * tg;
+      const g = Math.pow(10, this.gdb / 20);
+      for (let c = 0; c < o.length; c++) o[c][s] = (i[c] || i[0])[s] * g;
     }
     return true;
   }

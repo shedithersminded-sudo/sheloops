@@ -1,13 +1,20 @@
 {
-  "version": "2.13.0",
+  "version": "2.13.1",
   "date": "2026-11-20",
   "repo": "shedithersminded-sudo/sheloops",
   "notes": [
-    "Fixed your voice cutting in and out: call-style echo cancel and noise suppression are now off on headphones, the room gate no longer flutters, and the squeal guard listens only to your mic, not the beat.",
-    "Fix my squeal and Find and fix my static no longer turn on settings that chop singing.",
-    "New tall mic meter on the right edge: shows your level, a peak line and your voice over the last few seconds. Turns red with REC while recording."
+    "The room gate and every track noise gate are now smooth: they gently turn down room sound and can never chop a soft note or make your voice stutter."
   ],
   "history": [
+    {
+      "version": "2.13.0",
+      "date": "2026-11-20",
+      "notes": [
+        "Fixed your voice cutting in and out: call-style echo cancel and noise suppression are now off on headphones, the room gate no longer flutters, and the squeal guard listens only to your mic, not the beat.",
+        "Fix my squeal and Find and fix my static no longer turn on settings that chop singing.",
+        "New tall mic meter on the right edge: shows your level, a peak line and your voice over the last few seconds. Turns red with REC while recording."
+      ]
+    },
     {
       "version": "2.12.0",
       "date": "2026-11-20",
